@@ -59,8 +59,9 @@ import {
   type Asset,
   type ReferenceReader,
   type SpotReader,
-} from "./signal.js";
+} from "./signal";
 import { Positions } from "./position.js";
+import { logDecision, logCycleSummary, backfillSettlements } from "./journal";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -114,6 +115,14 @@ const MAX_HORIZONS = envNum("OF_MAX_HORIZONS", 30);
 // frozen price reads as "no momentum" rather than "no data" — refuse it.
 const MAX_SPOT_AGE_MS = envNum("OF_MAX_SPOT_AGE_MS", 15_000);
 const MODEL = (process.env.OF_MODEL ?? "strike") === "momentum" ? "momentum" : "strike";
+// Which momentum computation feeds the drift term: the original single-window
+// return ("window"), or the EMA(fast)/EMA(slow) crossover validated in the
+// Python backtest ("ema", default — see signal.ts's SpotHistory.emaMomentum).
+// Falling back to "window" is a one-line env change if the live behavior
+// needs comparing against the original.
+const MOMENTUM_SOURCE = (process.env.OF_MOMENTUM_SOURCE ?? "ema") === "window" ? "window" : "ema";
+const EMA_FAST_SPAN = envNum("OF_EMA_FAST_SPAN", 3);
+const EMA_SLOW_SPAN = envNum("OF_EMA_SLOW_SPAN", 12);
 const SPOT_SOURCE = (process.env.OF_SPOT_SOURCE ?? "sdk").toLowerCase();
 // Most cycles end in "no edge", which is silent. Without a heartbeat the bot
 // looks hung when it's working correctly, so summarise what it saw.
@@ -133,7 +142,7 @@ const log = (s: string) => console.log(`${new Date().toISOString()} ${s}`);
 
 // Retention is set by the volatility estimate, not by momentum: measuring how
 // much the underlying moves needs far more samples than one lookback window.
-const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS);
+const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS, EMA_FAST_SPAN, EMA_SLOW_SPAN);
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
 const position = new Positions();
@@ -229,7 +238,7 @@ async function takeOne(
   // 3) Sample the underlying and measure the short-window return.
   const observed = await spot.getSpot(info.asset);
   if (observed) history.record(info.asset, observed);
-  const mom = history.momentum(info.asset, now);
+  const mom = MOMENTUM_SOURCE === "ema" ? history.emaMomentum(info.asset, now) : history.momentum(info.asset, now);
   if (!mom) {
     if (!warned.has(`warm:${info.asset}`)) {
       warned.add(`warm:${info.asset}`);
@@ -454,6 +463,24 @@ async function takeOne(
   // of what you want to see before handing it a funded key.
   position.add(market.symbol, leg, taken);
   lastTake.set(market.symbol, now);
+
+  logDecision({
+    market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
+    symbol: market.symbol,
+    asset: info.asset,
+    side,
+    size: taken,
+    price,
+    dry_run: ctx.config.dryRun,
+    signal: bullish ? "UP" : "DOWN",
+    fair_prob: fairFav,
+    market_mid: marketFair,
+    edge: fairFav - askPx,
+    disagreement,
+    momentum_r: useMomentum ? mom.r : null,
+    momentum_used: useMomentum,
+    reason: why,
+  });
 }
 
 async function main() {
@@ -526,6 +553,13 @@ async function main() {
       const netTotal = position.totalNet();
       const book = gross === 0 ? "flat" : `net ${netTotal}${gross === netTotal ? "" : ` of ${gross} gross`}`;
       log(`idle · ${cycle.scanned} tradable · ${book} · ${reasons}${gap}${closest}`);
+
+      logCycleSummary({ scanned: cycle.scanned, skips: Object.fromEntries(cycle.skips) });
+
+      // Backfill settlement outcomes for the dashboard, on the same throttle
+      // as the heartbeat — this only reads chain state, it never redeems (that's
+      // maybeClaim's job above), so it's safe to run in dry-run too.
+      backfillSettlements(ctx).catch((e) => log(`settlement backfill failed: ${(e as Error).message}`));
     }
     await sleep(INTERVAL_MS, () => stop);
   }

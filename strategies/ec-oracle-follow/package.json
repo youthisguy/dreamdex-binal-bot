@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@dreamdex-bot-kit/ec-core": "*",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

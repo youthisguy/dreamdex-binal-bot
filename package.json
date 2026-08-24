@@ -30,5 +30,8 @@
   "devDependencies": {
     "tsx": "^4.19.0",
     "vitest": "^2.1.6"
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
   }
 }

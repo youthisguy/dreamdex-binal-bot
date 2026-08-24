@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dreamDEX Event Contracts — Agent Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #0b0e14;
+        --surface: #12151c;
+        --surface-2: #171b24;
+        --border: #1e2530;
+        --text: #e4e7ec;
+        --text-muted: #7c8798;
+
+        /* Semantic direction colors strictly reserved for directional data */
+        --pos: #16c784;
+        --pos-bg: rgba(22, 199, 132, 0.1);
+        --neg: #ea3943;
+        --neg-bg: rgba(234, 57, 67, 0.1);
+
+        /* Dedicated interactive accent color */
+        --accent: #e8a33d;
+        --accent-bg: rgba(232, 163, 61, 0.12);
+
+        --font-mono: "IBM Plex Mono", monospace;
+        --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont,
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        min-height: 100vh;
+        font-size: 13px;
+        letter-spacing: normal;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Monospaced numeric utility */
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Top Ticker Tape */
+      .ticker-wrap {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 6px 0;
+      }
+      .ticker {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-muted);
+        animation: scroll-left 40s linear infinite;
+        padding-left: 100%;
+      }
+      .ticker span {
+        margin-right: 32px;
+      }
+      .ticker .pos {
+        color: var(--pos);
+      }
+      .ticker .neg {
+        color: var(--neg);
+      }
+      @keyframes scroll-left {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-100%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ticker {
+          animation: none;
+          padding-left: 0;
+        }
+      }
+
+      /* Header & Navigation Chrome */
+      header {
+        padding: 16px 24px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+      }
+      h1 {
+        font-family: var(--font-mono);
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1 .dim {
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+
+      .status-pill {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--text-muted);
+      }
+      .dot.live {
+        background: var(--pos);
+      }
+
+      .refresh-btn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      .refresh-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* Toolbar Filter Segmented Control */
+      .toolbar {
+        padding: 12px 24px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        background: var(--bg);
+      }
+      .filters {
+        display: flex;
+        gap: 2px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px;
+      }
+      .filter-btn {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        background: transparent;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      .filter-btn.active {
+        color: var(--text);
+        background: var(--border);
+      }
+      .filter-btn:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* Core Layout Grid */
+      .grid {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        gap: 16px;
+        padding: 0 24px 24px;
+      }
+      @media (max-width: 1024px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Quiet Card Elements */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 16px;
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 12px;
+      }
+      .card h2 {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+      .card h2 .sub {
+        color: var(--text-muted);
+        text-transform: none;
+        font-weight: 400;
+        letter-spacing: normal;
+      }
+
+      /* Stat Cards Matrix */
+      .stat-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .stat {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+      }
+      .stat .label {
+        font-size: 10px;
+        color: var(--text-muted);
+        font-family: var(--font-sans);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 500;
+      }
+      .stat .value {
+        font-size: 18px;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        margin-top: 2px;
+      }
+
+      /* Color utilities for directional stats */
+      .pos {
+        color: var(--pos) !important;
+      }
+      .neg {
+        color: var(--neg) !important;
+      }
+
+      /* Tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th {
+        text-align: left;
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        background: var(--surface);
+      }
+      th.num-col,
+      td.num-col {
+        text-align: right;
+      }
+      td {
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--text);
+        vertical-align: middle;
+      }
+      tr:hover td {
+        background: var(--surface-2);
+      }
+      .reason-cell {
+        color: var(--text-muted);
+        max-width: 240px;
+        font-family: var(--font-sans);
+        font-size: 11px;
+        white-space: normal;
+        line-height: 1.3;
+      }
+
+      /* Compact Badges */
+      .outcome-badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: var(--font-sans);
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .outcome-WIN {
+        background: var(--pos-bg);
+        color: var(--pos);
+      }
+      .outcome-LOSS {
+        background: var(--neg-bg);
+        color: var(--neg);
+      }
+      .outcome-VOID {
+        background: rgba(124, 135, 152, 0.12);
+        color: var(--text-muted);
+      }
+      .outcome-PENDING {
+        background: var(--accent-bg);
+        color: var(--accent);
+      }
+
+      .copy-link {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--accent);
+        text-decoration: none;
+        border: 1px solid rgba(232, 163, 61, 0.4);
+        border-radius: 4px;
+        padding: 2px 6px;
+        white-space: nowrap;
+        display: inline-block;
+      }
+      .copy-link:hover {
+        background: var(--accent);
+        color: var(--bg);
+      }
+
+      .empty-state {
+        color: var(--text-muted);
+        font-size: 12px;
+        padding: 24px 0;
+        text-align: center;
+        font-family: var(--font-mono);
+      }
+
+      #pnlChart {
+        max-height: 180px;
+      }
+
+      .scroll-body {
+        max-height: 520px;
+        overflow-y: auto;
+      }
+      .scroll-body::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scroll-body::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      /* Sit-out Bars */
+      .sitout-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .sitout-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .sitout-row .reason {
+        color: var(--text-muted);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        max-width: 180px;
+      }
+      .sitout-bar-bg {
+        flex: 1;
+        height: 4px;
+        background: var(--bg);
+        border-radius: 2px;
+        margin: 0 12px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+      .sitout-bar-fill {
+        height: 100%;
+        background: var(--text-muted);
+        border-radius: 2px;
+      }
+      .sitout-row .count {
+        color: var(--text);
+        min-width: 28px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Harness <span class="dim">/ event contracts agent terminal</span></h1>
+    </header>
+
+    <div class="toolbar">
+      <div class="filters" id="filterBar">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="trades">Trades</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="settled">Settled</button>
+        <button class="filter-btn" data-filter="BTC">BTC</button>
+        <button class="filter-btn" data-filter="ETH">ETH</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <h2>Performance</h2>
+        </div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="label">Win Rate</div>
+            <div class="value" id="statWinRate">–</div>
+          </div>
+          <div class="stat">
+            <div class="label">Total PnL</div>
+            <div class="value" id="statPnl">–</div>
+          </div>
+          <div class="stat">
+            <div class="label">Total Trades</div>
+            <div class="value" id="statTrades">–</div>
+          </div>
+          <div class="stat">
+            <div class="label">Sit-Out Rate</div>
+            <div class="value" id="statSitout">–</div>
+          </div>
+        </div>
+
+        <div class="card-header" style="margin-top: 16px">
+          <h2>Cumulative PnL <span class="sub">— settled trades</span></h2>
+        </div>
+        <canvas id="pnlChart"></canvas>
+
+        <div class="card-header" style="margin-top: 24px">
+          <h2>Execution Skips <span class="sub">— sit-out reasons</span></h2>
+        </div>
+        <div class="sitout-list" id="sitoutList">
+          <div class="empty-state">no sit-out data yet</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Decision Feed</h2>
+        </div>
+        <div class="scroll-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Market</th>
+                <th>Signal</th>
+                <th class="num-col">Edge</th>
+                <th>Outcome</th>
+                <th class="num-col">PnL</th>
+                <th>Reasoning</th>
+              </tr>
+            </thead>
+            <tbody id="decisionRows">
+              <tr>
+                <td colspan="7" class="empty-state">no decisions logged yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let chart;
+      let allRecords = [];
+      let activeFilter = "all";
+
+      function fmtPct(v) {
+        return v === null || v === undefined || isNaN(v)
+          ? "–"
+          : (v * 100).toFixed(1) + "%";
+      }
+      function fmtSigned(v) {
+        if (v === null || v === undefined || isNaN(v)) return "–";
+        const s = v >= 0 ? "+" : "";
+        return s + v.toFixed(4);
+      }
+      function fmtMoney(v) {
+        if (v === null || v === undefined || isNaN(v)) return "–";
+        const s = v >= 0 ? "+" : "";
+        return s + v.toFixed(3);
+      }
+
+      function parseJsonl(text) {
+        return text
+          .split("\n")
+          .filter((l) => l.trim())
+          .map((l) => {
+            try {
+              return JSON.parse(l);
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+      }
+
+      function copyTradeLink(symbol) {
+        return `https://app.dreamdex.io/event-contracts?market=${encodeURIComponent(
+          symbol
+        )}`;
+      }
+
+      function joinRecords(records) {
+        const decisions = new Map();
+        const settlements = new Map();
+        const cycleSkips = {};
+        let totalScanned = 0,
+          totalTradeDecisions = 0;
+
+        for (const r of records) {
+          if (r.type === "decision") {
+            decisions.set(r.market_id, r);
+            totalTradeDecisions++;
+          } else if (r.type === "settlement") {
+            settlements.set(r.market_id, r);
+          } else if (r.type === "cycle") {
+            totalScanned += r.scanned || 0;
+            for (const [reason, n] of Object.entries(r.skips || {})) {
+              cycleSkips[reason] = (cycleSkips[reason] || 0) + n;
+            }
+          }
+        }
+
+        const merged = [...decisions.values()]
+          .map((d) => {
+            const s = settlements.get(d.market_id);
+            return {
+              ...d,
+              outcome: s ? s.outcome : "PENDING",
+              pnl: s ? s.pnl : null,
+              settled_at: s ? s.settled_at : null,
+            };
+          })
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        return { merged, cycleSkips, totalScanned, totalTradeDecisions };
+      }
+
+      function applyFilter(merged) {
+        switch (activeFilter) {
+          case "trades":
+            return merged;
+          case "pending":
+            return merged.filter((r) => r.outcome === "PENDING");
+          case "settled":
+            return merged.filter((r) => r.outcome !== "PENDING");
+          case "BTC":
+            return merged.filter((r) => r.asset === "BTC");
+          case "ETH":
+            return merged.filter((r) => r.asset === "ETH");
+          default:
+            return merged;
+        }
+      }
+
+      function render() {
+        const { merged, cycleSkips, totalScanned, totalTradeDecisions } =
+          joinRecords(allRecords);
+        document.getElementById("statusDot").classList.add("live");
+        document.getElementById(
+          "statusText"
+        ).textContent = `${allRecords.length} records loaded`;
+
+        const tape = merged
+          .slice(0, 25)
+          .map((r) => {
+            const cls = r.signal === "UP" ? "pos" : "neg";
+            const badge =
+              r.outcome === "WIN"
+                ? "✓"
+                : r.outcome === "LOSS"
+                ? "✗"
+                : r.outcome === "VOID"
+                ? "○"
+                : "…";
+            return `<span class="${cls}">${r.symbol} · ${r.signal} ${badge}</span>`;
+          })
+          .join("");
+        document.getElementById("tickerTape").innerHTML =
+          tape || "<span>no trades yet</span>";
+
+        const settled = merged.filter(
+          (r) => r.outcome === "WIN" || r.outcome === "LOSS"
+        );
+        const wins = settled.filter((r) => r.outcome === "WIN").length;
+        document.getElementById("statWinRate").textContent = settled.length
+          ? fmtPct(wins / settled.length)
+          : "–";
+        const totalPnl = settled.reduce((sum, r) => sum + (r.pnl || 0), 0);
+        const pnlEl = document.getElementById("statPnl");
+        pnlEl.textContent = settled.length ? fmtMoney(totalPnl) : "–";
+        pnlEl.className =
+          "value " + (totalPnl > 0 ? "pos" : totalPnl < 0 ? "neg" : "");
+        document.getElementById("statTrades").textContent = merged.length;
+        document.getElementById("statSitout").textContent = totalScanned
+          ? fmtPct(
+              1 -
+                totalTradeDecisions /
+                  Math.max(totalScanned, totalTradeDecisions)
+            )
+          : "–";
+
+        const filtered = applyFilter(merged);
+        const rows = filtered
+          .slice(0, 300)
+          .map((r) => {
+            const sideClass = r.signal === "UP" ? "pos" : "neg";
+            const time = r.timestamp
+              ? new Date(r.timestamp).toLocaleTimeString()
+              : "";
+            return `<tr>
+      <td class="num">${time}</td>
+      <td>
+        ${r.symbol || ""} ${
+              r.dry_run
+                ? "<span style='color:var(--text-muted)'>(dry)</span>"
+                : ""
+            }
+        <a class="copy-link" href="${copyTradeLink(
+          r.symbol
+        )}" target="_blank" rel="noopener">Trade →</a>
+      </td>
+      <td class="${sideClass}" style="font-weight:600;">${r.signal || ""}</td>
+      <td class="num-col">${fmtSigned(r.edge)}</td>
+      <td><span class="outcome-badge outcome-${r.outcome}">${
+              r.outcome
+            }</span></td>
+      <td class="num-col ${
+        r.pnl > 0 ? "pos" : r.pnl < 0 ? "neg" : ""
+      }">${fmtMoney(r.pnl)}</td>
+      <td class="reason-cell">${r.reason || ""}</td>
+    </tr>`;
+          })
+          .join("");
+        document.getElementById("decisionRows").innerHTML =
+          rows ||
+          '<tr><td colspan="7" class="empty-state">no decisions match this filter</td></tr>';
+
+        const sortedSkips = Object.entries(cycleSkips)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+        const maxSkip = sortedSkips.length ? sortedSkips[0][1] : 1;
+        document.getElementById("sitoutList").innerHTML = sortedSkips.length
+          ? sortedSkips
+              .map(
+                ([reason, n]) => `
+        <div class="sitout-row">
+          <span class="reason" title="${reason}">${reason}</span>
+          <span class="sitout-bar-bg"><span class="sitout-bar-fill" style="width:${(
+            (n / maxSkip) *
+            100
+          ).toFixed(0)}%"></span></span>
+          <span class="count">${n}</span>
+        </div>`
+              )
+              .join("")
+          : '<div class="empty-state">no sit-out data yet</div>';
+
+        // Render chart with dynamic directional gradient fill
+        const chronoSettled = [...settled].sort(
+          (a, b) => new Date(a.settled_at) - new Date(b.settled_at)
+        );
+        let cumulative = 0;
+        const pnlSeries = chronoSettled.map((r) => {
+          cumulative += r.pnl;
+          return cumulative;
+        });
+        const labels = chronoSettled.map((r) =>
+          new Date(r.settled_at).toLocaleTimeString()
+        );
+
+        const isPositiveTrend =
+          (pnlSeries.length > 0 ? pnlSeries[pnlSeries.length - 1] : 0) >= 0;
+        const trendColor = isPositiveTrend ? "#16C784" : "#EA3943";
+
+        const ctx = document.getElementById("pnlChart").getContext("2d");
+        const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+        gradient.addColorStop(
+          0,
+          isPositiveTrend ? "rgba(22, 199, 132, 0.2)" : "rgba(234, 57, 67, 0.2)"
+        );
+        gradient.addColorStop(1, "rgba(11, 14, 20, 0.0)");
+
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                data: pnlSeries,
+                borderColor: trendColor,
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                pointHoverBackgroundColor: trendColor,
+                borderWidth: 1.5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { display: false },
+              y: {
+                grid: { color: "#1E2530", drawTicks: false },
+                ticks: {
+                  color: "#7C8798",
+                  font: { family: "IBM Plex Mono", size: 10 },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      document
+        .getElementById("refreshBtn")
+        .addEventListener("click", () => fetchAndRender());
+
+      document.getElementById("filterBar").addEventListener("click", (e) => {
+        if (!e.target.classList.contains("filter-btn")) return;
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        e.target.classList.add("active");
+        activeFilter = e.target.dataset.filter;
+        render();
+      });
+
+      let pollTimer = null;
+      let liveMode = false;
+      const POLL_MS = 5000;
+
+      async function fetchAndRender() {
+        try {
+          const res = await fetch("/decisions.jsonl", { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const text = await res.text();
+          allRecords = parseJsonl(text);
+          render();
+          liveMode = true;
+          document.getElementById(
+            "statusText"
+          ).textContent = `${allRecords.length} records`;
+          return true;
+        } catch {
+          liveMode = false;
+          document.getElementById("statusText").textContent =
+            "offline / server disconnected";
+          return false;
+        }
+      }
+
+      (async () => {
+        if (location.protocol === "file:") return;
+        const ok = await fetchAndRender();
+        if (ok) pollTimer = setInterval(fetchAndRender, POLL_MS);
+      })();
+    </script>
+  </body>
+</html>

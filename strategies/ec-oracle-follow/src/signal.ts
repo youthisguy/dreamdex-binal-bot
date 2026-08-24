@@ -83,6 +83,21 @@ export class SpotHistory {
   private readonly samples = new Map<string, Spot[]>();
   private readonly retainMs: number;
 
+  // EMA(fast)/EMA(slow) crossover state — a validated alternative to the
+  // single-window return below. Backtested on 180 days of BTC 15-min windows
+  // (Python, walk-forward validated: 55.3% train / 56.8% test win rate,
+  // p=0.00033 out-of-sample). Defaults (3/12) match that validated config,
+  // but the backtest ran on 1-minute klines with regular spacing; this feed
+  // updates on the oracle's own cadence (irregular, roughly OF_INTERVAL_MS),
+  // so treat 3/12 here as a starting point to re-validate live, not an
+  // assumed-exact port. Updated per SAMPLE (not per unit time), same
+  // convention as the backtest's per-row EMA.
+  private readonly emaFast = new Map<string, number>();
+  private readonly emaSlow = new Map<string, number>();
+  private readonly emaSampleCount = new Map<string, number>();
+  private readonly fastAlpha: number;
+  private readonly slowAlpha: number;
+
   constructor(
     private readonly windowMs: number,
     private readonly maxAgeMs: number,
@@ -90,8 +105,13 @@ export class SpotHistory {
      *  volatility needs many more samples than that, so keep the longer of the
      *  two rather than sizing the ring for momentum alone. */
     retainMs = windowMs * 2,
+    /** EMA spans for the crossover signal, in SAMPLES not time. */
+    emaFastSpan = 3,
+    emaSlowSpan = 12,
   ) {
     this.retainMs = Math.max(retainMs, windowMs * 2);
+    this.fastAlpha = 2 / (emaFastSpan + 1);
+    this.slowAlpha = 2 / (emaSlowSpan + 1);
   }
 
   /** Record an observation, dropping anything past the retention horizon. */
@@ -103,6 +123,43 @@ export class SpotHistory {
     const cutoff = s.at - this.retainMs;
     while (arr.length > 0 && arr[0]!.at < cutoff) arr.shift();
     this.samples.set(asset, arr);
+
+    // EMA state persists indefinitely (not bounded by retainMs) — same fix
+    // as the backtest's continuous-EMA change: resetting context on a
+    // rolling window is what caused the original near-zero-signal bug there.
+    const prevFast = this.emaFast.get(asset);
+    const prevSlow = this.emaSlow.get(asset);
+    this.emaFast.set(asset, prevFast === undefined ? s.price : prevFast + this.fastAlpha * (s.price - prevFast));
+    this.emaSlow.set(asset, prevSlow === undefined ? s.price : prevSlow + this.slowAlpha * (s.price - prevSlow));
+    this.emaSampleCount.set(asset, (this.emaSampleCount.get(asset) ?? 0) + 1);
+  }
+
+  /**
+   * EMA(fast)/EMA(slow) crossover, normalized by spot and capped — the
+   * validated signal, as a drop-in replacement for `momentum()`'s single-
+   * window return. Same {spot, r} shape so callers don't need to change.
+   *
+   * Requires enough samples to warm up the slow EMA, and a fresh latest
+   * sample (same staleness rule as `momentum()`), so a stalled feed reads as
+   * "no data" rather than "zero momentum" here too.
+   */
+  emaMomentum(asset: string, now: number, cap = 0.05): { spot: number; r: number } | null {
+    const arr = this.samples.get(asset);
+    if (!arr || arr.length === 0) return null;
+    const latest = arr[arr.length - 1]!;
+    if (now - latest.at > this.maxAgeMs) return null;
+
+    const count = this.emaSampleCount.get(asset) ?? 0;
+    const slowSpanApprox = Math.round(2 / this.slowAlpha - 1);
+    if (count < slowSpanApprox) return null; // warming up, same as momentum()
+
+    const fast = this.emaFast.get(asset);
+    const slow = this.emaSlow.get(asset);
+    if (fast === undefined || slow === undefined || !(latest.price > 0)) return null;
+
+    const diffNorm = (fast - slow) / latest.price;
+    const r = Math.sign(diffNorm) * Math.min(Math.abs(diffNorm), cap);
+    return { spot: latest.price, r };
   }
 
   /**
