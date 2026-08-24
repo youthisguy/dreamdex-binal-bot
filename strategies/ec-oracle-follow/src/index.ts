@@ -59,9 +59,10 @@ import {
   type Asset,
   type ReferenceReader,
   type SpotReader,
-} from "./signal";
+} from "./signal.js";
 import { Positions } from "./position.js";
-import { logDecision, logCycleSummary, backfillSettlements } from "./journal";
+import { logDecision, logCycleSummary, backfillSettlements, computeStats } from "./journal.js";
+import { postSignal } from "./telegram.js";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -98,6 +99,33 @@ const COOLDOWN_MS = envNum("OF_COOLDOWN_MS", 30_000);
 const NEAR_EXPIRY_STOP_OVERRIDE_MS = process.env.OF_NEAR_EXPIRY_STOP_MS
   ? Number(process.env.OF_NEAR_EXPIRY_STOP_MS)
   : null;
+// For social posts and the journal — "15m", "1h" etc, not parsed back out.
+const windowLabel = (intervalSec: number | null): string => {
+  if (!intervalSec || intervalSec <= 0) return "?";
+  if (intervalSec % 3600 === 0) return `${intervalSec / 3600}h`;
+  return `${Math.round(intervalSec / 60)}m`;
+};
+
+// Which window lengths this bot is allowed to trade, in minutes. Comma-
+// separated, e.g. "15,60". Defaults to 15-minute ONLY, because that's the
+// only window the EMA(3,12) signal was ever backtested/validated against
+// (180 days BTC, walk-forward validated: 56.8% test win rate, p=0.00033).
+// activeMarkets() returns every tradable window DreamDEX offers with no
+// filter of its own — without this, the bot silently applies an unvalidated
+// signal to 4h/24h markets it was never tested on. Widen this only after
+// backtesting those windows separately; don't assume the 15m result transfers.
+const ALLOWED_WINDOW_MIN = (process.env.OF_ALLOWED_WINDOWS_MIN ?? "15")
+  .split(",")
+  .map((s) => Number(s.trim()))
+  .filter((n) => Number.isFinite(n) && n > 0);
+
+function windowAllowed(intervalSec: number | null): boolean {
+  if (ALLOWED_WINDOW_MIN.length === 0) return true; // explicitly set empty = no filter
+  if (!intervalSec) return false; // unknown window length — don't trade it by default
+  const mins = intervalSec / 60;
+  return ALLOWED_WINDOW_MIN.includes(mins);
+}
+
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
   (intervalSec && intervalSec > 0
@@ -215,6 +243,10 @@ async function takeOne(
 
   const info = marketInfo(market);
   if (!info) return;
+  if (!windowAllowed(info.intervalSec)) {
+    note(cycle, "window not in OF_ALLOWED_WINDOWS_MIN");
+    return;
+  }
   if (!isAsset(info.asset)) {
     if (!warned.has(info.asset)) {
       warned.add(info.asset);
@@ -468,6 +500,7 @@ async function takeOne(
     market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
     symbol: market.symbol,
     asset: info.asset,
+    window: windowLabel(info.intervalSec),
     side,
     size: taken,
     price,
@@ -480,7 +513,53 @@ async function takeOne(
     momentum_r: useMomentum ? mom.r : null,
     momentum_used: useMomentum,
     reason: why,
+    expiry_ms: info.expiryMs,
   });
+
+  // Post to Telegram AFTER the journal write so a signal always shows up in
+  // the dashboard even if the Telegram call fails or isn't configured — then
+  // log a second decision record with the message_id attached, so the last-
+  // write-wins read pattern (see journal.ts) picks it up for settlement edits
+  // without needing a distinct "update" record type.
+  const messageId = await postSignal({
+    marketId: info.marketId!,
+    symbol: market.symbol,
+    asset: info.asset,
+    window: windowLabel(info.intervalSec),
+    signal: bullish ? "UP" : "DOWN",
+    edge: fairFav - askPx,
+    disagreement,
+    momentumUsed: useMomentum,
+    expiryMs: info.expiryMs,
+    dryRun: ctx.config.dryRun,
+    stats: computeStats(),
+  }).catch((e) => {
+    console.error(`telegram post failed: ${(e as Error).message}`);
+    return null;
+  });
+
+  if (messageId) {
+    logDecision({
+      market_id: info.marketId!,
+      symbol: market.symbol,
+      asset: info.asset,
+      window: windowLabel(info.intervalSec),
+      side,
+      size: taken,
+      price,
+      dry_run: ctx.config.dryRun,
+      signal: bullish ? "UP" : "DOWN",
+      fair_prob: fairFav,
+      market_mid: marketFair,
+      edge: fairFav - askPx,
+      disagreement,
+      momentum_r: useMomentum ? mom.r : null,
+      momentum_used: useMomentum,
+      reason: why,
+      expiry_ms: info.expiryMs,
+      telegram_message_id: messageId,
+    });
+  }
 }
 
 async function main() {
@@ -507,7 +586,8 @@ async function main() {
     `oracle-follow up as ${ctx.exchange.walletAddress ?? "(no key, dry run)"} · dryRun=${ctx.config.dryRun} · ` +
       `model=${MODEL} interval=${INTERVAL_MS}ms window=${WINDOW_MS}ms edge=${EDGE} ` +
       `maxDisagreement=${MAX_DISAGREEMENT > 0 ? MAX_DISAGREEMENT : "off"} ` +
-      `maxHorizons=${MAX_HORIZONS > 0 ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(0)}min)` : "off"}`,
+      `maxHorizons=${MAX_HORIZONS > 0 ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(0)}min)` : "off"} ` +
+      `allowedWindows=${ALLOWED_WINDOW_MIN.length ? ALLOWED_WINDOW_MIN.join(",") + "min" : "ALL (unfiltered!)"}`,
   );
 
   let stop = false;

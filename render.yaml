@@ -1,0 +1,40 @@
+# Render Blueprint — one Web Service running both the trading bot and the
+# dashboard together, since they must share a filesystem (see prod-server.mjs
+# for why). Deploy via Render's "New +" -> "Blueprint", pointing at this repo.
+#
+# Secrets (PRIVATE_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) are marked
+# sync: false so Render prompts for them in the dashboard rather than storing
+# them in this file / git history.
+services:
+  - type: web
+    name: dreamdex-ec-oracle-follow
+    runtime: node
+    plan: starter # bump if the bot + dashboard need more than the free tier's resources
+    buildCommand: npm install
+    startCommand: node dashboard/prod-server.mjs
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NETWORK
+        value: testnet
+      - key: DRY_RUN
+        value: "true" # flip to "false" only after watching it run correctly on Render itself
+      - key: VENUE_ID
+        value: 0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c
+      - key: PRIVATE_KEY
+        sync: false
+      - key: OF_MAX_HORIZONS
+        value: "0"
+      - key: OF_MOMENTUM_SOURCE
+        value: ema
+      - key: OF_MOMENTUM_THRESHOLD
+        value: "0.00025"
+      - key: OF_ALLOWED_WINDOWS_MIN
+        value: "15" # only the backtested/validated window — see index.ts's comment on this
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: DASHBOARD_URL
+        value: "" # set this to the real https://<service>.onrender.com URL AFTER first deploy — see deploy steps

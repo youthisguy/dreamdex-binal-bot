@@ -1,6 +1,6 @@
 /**
- * Minimal static server so the dashboard can `fetch()` the journal instead of
- * requiring a manual file picker. Serves two things:
+ * Minimal static server so the dashboard can `fetch()` the journal
+ * Serves two things:
  *   - /decisions.jsonl  → strategies/ec-oracle-follow/logs/decisions.jsonl
  *   - everything else   → dashboard/ (so dashboard/index.html loads at "/")
  *
