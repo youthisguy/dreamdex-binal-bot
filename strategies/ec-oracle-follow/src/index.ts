@@ -64,6 +64,7 @@ import { Positions } from "./position.js";
 import { logDecision, logCycleSummary, backfillSettlements, computeStats } from "./journal.js";
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
+import { createServer } from "node:http";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -176,7 +177,20 @@ const sleep = async (ms: number, stopped?: () => boolean) => {
   }
 };
 const log = (s: string) => console.log(`${new Date().toISOString()} ${s}`);
-
+ /**
+  * Bare HTTP listener with no purpose beyond satisfying Render's free Web
+  * Service port-scan check — trading logic doesn't need a port at all.
+  * No-ops if PORT isn't set (local dev, or any platform that doesn't
+  * require one), so this is harmless outside Render.
+  */
+ function startHealthServer(): void {
+   const port = process.env.PORT;
+   if (!port) return;
+   createServer((_req, res) => {
+     res.writeHead(200, { "Content-Type": "text/plain" });
+     res.end("ok");
+   }).listen(Number(port), () => log(`health endpoint listening on :${port}`));
+ }
 // Retention is set by the volatility estimate, not by momentum: measuring how
 // much the underlying moves needs far more samples than one lookback window.
 const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS, EMA_FAST_SPAN, EMA_SLOW_SPAN);
@@ -603,6 +617,8 @@ async function main() {
       `maxHorizons=${MAX_HORIZONS > 0 ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(0)}min)` : "off"} ` +
       `allowedWindows=${ALLOWED_WINDOW_MIN.length ? ALLOWED_WINDOW_MIN.join(",") + "min" : "ALL (unfiltered!)"}`,
   );
+
+  startHealthServer();
 
   let stop = false;
   const requestStop = () => (stop = true);

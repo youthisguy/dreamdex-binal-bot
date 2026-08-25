@@ -244,7 +244,7 @@ export interface SettlementPost {
 
 /**
  * Post the settlement result as a reply to the original signal message
- * (rather than editing it). Telegram renders the original as a tappable
+ * Telegram renders the original as a tappable
  * quote above this message, so followers can jump straight back to the
  * signal that triggered it.
  */

@@ -22,6 +22,7 @@ import type { EcContext } from "@dreamdex-bot-kit/ec-core";
 import { estimatePayout, settlementFeeBps } from "@dreamdex-bot-kit/ec-core";
 import { postSettlementReply, type SignalPost, type Stats } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
+import { scheduleCheckpoint } from "./checkpoint.js";
 
 const JOURNAL_PATH = process.env.JOURNAL_PATH ?? "logs/decisions.jsonl";
 
@@ -37,6 +38,14 @@ function appendRecord(record: Record<string, unknown>): void {
   ensureDir();
   const line = JSON.stringify({ timestamp: new Date().toISOString(), ...record }) + "\n";
   appendFileSync(JOURNAL_PATH, line);
+
+  // Trade events (a decision, its telegram_message_id follow-up, or a
+  // settlement) are durable-backed to GitHub so they survive Render's
+  // ephemeral disk across redeploys — see checkpoint.ts. Cycle summaries
+  // are excluded: they're recomputed every heartbeat  
+  if (record.type === "decision" || record.type === "settlement") {
+    scheduleCheckpoint(String(record.type));
+  }
 }
 
 export interface DecisionRecord {
