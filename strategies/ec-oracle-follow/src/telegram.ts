@@ -28,11 +28,31 @@ const apiBase = () => {
   return t ? `https://api.telegram.org/bot${t}` : null;
 };
 
+// Node's fetch has NO default timeout. An unguarded call here can hang
+// forever on a dropped connection, silently freezing the bot's entire
+// sequential main loop (it awaits this before doing anything else) with no
+// crash, no error, and no restart trigger — this is the "still running but
+// stopped trading until redeploy" symptom. sendPhoto is the higher-risk call
+// of the two (larger multipart upload, slower, more surface for a stall),
+// so it gets a longer budget than the small JSON calls.
+const JSON_CALL_TIMEOUT_MS = 8_000;
+const PHOTO_UPLOAD_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface SignalPost {
   marketId: string;
-  symbol: string; // e.g. "BTC-0-23AUG26-1630/tUSDC" — used to build the copy-trade link
+  symbol: string;  
   asset: string;
-  window: string; // e.g. "15m" — derived by the caller from the series cadence
+  window: string; 
   signal: "UP" | "DOWN";
   edge: number;
   disagreement: number;
@@ -42,8 +62,17 @@ export interface SignalPost {
   stats: Stats;
 }
 
-function copyTradeUrl(symbol: string): string {
-  return `${dreamdexMarketBase()}?market=${encodeURIComponent(symbol)}`;
+ 
+const ASSET_PAIR: Record<string, string> = { BTC: "WBTC:USDso", ETH: "WETH:USDso" };
+
+function copyTradeUrl(asset: string, window: string, symbol: string): string {
+  const pair = ASSET_PAIR[asset] ?? `${asset}:USDso`;
+  // pair/window are our own controlled constants, not user input — interpolate
+  // directly. encodeURIComponent would escape the colon in "WBTC:USDso" to
+  // %3A, which doesn't match the real observed URL format (literal ":").
+  // symbol DOES need encoding: it contains "/" (e.g. ".../tUSDC") which must
+  // become %2F or it'd be read as an extra path segment instead of the query value.
+  return `${dreamdexMarketBase()}/${pair}/${window}?market=${encodeURIComponent(symbol)}`;
 }
 
 // Telegram's servers reject inline-button URLs that point at localhost or a
@@ -71,7 +100,7 @@ function isPubliclyReachable(url: string): boolean {
   }
 }
 
-function signalKeyboard(symbol: string): { inline_keyboard: { text: string; url: string }[][] } {
+function signalKeyboard(asset: string, window: string, symbol: string): { inline_keyboard: { text: string; url: string }[][] } {
   const buttons: { text: string; url: string }[] = [];
   const dash = dashboardUrl();
   if (isPubliclyReachable(dash)) {
@@ -79,7 +108,7 @@ function signalKeyboard(symbol: string): { inline_keyboard: { text: string; url:
   } else {
     console.warn(`telegram: DASHBOARD_URL "${dash}" isn't publicly reachable — omitting Dashboard button`);
   }
-  buttons.push({ text: "⚡ Copy Trade", url: copyTradeUrl(symbol) });
+  buttons.push({ text: "⚡ Trade", url: copyTradeUrl(asset, window, symbol) });
   return { inline_keyboard: [buttons] };
 }
 
@@ -118,11 +147,11 @@ async function tgCall(method: string, body: Record<string, unknown>): Promise<an
   const API = apiBase();
   if (!API) return null;
   try {
-    const res = await fetch(`${API}/${method}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await fetchWithTimeout(
+      `${API}/${method}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      JSON_CALL_TIMEOUT_MS,
+    );
     const data = (await res.json()) as { ok: boolean; description?: string; result?: any };
     if (!data.ok) {
       console.error(`telegram ${method} failed: ${data.description ?? "unknown error"}`);
@@ -135,7 +164,7 @@ async function tgCall(method: string, body: Record<string, unknown>): Promise<an
   }
 }
 
-/** sendPhoto needs multipart/form-data since we're uploading raw bytes, not a URL. */
+/** sendPhoto needs multipart/form-data since we're uploading raw bytes */
 async function tgSendPhoto(opts: {
   photo: Buffer;
   caption: string;
@@ -154,7 +183,7 @@ async function tgSendPhoto(opts: {
     if (opts.replyToMessageId) form.append("reply_to_message_id", String(opts.replyToMessageId));
     form.append("photo", new Blob([opts.photo], { type: "image/png" }), "signal.png");
 
-    const res = await fetch(`${API}/sendPhoto`, { method: "POST", body: form });
+    const res = await fetchWithTimeout(`${API}/sendPhoto`, { method: "POST", body: form }, PHOTO_UPLOAD_TIMEOUT_MS);
     const data = (await res.json()) as { ok: boolean; description?: string; result?: any };
     if (!data.ok) {
       console.error(`telegram sendPhoto failed: ${data.description ?? "unknown error"}`);
@@ -200,17 +229,17 @@ export async function postSignal(p: SignalPost): Promise<number | null> {
   const result = await tgSendPhoto({
     photo,
     caption: signalCaption(p),
-    keyboard: signalKeyboard(p.symbol),
+    keyboard: signalKeyboard(p.asset, p.window, p.symbol),
   });
   return result?.message_id ?? null;
 }
 
 export interface SettlementPost {
-  messageId: number; // the original signal post's message_id — we reply TO this, never edit it
+  messageId: number; // the original signal post's message_id 
   outcome: "WIN" | "LOSS" | "VOID";
   pnl: number;
-  stats: Stats; // stats AFTER this settlement is included
-  original: SignalPost; // reused for the copy-trade link and a one-line recap
+  stats: Stats;  
+  original: SignalPost;  
 }
 
 /**
@@ -242,7 +271,7 @@ export async function postSettlementReply(s: SettlementPost): Promise<number | n
     parse_mode: "HTML",
     disable_web_page_preview: true,
     reply_to_message_id: s.messageId,
-    reply_markup: signalKeyboard(s.original.symbol),
+    reply_markup: signalKeyboard(s.original.asset, s.original.window, s.original.symbol),
   });
 
   return result?.message_id ?? null;

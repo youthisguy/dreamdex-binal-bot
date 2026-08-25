@@ -21,6 +21,7 @@ import { dirname } from "node:path";
 import type { EcContext } from "@dreamdex-bot-kit/ec-core";
 import { estimatePayout, settlementFeeBps } from "@dreamdex-bot-kit/ec-core";
 import { postSettlementReply, type SignalPost, type Stats } from "./telegram.js";
+import { withTimeout } from "./timeout.js";
 
 const JOURNAL_PATH = process.env.JOURNAL_PATH ?? "logs/decisions.jsonl";
 
@@ -198,7 +199,11 @@ export async function backfillSettlements(ctx: EcContext): Promise<number> {
 
   for (const p of pending) {
     try {
-      const onchain = await ctx.exchange.client.getMarketOnchain(p.marketId as `0x${string}`);
+      const onchain = await withTimeout(
+        ctx.exchange.client.getMarketOnchain(p.marketId as `0x${string}`),
+        10_000,
+        `getMarketOnchain(${p.marketId})`,
+      );
       if (!onchain || !(onchain.isResolved || onchain.isVoided)) continue;
 
       const boughtOutcome = p.side === "BUY_YES" ? 0 : 1;
@@ -239,8 +244,6 @@ export async function backfillSettlements(ctx: EcContext): Promise<number> {
           dryRun: p.dryRun,
           stats: computeStats(), // stats AFTER this settlement is already logged above
         };
-        // Reply to the original signal message rather than editing it, so
-        // the original stays intact and tappable as a quoted parent.
         await postSettlementReply({ messageId: p.telegramMessageId, outcome, pnl, stats: original.stats, original }).catch(
           (e) => console.error(`telegram settlement reply failed: ${(e as Error).message}`),
         );

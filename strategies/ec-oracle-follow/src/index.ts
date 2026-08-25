@@ -63,6 +63,7 @@ import {
 import { Positions } from "./position.js";
 import { logDecision, logCycleSummary, backfillSettlements, computeStats } from "./journal.js";
 import { postSignal } from "./telegram.js";
+import { withTimeout } from "./timeout.js";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -125,6 +126,14 @@ function windowAllowed(intervalSec: number | null): boolean {
   const mins = intervalSec / 60;
   return ALLOWED_WINDOW_MIN.includes(mins);
 }
+
+// Backtested/validated: EMA(3,12) momentum vs a flat market, walk-forward
+// validated (56.8% test win rate, p=0.00033). NOT backtested: the strike
+// model's moneyness/disagreement logic on its own — that's DreamDEX's
+// original placeholder-grade model, same category they flagged as unproven.
+// Default true so real funds only ride the validated signal; set to "false"
+// to let the (unvalidated) strike-only trades through again.
+const REQUIRE_MOMENTUM = (process.env.OF_REQUIRE_MOMENTUM ?? "true") !== "false";
 
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
@@ -397,6 +406,11 @@ async function takeOne(
     return;
   }
 
+  if (REQUIRE_MOMENTUM && !useMomentum) {
+    note(cycle, "no momentum contribution (OF_REQUIRE_MOMENTUM)");
+    return;
+  }
+
   // 10) A view is not a trade: only cross when the ask is below fair by EDGE.
   // Crossing costs about half the spread, so on a 2-cent book a 2-cent tilt
   // cannot pay for itself — this is the gate that says so.
@@ -601,12 +615,12 @@ async function main() {
     try {
       // Collect anything that settled since the last pass. Self-throttled
       // (AUTO_CLAIM_INTERVAL_MS) and a no-op under AUTO_CLAIM=false.
-      await maybeClaim(ctx);
-      const markets = await activeMarkets(ctx);
+      await withTimeout(maybeClaim(ctx), 20_000, "maybeClaim");
+      const markets = await withTimeout(activeMarkets(ctx), 20_000, "activeMarkets");
       for (const m of markets) {
         if (stop) break;
         try {
-          await takeOne(ctx, spot, refs, m, cycle);
+          await withTimeout(takeOne(ctx, spot, refs, m, cycle), 20_000, `takeOne(${m.symbol})`);
         } catch (e) {
           log(`${m.symbol} error: ${(e as Error).message}`);
         }
@@ -643,8 +657,7 @@ async function main() {
     }
     await sleep(INTERVAL_MS, () => stop);
   }
-
-  // Nothing rests (IOC), so there is nothing to cancel on the way out.
+ 
   await shutdown(ctx);
   log("oracle-follow stopped");
 }
