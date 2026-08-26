@@ -179,6 +179,7 @@ function signalCaption(p: SignalPost): string {
     ``,
     `<b>${p.signal}</b>  |  edge +${(p.edge * 100).toFixed(1)}%  |  ${escapeHtml(formatTimeLeft(p.expiryMs, now))}`,
     [oddsLine, stakeLine, refLine].filter(Boolean).join("  |  "),
+    ``,
     escapeHtml(reason),
     ``,
     `<i>Track record: ${wr} WR  |  ${pnl} PnL  (n=${p.stats.settledCount})</i>`,

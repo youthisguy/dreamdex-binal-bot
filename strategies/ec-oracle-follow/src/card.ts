@@ -104,10 +104,6 @@ function buildSvg(o: CardOpts): string {
   const asset = escapeXml(o.asset ?? "");
   const windowLabel = escapeXml(o.window ?? "");
 
-  // Hero call: signal text starts at x=0; the triangle sits to its left as
-  // vector geometry, then "UP"/"DOWN" is drawn as normal mono text offset
-  // past it. At font-size 96 the text baseline sits at y=125 in the
-  // `translate(80,160)` group, so cap-height center is roughly y=95.
   const heroTextX = 80;
   const heroBaselineY = 125;
   const heroTriangleCx = 30;
@@ -123,21 +119,40 @@ function buildSvg(o: CardOpts): string {
       .sans { font-family: 'IBM Plex Sans', sans-serif; }
     </style>
 
-    <linearGradient id="sparklineGrad" x1="0" y1="0" x2="0" y2="1">
+    <!-- Fading Gradient for Background Area Chart -->
+    <linearGradient id="chartBgGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.25"/>
+      <stop offset="80%" stop-color="${accentColor}" stop-opacity="0.03"/>
       <stop offset="100%" stop-color="${accentColor}" stop-opacity="0.0"/>
     </linearGradient>
+
+    <!-- Horizontal Fade Mask to smooth edges out on the sides -->
+    <linearGradient id="chartMaskGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#000" stop-opacity="0.1"/>
+      <stop offset="30%" stop-color="#000" stop-opacity="1"/>
+      <stop offset="80%" stop-color="#000" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.2"/>
+    </linearGradient>
+
+    <mask id="chartMask">
+      <rect x="0" y="0" width="1200" height="630" fill="url(#chartMaskGrad)"/>
+    </mask>
   </defs>
 
-  <!-- Background Canvas -->
+  <!-- Canvas Background -->
   <rect width="1200" height="630" fill="${COLORS.bg}"/>
 
   <!-- Main Container Card -->
-  <rect x="40" y="40" width="1120" height="550" rx="12" fill="${COLORS.cardBg}" stroke="${COLORS.border}" stroke-width="2"/>
+  <rect x="40" y="40" width="1120" height="550" rx="16" fill="${COLORS.cardBg}" stroke="${COLORS.border}" stroke-width="1.5"/>
+
+  <!-- Smooth Background Area Chart Layer (Behind Content) -->
+  <g mask="url(#chartMask)" transform="translate(400, 100) scale(2.0, 2.2)" opacity="0.85">
+    <path d="${renderSparkline(isUp)} L 350,120 L 0,120 Z" fill="url(#chartBgGrad)"/>
+    <path d="${renderSparkline(isUp)}" fill="none" stroke="${accentColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+  </g>
 
   <!-- Top Header Bar -->
-  <g transform="translate(80, 80)">
-    <!-- Status Dot -->
+  <g transform="translate(80, 85)">
     <circle cx="8" cy="14" r="6" fill="${COLORS.green}"/>
     <text x="28" y="20" class="mono" font-size="18" font-weight="600" fill="${COLORS.textPrimary}" letter-spacing="1.5">
       ${botName} ${o.dryRun ? '<tspan fill="' + COLORS.textMuted + '"></tspan>' : ''}
@@ -150,23 +165,21 @@ function buildSvg(o: CardOpts): string {
     </g>
   </g>
 
-  <!-- Divider -->
-  <line x1="80" y1="120" x2="1120" y2="120" stroke="${COLORS.border}" stroke-width="1"/>
+  <line x1="80" y1="125" x2="1120" y2="125" stroke="${COLORS.border}" stroke-width="1"/>
 
-  <!-- Middle Content Region -->
-  <!-- Left Column: Primary Signal Data -->
-  <g transform="translate(80, 160)">
+  <!-- Main Hero Section (In Front of Chart) -->
+  <g transform="translate(80, 165)">
     <text x="0" y="24" class="sans" font-size="20" font-weight="500" fill="${COLORS.textMuted}" letter-spacing="0.5">
       ${asset} <tspan fill="${COLORS.border}">|</tspan> ${windowLabel} WINDOW
     </text>
 
-    <!-- Oversized Hero Call -->
+    <!-- Signal Callout -->
     ${renderTriangle(heroTriangleCx, heroTriangleCy, heroTriangleSize, isUp, accentColor)}
     <text x="${heroTextX}" y="${heroBaselineY}" class="mono" font-size="96" font-weight="700" fill="${accentColor}" letter-spacing="-2">
       ${o.signal}
     </text>
 
-    <!-- Key Metrics Grid -->
+    <!-- Key Metrics Row -->
     <g transform="translate(0, 160)">
       <!-- Edge Card -->
       <rect x="0" y="0" width="220" height="72" rx="8" fill="${COLORS.bg}" stroke="${COLORS.border}" stroke-width="1"/>
@@ -180,25 +193,18 @@ function buildSvg(o: CardOpts): string {
     </g>
   </g>
 
-  <!-- Right Column: Visual Trend Chart -->
-  <g transform="translate(690, 170)">
-    <path d="${renderSparkline(isUp)} L 350,110 L 0,110 Z" fill="url(#sparklineGrad)"/>
-    <path d="${renderSparkline(isUp)}" fill="none" stroke="${accentColor}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-
-  <!-- Execution Reasoning Footer -->
-  <g transform="translate(80, 420)">
+  <!-- Execution Reasoning Log -->
+  <g transform="translate(80, 425)">
     <rect x="0" y="0" width="1040" height="44" rx="6" fill="${COLORS.bg}" stroke="${COLORS.border}" stroke-width="1"/>
     <text x="16" y="26" class="sans" font-size="14" fill="${COLORS.textMuted}">
       <tspan font-weight="600" fill="${COLORS.accent}">STRATEGY LOG:</tspan> ${cleanReason}
     </text>
   </g>
 
-  <!-- Bottom Track Record Footer -->
+  <!-- Bottom Track Record & Social Link Footer -->
   <g transform="translate(80, 510)">
     <line x1="0" y1="-10" x2="1040" y2="-10" stroke="${COLORS.border}" stroke-width="1"/>
 
-    <!-- Track Record Stats -->
     <text x="0" y="16" class="sans" font-size="11" font-weight="600" fill="${COLORS.textMuted}" letter-spacing="1">HISTORICAL WIN RATE</text>
     <text x="0" y="44" class="mono" font-size="24" font-weight="700" fill="${COLORS.textPrimary}">${wrStr}</text>
 
@@ -208,8 +214,9 @@ function buildSvg(o: CardOpts): string {
     <text x="640" y="16" class="sans" font-size="11" font-weight="600" fill="${COLORS.textMuted}" letter-spacing="1">CUMULATIVE PNL</text>
     <text x="640" y="44" class="mono" font-size="24" font-weight="700" fill="${pnlColor}">${pnlStr}</text>
 
-    <text x="1040" y="32" text-anchor="end" class="sans" font-size="12" fill="${COLORS.textMuted}">
-      dreamDEX Automated Signals
+    <!-- Channel Link Replacement -->
+    <text x="1040" y="32" text-anchor="end" class="mono" font-size="14" font-weight="600" fill="${COLORS.accent}">
+      t.me/binal_bot_signals
     </text>
   </g>
 </svg>`.trim();
