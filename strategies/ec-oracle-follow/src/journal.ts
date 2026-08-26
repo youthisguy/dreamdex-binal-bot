@@ -22,6 +22,7 @@ import type { EcContext } from "@dreamdex-bot-kit/ec-core";
 import { estimatePayout, settlementFeeBps } from "@dreamdex-bot-kit/ec-core";
 import { postSettlementReply, type SignalPost, type Stats } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
+import { scheduleCheckpoint } from "./checkpoint.js";
 
 const JOURNAL_PATH = process.env.JOURNAL_PATH ?? "logs/decisions.jsonl";
 
@@ -70,6 +71,11 @@ export function logDecision(rec: DecisionRecord): void {
     outcome: "PENDING",
     ...rec,
   });
+  // This is a "real trade event" per checkpoint.ts's own doc comment, but
+  // nothing was actually calling scheduleCheckpoint() anywhere in the repo —
+  // that's why commits weren't being written automatically. Fire-and-forget,
+  // never awaited, never throws into the caller.
+  scheduleCheckpoint(`decision:${rec.market_id}`);
 }
 
 export interface CycleSummary {
@@ -93,6 +99,7 @@ export interface SettlementRecord {
 
 export function logSettlement(rec: SettlementRecord): void {
   appendRecord({ type: "settlement", ...rec });
+  scheduleCheckpoint(`settlement:${rec.market_id}`);
 }
 
 interface PendingEntry {

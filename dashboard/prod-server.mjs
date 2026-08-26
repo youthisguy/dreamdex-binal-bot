@@ -17,7 +17,10 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, dirname, extname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
@@ -36,6 +39,36 @@ const server = createServer(async (req, res) => {
   if (req.url === "/healthz") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("ok");
+    return;
+  }
+
+  // Manual checkpoint trigger — same script the automatic post-trade
+  // checkpoint uses (see strategies/ec-oracle-follow's checkpoint.ts /
+  // scripts/checkpoint.sh), callable directly so you can test/force a
+  // commit+push without waiting for a trade. Runs scripts/checkpoint.sh
+  // straight from here (rather than importing checkpoint.ts) so this works
+  // regardless of how the TS workspace is built.
+  if (req.url === "/api/checkpoint" && req.method === "POST") {
+    const expected = process.env.CHECKPOINT_SECRET;
+    if (expected && req.headers["x-checkpoint-secret"] !== expected) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+    try {
+      const scriptPath = join(REPO_ROOT, "scripts", "checkpoint.sh");
+      const { stdout, stderr } = await execFileAsync("bash", [scriptPath], {
+        cwd: REPO_ROOT,
+        timeout: 60_000,
+      });
+      const output = (stdout + stderr).trim();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, output }));
+    } catch (e) {
+      const output = String((e?.stdout ?? "") + (e?.stderr ?? "")).trim() || e.message;
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "checkpoint script failed", output }));
+    }
     return;
   }
 
@@ -83,8 +116,8 @@ function startBot() {
   console.log("[prod-server] starting ec-oracle-follow...");
   const child = spawn("npm", ["start", "-w", "ec-oracle-follow"], {
     cwd: BOT_CWD,
-    env: process.env, // inherit Render's configured env vars (PRIVATE_KEY, TELEGRAM_*, OF_*, etc.)
-    stdio: "inherit", // bot's own logs flow straight into Render's log stream
+    env: process.env, 
+    stdio: "inherit", 
   });
 
   child.on("exit", (code, signal) => {

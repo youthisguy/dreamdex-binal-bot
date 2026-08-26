@@ -12,7 +12,10 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, dirname, extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
+const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 const JOURNAL_PATH = join(REPO_ROOT, "strategies/ec-oracle-follow/logs/decisions.jsonl");
@@ -26,6 +29,30 @@ const server = createServer(async (req, res) => {
   // allow cross-origin fetches in case the dashboard is ever opened from a
   // different port/host during development.
   res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.url === "/api/checkpoint" && req.method === "POST") {
+    const expected = process.env.CHECKPOINT_SECRET;
+    if (expected && req.headers["x-checkpoint-secret"] !== expected) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+    try {
+      const scriptPath = join(REPO_ROOT, "scripts", "checkpoint.sh");
+      const { stdout, stderr } = await execFileAsync("bash", [scriptPath], {
+        cwd: REPO_ROOT,
+        timeout: 60_000,
+      });
+      const output = (stdout + stderr).trim();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, output }));
+    } catch (e) {
+      const output = String((e?.stdout ?? "") + (e?.stderr ?? "")).trim() || e.message;
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "checkpoint script failed", output }));
+    }
+    return;
+  }
 
   if (req.url === "/decisions.jsonl") {
     try {

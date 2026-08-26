@@ -122,22 +122,17 @@ function signalKeyboard(asset: string, window: string, symbol: string): { inline
   const buttons: { text: string; url: string }[] = [];
   const dash = dashboardUrl();
   if (isPubliclyReachable(dash)) {
-    buttons.push({ text: "📊 Dashboard", url: dash });
+    buttons.push({ text: "🖥️ Dashboard", url: dash });
   } else {
     console.warn(`telegram: DASHBOARD_URL "${dash}" isn't publicly reachable — omitting Dashboard button`);
   }
-  buttons.push({ text: "⚡ Copy Trade", url: copyTradeUrl(asset, window, symbol) });
+  buttons.push({ text: "⚡ Trade", url: copyTradeUrl(asset, window, symbol) });
   return { inline_keyboard: [buttons] };
 }
 
 /**
  * Settlement replies get ONE button: the on-chain explorer page for this
- * exact market (DreamDEX/Somnia's own indexer explorer, e.g.
- * prd.smk.somnia.host/markets/{pool}) — the settled result's source of
- * truth, not the Dashboard/Copy-Trade pair the original signal used (that
- * market is already closed, "copy" no longer means anything for it).
- * Falls back to the same signalKeyboard() if explorerUrl wasn't available
- * (e.g. pool address missing), so a settlement reply is never buttonless.
+ * exact market (DreamDEX/Somnia's own indexer explorer
  */
 function explorerKeyboard(
   explorerUrl: string | null,

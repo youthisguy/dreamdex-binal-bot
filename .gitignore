@@ -12,6 +12,8 @@ dist/
 keystore.json
 .state/
 logs/
+!strategies/ec-oracle-follow/logs/
+!strategies/ec-oracle-follow/logs/decisions.jsonl
 artifacts/
 
 # python

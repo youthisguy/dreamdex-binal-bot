@@ -75,7 +75,13 @@ while [ "$attempt" -lt "$MAX_PUSH_RETRIES" ]; do
   # Merge remote into our detached/local commit. .gitattributes' union
   # driver handles decisions.jsonl conflicts by keeping both sides' lines;
   # -X ours is the fallback ONLY for files without a merge= attribute.
-  if git merge --no-edit -X ours "origin/$BRANCH" 2>&1; then
+  # --allow-unrelated-histories is a safety net: restore-and-start.sh's boot
+  # logic is responsible for giving this branch shared ancestry with origin
+  # up front, so this flag should normally be a no-op. It's here only so
+  # that if that boot-time step is ever skipped or fails silently, a
+  # checkpoint still succeeds (with an honest merge of two real histories)
+  # instead of hard-failing with "refusing to merge unrelated histories".
+  if git merge --no-edit --allow-unrelated-histories -X ours "origin/$BRANCH" 2>&1; then
     : # merged cleanly (or via union driver) — fall through to push
   else
     echo "checkpoint: merge with origin/$BRANCH had unresolved conflicts outside tracked paths — aborting merge, will retry"

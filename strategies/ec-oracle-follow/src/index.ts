@@ -185,6 +185,31 @@ const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS, EMA_F
 const position = new Positions();
 const lastTake = new Map<string, number>();
 const warned = new Set<string>();
+// Expiry per symbol we hold a position in, recorded the moment we take it.
+// position.clear() is normally driven by seeing isTradable()===false for a
+// market still returned by activeMarkets() — but once a market fully
+// settles, activeMarkets() may stop returning it at all, so takeOne() never
+// runs for that symbol again and clear() never fires. That leaves its
+// shares/exposure locked against MAX_SHARES/MAX_EXPOSURE forever, which is
+// exactly what produces a hard stop once totalNet() hits MAX_EXPOSURE (e.g.
+// 10 trades at MAX_SHARES=5 with MAX_EXPOSURE=50). sweepExpiredPositions()
+// below is a second, independent path to clear() that doesn't depend on
+// activeMarkets() still mentioning the symbol at all.
+const positionExpiry = new Map<string, number>();
+// Grace period past expiry before we assume a market has settled and release
+// its exposure — gives on-chain settlement time to actually land so we don't
+// clear a position that's still technically pending.
+const EXPIRY_CLEAR_GRACE_MS = envNum("OF_EXPIRY_CLEAR_GRACE_MS", 10 * 60_000);
+
+function sweepExpiredPositions(now: number): void {
+  for (const [symbol, expiryMs] of positionExpiry) {
+    if (now - expiryMs >= EXPIRY_CLEAR_GRACE_MS) {
+      position.clear(symbol);
+      positionExpiry.delete(symbol);
+      lastTake.delete(symbol);
+    }
+  }
+}
 
 /** What one cycle saw, so a quiet bot can still show its work. */
 interface Cycle {
@@ -252,6 +277,7 @@ async function takeOne(
     : null;
   if (!isTradable(onchain)) {
     position.clear(market.symbol);
+    positionExpiry.delete(market.symbol);
     lastTake.delete(market.symbol);
     warned.delete(`opp:${market.symbol}`);
     note(cycle, "not trading");
@@ -518,6 +544,7 @@ async function takeOne(
   // of what you want to see before handing it a funded key.
   position.add(market.symbol, leg, taken);
   lastTake.set(market.symbol, now);
+  if (info.expiryMs !== null) positionExpiry.set(market.symbol, info.expiryMs);
 
   logDecision({
     market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
@@ -635,6 +662,10 @@ async function main() {
       // Collect anything that settled since the last pass. Self-throttled
       // (AUTO_CLAIM_INTERVAL_MS) and a no-op under AUTO_CLAIM=false.
       await withTimeout(maybeClaim(ctx), 20_000, "maybeClaim");
+      // Independent of whatever activeMarkets() returns this cycle — see the
+      // comment on positionExpiry above for why this can't just rely on
+      // isTradable() being seen again for a symbol that already settled.
+      sweepExpiredPositions(Date.now());
       const markets = await withTimeout(activeMarkets(ctx), 20_000, "activeMarkets");
       for (const m of markets) {
         if (stop) break;
