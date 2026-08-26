@@ -50,9 +50,9 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 
 export interface SignalPost {
   marketId: string;
-  symbol: string;  
+  symbol: string; // e.g. "BTC-0-23AUG26-1630/tUSDC" — used to build the copy-trade link
   asset: string;
-  window: string; 
+  window: string; // e.g. "15m" — derived by the caller from the series cadence
   signal: "UP" | "DOWN";
   edge: number;
   disagreement: number;
@@ -60,9 +60,27 @@ export interface SignalPost {
   expiryMs: number | null;
   dryRun: boolean;
   stats: Stats;
+  /** The actual price paid/quoted for the leg — this venue's "odds" are the
+   *  price itself (0-1 = the probability), not a separate number. */
+  entryPrice: number;
+  /** The level this market settles against: a fixed strike, or the window's
+   *  own opening price for an up/down market (most of what we trade — see
+   *  signal.ts's Reference type). Null when unreadable. */
+  refPrice: number | null;
+  refKind: "strike" | "opening" | null;
+  /** DreamDEX/Somnia's own market explorer page (host derived from
+   *  ctx.config.indexer, path is /markets/{pool address}) — null if the
+   *  pool address wasn't available when this was built. */
+  explorerUrl: string | null;
 }
 
- 
+// DreamDEX's asset ticker on the trading-pair path segment isn't the same
+// string as our internal "asset" field (BTC/ETH) — it's the wrapped-token
+// pair, e.g. "WBTC:USDso". Confirmed against a real market URL:
+// https://app.dreamdex.io/event-contracts/WBTC:USDso/15m?market=...
+// Falls back to a same-pattern guess for any asset not in this map, so a
+// new asset doesn't silently produce a broken link — worth re-verifying
+// against the live app if DreamDEX ever adds one.
 const ASSET_PAIR: Record<string, string> = { BTC: "WBTC:USDso", ETH: "WETH:USDso" };
 
 function copyTradeUrl(asset: string, window: string, symbol: string): string {
@@ -108,8 +126,29 @@ function signalKeyboard(asset: string, window: string, symbol: string): { inline
   } else {
     console.warn(`telegram: DASHBOARD_URL "${dash}" isn't publicly reachable — omitting Dashboard button`);
   }
-  buttons.push({ text: "⚡ Trade", url: copyTradeUrl(asset, window, symbol) });
+  buttons.push({ text: "⚡ Copy Trade", url: copyTradeUrl(asset, window, symbol) });
   return { inline_keyboard: [buttons] };
+}
+
+/**
+ * Settlement replies get ONE button: the on-chain explorer page for this
+ * exact market (DreamDEX/Somnia's own indexer explorer, e.g.
+ * prd.smk.somnia.host/markets/{pool}) — the settled result's source of
+ * truth, not the Dashboard/Copy-Trade pair the original signal used (that
+ * market is already closed, "copy" no longer means anything for it).
+ * Falls back to the same signalKeyboard() if explorerUrl wasn't available
+ * (e.g. pool address missing), so a settlement reply is never buttonless.
+ */
+function explorerKeyboard(
+  explorerUrl: string | null,
+  asset: string,
+  window: string,
+  symbol: string,
+): { inline_keyboard: { text: string; url: string }[][] } {
+  if (explorerUrl && isPubliclyReachable(explorerUrl)) {
+    return { inline_keyboard: [[{ text: "🔗 View Market", url: explorerUrl }]] };
+  }
+  return signalKeyboard(asset, window, symbol);
 }
 
 function escapeHtml(s: string): string {
@@ -133,13 +172,23 @@ function signalCaption(p: SignalPost): string {
   const dryTag = p.dryRun ? " <i>(dry-run)</i>" : "";
   const arrow = p.signal === "UP" ? "🟢" : "🔴";
 
+  // Entry odds: on this venue, price IS the probability (0-1), so "odds" is
+  // just the entry price shown as a percentage — there's no separate
+  // odds/price conversion the way there would be on a fractional-odds book.
+  const oddsLine = `Entry: ${p.entryPrice.toFixed(3)} (${(p.entryPrice * 100).toFixed(1)}%)`;
+  const refLine =
+    p.refPrice !== null && p.refKind !== null
+      ? `${p.refKind === "opening" ? "Opening" : "Strike"}: ${p.refPrice.toFixed(2)}`
+      : null;
+
   return [
     `${arrow} <b>${escapeHtml(p.asset)} ${escapeHtml(p.window)}</b>`,
     ``,
     `<b>${p.signal}</b>  |  edge +${(p.edge * 100).toFixed(1)}%  |  ${escapeHtml(formatTimeLeft(p.expiryMs, now))}`,
+    [oddsLine, refLine].filter(Boolean).join("  |  "),
     escapeHtml(reason),
     ``,
-    `<i>Track record: ${wr} WR  |  ${pnl} PnL  (n=${p.stats.settledCount})</i>`,
+    `<i>Track record: ${wr} WR  |  ${pnl} PnL  (trades=${p.stats.settledCount})</i>`,
   ].join("\n");
 }
 
@@ -164,7 +213,7 @@ async function tgCall(method: string, body: Record<string, unknown>): Promise<an
   }
 }
 
-/** sendPhoto needs multipart/form-data since we're uploading raw bytes */
+/** sendPhoto needs multipart/form-data since we're uploading raw bytes, not a URL. */
 async function tgSendPhoto(opts: {
   photo: Buffer;
   caption: string;
@@ -235,16 +284,16 @@ export async function postSignal(p: SignalPost): Promise<number | null> {
 }
 
 export interface SettlementPost {
-  messageId: number; // the original signal post's message_id 
+  messageId: number; // the original signal post's message_id — we reply TO this, never edit it
   outcome: "WIN" | "LOSS" | "VOID";
   pnl: number;
-  stats: Stats;  
-  original: SignalPost;  
+  stats: Stats; // stats AFTER this settlement is included
+  original: SignalPost; // reused for the copy-trade link and a one-line recap
 }
 
 /**
  * Post the settlement result as a reply to the original signal message
- * Telegram renders the original as a tappable
+ * (rather than editing it). Telegram renders the original as a tappable
  * quote above this message, so followers can jump straight back to the
  * signal that triggered it.
  */
@@ -262,7 +311,7 @@ export async function postSettlementReply(s: SettlementPost): Promise<number | n
     ``,
     `<b>${badge}</b>  |  ${pnlStr} USDC`,
     ``,
-    `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (n=${s.stats.settledCount})</i>`,
+    `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (trades=${s.stats.settledCount})</i>`,
   ].join("\n");
 
   const result = await tgCall("sendMessage", {
@@ -271,7 +320,7 @@ export async function postSettlementReply(s: SettlementPost): Promise<number | n
     parse_mode: "HTML",
     disable_web_page_preview: true,
     reply_to_message_id: s.messageId,
-    reply_markup: signalKeyboard(s.original.asset, s.original.window, s.original.symbol),
+    reply_markup: explorerKeyboard(s.original.explorerUrl, s.original.asset, s.original.window, s.original.symbol),
   });
 
   return result?.message_id ?? null;

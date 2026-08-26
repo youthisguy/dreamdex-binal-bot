@@ -64,7 +64,6 @@ import { Positions } from "./position.js";
 import { logDecision, logCycleSummary, backfillSettlements, computeStats } from "./journal.js";
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
-import { createServer } from "node:http";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -177,20 +176,7 @@ const sleep = async (ms: number, stopped?: () => boolean) => {
   }
 };
 const log = (s: string) => console.log(`${new Date().toISOString()} ${s}`);
- /**
-  * Bare HTTP listener with no purpose beyond satisfying Render's free Web
-  * Service port-scan check — trading logic doesn't need a port at all.
-  * No-ops if PORT isn't set (local dev, or any platform that doesn't
-  * require one), so this is harmless outside Render.
-  */
- function startHealthServer(): void {
-   const port = process.env.PORT;
-   if (!port) return;
-   createServer((_req, res) => {
-     res.writeHead(200, { "Content-Type": "text/plain" });
-     res.end("ok");
-   }).listen(Number(port), () => log(`health endpoint listening on :${port}`));
- }
+
 // Retention is set by the volatility estimate, not by momentum: measuring how
 // much the underlying moves needs far more samples than one lookback window.
 const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS, EMA_FAST_SPAN, EMA_SLOW_SPAN);
@@ -255,6 +241,15 @@ async function takeOne(
   // 1) Authoritative status. The indexer lags; only this snapshot decides.
   const onchain = await marketOnchain(ctx, market);
   if (!onchain) return;
+  // DreamDEX/Somnia's own market explorer, e.g. https://dev.smk.somnia.host/markets/{pool}
+  // (prd.smk on mainnet) — host derived from ctx.config.indexerUrl so this
+  // automatically matches testnet/mainnet rather than hardcoding one.
+  // onchain.pool is the market's 20-byte contract address, NOT the same as
+  // info.marketId (a 32-byte indexer-side identifier) — confirmed against
+  // settlement.ts's own `address: onchain.pool` usage.
+  const explorerUrl = onchain.pool
+    ? `${ctx.config.indexerUrl.replace(/\/v1\/graphql$/, "")}/markets/${onchain.pool}`
+    : null;
   if (!isTradable(onchain)) {
     position.clear(market.symbol);
     lastTake.delete(market.symbol);
@@ -542,6 +537,9 @@ async function takeOne(
     momentum_used: useMomentum,
     reason: why,
     expiry_ms: info.expiryMs,
+    ref_price: ref?.price ?? null,
+    ref_kind: ref?.kind ?? null,
+    explorer_url: explorerUrl,
   });
 
   // Post to Telegram AFTER the journal write so a signal always shows up in
@@ -560,6 +558,10 @@ async function takeOne(
     momentumUsed: useMomentum,
     expiryMs: info.expiryMs,
     dryRun: ctx.config.dryRun,
+    entryPrice: price,
+    refPrice: ref?.price ?? null,
+    refKind: ref?.kind ?? null,
+    explorerUrl,
     stats: computeStats(),
   }).catch((e) => {
     console.error(`telegram post failed: ${(e as Error).message}`);
@@ -585,6 +587,9 @@ async function takeOne(
       momentum_used: useMomentum,
       reason: why,
       expiry_ms: info.expiryMs,
+      ref_price: ref?.price ?? null,
+      ref_kind: ref?.kind ?? null,
+      explorer_url: explorerUrl,
       telegram_message_id: messageId,
     });
   }
@@ -618,8 +623,6 @@ async function main() {
       `allowedWindows=${ALLOWED_WINDOW_MIN.length ? ALLOWED_WINDOW_MIN.join(",") + "min" : "ALL (unfiltered!)"}`,
   );
 
-  startHealthServer();
-
   let stop = false;
   const requestStop = () => (stop = true);
   process.on("SIGINT", requestStop);
@@ -636,6 +639,10 @@ async function main() {
       for (const m of markets) {
         if (stop) break;
         try {
+          // Per-market, not just per-cycle: one market's stalled RPC/indexer
+          // call must not freeze every other tradable market behind it for
+          // the rest of this cycle (or, since the loop is sequential, forever
+          // — see timeout.ts for why this can't be fixed inside the SDK itself).
           await withTimeout(takeOne(ctx, spot, refs, m, cycle), 20_000, `takeOne(${m.symbol})`);
         } catch (e) {
           log(`${m.symbol} error: ${(e as Error).message}`);
@@ -673,7 +680,8 @@ async function main() {
     }
     await sleep(INTERVAL_MS, () => stop);
   }
- 
+
+  // Nothing rests (IOC), so there is nothing to cancel on the way out.
   await shutdown(ctx);
   log("oracle-follow stopped");
 }

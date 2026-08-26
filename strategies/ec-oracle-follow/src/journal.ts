@@ -22,7 +22,6 @@ import type { EcContext } from "@dreamdex-bot-kit/ec-core";
 import { estimatePayout, settlementFeeBps } from "@dreamdex-bot-kit/ec-core";
 import { postSettlementReply, type SignalPost, type Stats } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
-import { scheduleCheckpoint } from "./checkpoint.js";
 
 const JOURNAL_PATH = process.env.JOURNAL_PATH ?? "logs/decisions.jsonl";
 
@@ -38,14 +37,6 @@ function appendRecord(record: Record<string, unknown>): void {
   ensureDir();
   const line = JSON.stringify({ timestamp: new Date().toISOString(), ...record }) + "\n";
   appendFileSync(JOURNAL_PATH, line);
-
-  // Trade events (a decision, its telegram_message_id follow-up, or a
-  // settlement) are durable-backed to GitHub so they survive Render's
-  // ephemeral disk across redeploys — see checkpoint.ts. Cycle summaries
-  // are excluded: they're recomputed every heartbeat  
-  if (record.type === "decision" || record.type === "settlement") {
-    scheduleCheckpoint(String(record.type));
-  }
 }
 
 export interface DecisionRecord {
@@ -55,7 +46,7 @@ export interface DecisionRecord {
   window: string; // e.g. "15m", "1h" — for display, not parsed back out
   side: "BUY_YES" | "BUY_NO";
   size: number;
-  price: number;
+  price: number; // entry odds — on this venue price IS the probability
   dry_run: boolean;
   signal: "UP" | "DOWN";
   fair_prob: number;
@@ -66,6 +57,9 @@ export interface DecisionRecord {
   momentum_used: boolean;
   reason: string;
   expiry_ms: number | null;
+  ref_price: number | null; // the strike, or the window's own opening price
+  ref_kind: "strike" | "opening" | null;
+  explorer_url: string | null; // DreamDEX/Somnia indexer's market page
   telegram_message_id?: number | null;
 }
 
@@ -115,6 +109,9 @@ interface PendingEntry {
   momentumUsed: boolean;
   expiryMs: number | null;
   dryRun: boolean;
+  refPrice: number | null;
+  refKind: "strike" | "opening" | null;
+  explorerUrl: string | null;
   telegramMessageId: number | null;
 }
 
@@ -154,6 +151,9 @@ function pendingMarketIds(): PendingEntry[] {
         momentumUsed: rec.momentum_used,
         expiryMs: rec.expiry_ms ?? null,
         dryRun: rec.dry_run,
+        refPrice: rec.ref_price ?? null,
+        refKind: rec.ref_kind ?? null,
+        explorerUrl: rec.explorer_url ?? null,
         telegramMessageId: rec.telegram_message_id ?? null,
       });
     } else if (rec.type === "settlement") {
@@ -251,6 +251,10 @@ export async function backfillSettlements(ctx: EcContext): Promise<number> {
           momentumUsed: p.momentumUsed,
           expiryMs: p.expiryMs,
           dryRun: p.dryRun,
+          entryPrice: p.price,
+          refPrice: p.refPrice,
+          refKind: p.refKind,
+          explorerUrl: p.explorerUrl,
           stats: computeStats(), // stats AFTER this settlement is already logged above
         };
         await postSettlementReply({ messageId: p.telegramMessageId, outcome, pnl, stats: original.stats, original }).catch(
