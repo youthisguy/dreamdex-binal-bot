@@ -590,6 +590,7 @@ async function takeOne(
     refKind: ref?.kind ?? null,
     explorerUrl,
     stats: computeStats(),
+    size: taken,
   }).catch((e) => {
     console.error(`telegram post failed: ${(e as Error).message}`);
     return null;
@@ -662,7 +663,7 @@ async function main() {
       // Collect anything that settled since the last pass. Self-throttled
       // (AUTO_CLAIM_INTERVAL_MS) and a no-op under AUTO_CLAIM=false.
       await withTimeout(maybeClaim(ctx), 20_000, "maybeClaim");
-      // Independent of whatever activeMarkets() returns this cycle — see the
+            // Independent of whatever activeMarkets() returns this cycle — see the
       // comment on positionExpiry above for why this can't just rely on
       // isTradable() being seen again for a symbol that already settled.
       sweepExpiredPositions(Date.now());

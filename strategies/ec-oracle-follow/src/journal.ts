@@ -71,10 +71,6 @@ export function logDecision(rec: DecisionRecord): void {
     outcome: "PENDING",
     ...rec,
   });
-  // This is a "real trade event" per checkpoint.ts's own doc comment, but
-  // nothing was actually calling scheduleCheckpoint() anywhere in the repo —
-  // that's why commits weren't being written automatically. Fire-and-forget,
-  // never awaited, never throws into the caller.
   scheduleCheckpoint(`decision:${rec.market_id}`);
 }
 
@@ -259,10 +255,11 @@ export async function backfillSettlements(ctx: EcContext): Promise<number> {
           expiryMs: p.expiryMs,
           dryRun: p.dryRun,
           entryPrice: p.price,
+          size: p.size,
           refPrice: p.refPrice,
           refKind: p.refKind,
           explorerUrl: p.explorerUrl,
-          stats: computeStats(), // stats AFTER this settlement is already logged above
+          stats: computeStats(),  
         };
         await postSettlementReply({ messageId: p.telegramMessageId, outcome, pnl, stats: original.stats, original }).catch(
           (e) => console.error(`telegram settlement reply failed: ${(e as Error).message}`),

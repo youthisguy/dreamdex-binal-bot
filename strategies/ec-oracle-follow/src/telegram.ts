@@ -1,6 +1,6 @@
 /**
  * Posts trade signals to a Telegram channel as a photo with two inline buttons 
- * — Dashboard and Copy Trade —
+ * — Dashboard and Trade —
  * and a short HTML caption. When the market settles, instead of editing that
  * post in place, we send a NEW message that REPLIES to it (Telegram's
  * reply_to_message_id): the client shows the original signal as a tappable
@@ -60,9 +60,10 @@ export interface SignalPost {
   expiryMs: number | null;
   dryRun: boolean;
   stats: Stats;
-  /** The actual price paid/quoted for the leg — this venue's "odds" are the
-   *  price itself (0-1 = the probability), not a separate number. */
   entryPrice: number;
+  /** Shares (contracts) actually filled — on this venue, cost in quote
+   *  currency is size * entryPrice, since price IS the probability/payout share. */
+  size: number;
   /** The level this market settles against: a fixed strike, or the window's
    *  own opening price for an up/down market (most of what we trade — see
    *  signal.ts's Reference type). Null when unreadable. */
@@ -94,12 +95,7 @@ function copyTradeUrl(asset: string, window: string, symbol: string): string {
 }
 
 // Telegram's servers reject inline-button URLs that point at localhost or a
-// private-network address ("Wrong HTTP URL") — a bare local dev DASHBOARD_URL
-// fails the WHOLE sendPhoto call, keyboard and photo included, not just that
-// one button. Detect that case and drop the Dashboard button instead, so
-// local/dry-run testing still posts (with just Copy Trade) instead of failing
-// outright. Once DASHBOARD_URL is swapped for a real public URL, this stops
-// triggering and the Dashboard button comes back automatically 
+// private-network address ("Wrong HTTP URL")
 function isPubliclyReachable(url: string): boolean {
   try {
     const { hostname, protocol } = new URL(url);
@@ -132,7 +128,8 @@ function signalKeyboard(asset: string, window: string, symbol: string): { inline
 
 /**
  * Settlement replies get ONE button: the on-chain explorer page for this
- * exact market (DreamDEX/Somnia's own indexer explorer
+ * exact market (DreamDEX/Somnia's own indexer explorer, e.g.
+ * prd.smk.somnia.host/markets/{pool}) 
  */
 function explorerKeyboard(
   explorerUrl: string | null,
@@ -171,6 +168,7 @@ function signalCaption(p: SignalPost): string {
   // just the entry price shown as a percentage — there's no separate
   // odds/price conversion the way there would be on a fractional-odds book.
   const oddsLine = `Entry: ${p.entryPrice.toFixed(3)} (${(p.entryPrice * 100).toFixed(1)}%)`;
+  const stakeLine = `Size: ${p.size} @ ~${(p.size * p.entryPrice).toFixed(2)} USDC`;
   const refLine =
     p.refPrice !== null && p.refKind !== null
       ? `${p.refKind === "opening" ? "Opening" : "Strike"}: ${p.refPrice.toFixed(2)}`
@@ -180,10 +178,10 @@ function signalCaption(p: SignalPost): string {
     `${arrow} <b>${escapeHtml(p.asset)} ${escapeHtml(p.window)}</b>`,
     ``,
     `<b>${p.signal}</b>  |  edge +${(p.edge * 100).toFixed(1)}%  |  ${escapeHtml(formatTimeLeft(p.expiryMs, now))}`,
-    [oddsLine, refLine].filter(Boolean).join("  |  "),
+    [oddsLine, stakeLine, refLine].filter(Boolean).join("  |  "),
     escapeHtml(reason),
     ``,
-    `<i>Track record: ${wr} WR  |  ${pnl} PnL  (trades=${p.stats.settledCount})</i>`,
+    `<i>Track record: ${wr} WR  |  ${pnl} PnL  (n=${p.stats.settledCount})</i>`,
   ].join("\n");
 }
 
@@ -282,8 +280,8 @@ export interface SettlementPost {
   messageId: number; // the original signal post's message_id — we reply TO this, never edit it
   outcome: "WIN" | "LOSS" | "VOID";
   pnl: number;
-  stats: Stats; // stats AFTER this settlement is included
-  original: SignalPost; // reused for the copy-trade link and a one-line recap
+  stats: Stats; 
+  original: SignalPost; 
 }
 
 /**
@@ -306,7 +304,7 @@ export async function postSettlementReply(s: SettlementPost): Promise<number | n
     ``,
     `<b>${badge}</b>  |  ${pnlStr} USDC`,
     ``,
-    `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (trades=${s.stats.settledCount})</i>`,
+    `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (n=${s.stats.settledCount})</i>`,
   ].join("\n");
 
   const result = await tgCall("sendMessage", {
