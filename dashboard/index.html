@@ -3,34 +3,38 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>dreamDEX Event Contracts — Agent Terminal</title>
+<title>Binal Agent Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0B0E14;
-    --surface: #12151C;
-    --surface-2: #171B24;
-    --border: #1E2530;
-    --text: #E4E7EC;
-    --text-muted: #7C8798;
+    --bg: #05070A;
+    --surface: #0B0F17;
+    --surface-2: #111724;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-bright: rgba(232, 163, 61, 0.3);
+    --text: #F0F4F8;
+    --text-muted: #64748B;
     
-    /* Semantic direction colors strictly reserved for directional data */
-    --pos: #16C784;
-    --pos-bg: rgba(22, 199, 132, 0.1);
-    --neg: #EA3943;
-    --neg-bg: rgba(234, 57, 67, 0.1);
+    --pos: #10B981;
+    --pos-bg: rgba(16, 185, 129, 0.12);
+    --neg: #EF4444;
+    --neg-bg: rgba(239, 68, 68, 0.12);
     
-    /* Dedicated interactive accent color */
-    --accent: #E8A33D;
-    --accent-bg: rgba(232, 163, 61, 0.12);
+    --accent: #F59E0B;
+    --accent-glow: rgba(245, 158, 11, 0.25);
+    --accent-bg: rgba(245, 158, 11, 0.12);
+
+    --grid-line: rgba(245, 158, 11, 0.15);
+    --grid-line-strong: rgba(255, 255, 255, 0.25);
 
     --font-mono: 'IBM Plex Mono', monospace;
     --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); min-height: 100%; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -39,17 +43,64 @@
     font-size: 13px;
     letter-spacing: normal;
     -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
   }
 
-  /* Monospaced numeric utility */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -20% -20% 20% -20%;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    transform: perspective(500px) rotateX(55deg);
+    transform-origin: top center;
+    -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 10%, #000 20%, transparent 80%);
+            mask-image: radial-gradient(ellipse 70% 50% at 50% 10%, #000 20%, transparent 80%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 15%, var(--grid-line-strong), transparent),
+      radial-gradient(1px 1px at 85% 10%, var(--grid-line-strong), transparent),
+      radial-gradient(1.5px 1.5px at 35% 55%, var(--grid-line-strong), transparent),
+      radial-gradient(1px 1px at 65% 35%, var(--grid-line-strong), transparent),
+      radial-gradient(2px 2px at 90% 70%, var(--grid-line-strong), transparent),
+      radial-gradient(1px 1px at 5% 80%, var(--grid-line-strong), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .bottom-glow {
+    position: fixed;
+    bottom: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120vw;
+    height: 350px;
+    background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.15) 0%, rgba(16, 185, 129, 0.05) 40%, transparent 75%);
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(40px);
+  }
+
+  header, .toolbar, .grid, .ticker-wrap { position: relative; z-index: 1; }
+
   .num {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
-  /* Top Ticker Tape */
   .ticker-wrap {
-    background: var(--surface);
+    background: rgba(11, 15, 23, 0.7);
+    backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border);
     overflow: hidden;
     white-space: nowrap;
@@ -70,14 +121,26 @@
   @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
   @media (prefers-reduced-motion: reduce) { .ticker { animation: none; padding-left: 0; } }
 
-  /* Header & Navigation Chrome */
   header {
     padding: 16px 24px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--border);
-    background: var(--bg);
+    background: rgba(5, 7, 10, 0.8);
+    backdrop-filter: blur(12px);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 0.5px solid var(--border-bright);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--surface);
   }
   h1 {
     font-family: var(--font-mono);
@@ -85,6 +148,9 @@
     font-size: 14px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   h1 .dim { color: var(--text-muted); font-weight: 400; }
   
@@ -101,7 +167,7 @@
     gap: 8px;
   }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
-  .dot.live { background: var(--pos); }
+  .dot.live { background: var(--pos); box-shadow: 0 0 8px var(--pos); }
 
   .refresh-btn {
     font-family: var(--font-mono);
@@ -112,18 +178,18 @@
     border-radius: 6px;
     padding: 4px 10px;
     cursor: pointer;
+    transition: all 0.2s ease;
   }
-  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
 
-  /* Toolbar Filter Segmented Control */
   .toolbar {
     padding: 12px 24px;
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    background: var(--bg);
+    background: transparent;
   }
-  .filters { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 2px; }
+  .filters { display: flex; gap: 4px; background: rgba(11, 15, 23, 0.8); border: 1px solid var(--border); border-radius: 6px; padding: 3px; backdrop-filter: blur(8px); }
   .filter-btn {
     font-family: var(--font-sans);
     font-size: 11px;
@@ -132,15 +198,15 @@
     letter-spacing: 0.04em;
     color: var(--text-muted);
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 4px;
     padding: 4px 10px;
     cursor: pointer;
+    transition: all 0.2s ease;
   }
-  .filter-btn.active { color: var(--text); background: var(--border); }
+  .filter-btn.active { color: var(--accent); background: var(--surface-2); border-color: rgba(245, 158, 11, 0.3); }
   .filter-btn:hover:not(.active) { color: var(--text); }
 
-  /* Core Layout Grid */
   .grid {
     display: grid;
     grid-template-columns: 420px 1fr;
@@ -149,12 +215,13 @@
   }
   @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
 
-  /* Quiet Card Elements */
   .card {
-    background: var(--surface);
+    background: rgba(11, 15, 23, 0.65);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 16px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   }
   .card-header {
     display: flex;
@@ -172,10 +239,9 @@
   }
   .card h2 .sub { color: var(--text-muted); text-transform: none; font-weight: 400; letter-spacing: normal; }
 
-  /* Stat Cards Matrix */
   .stat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
   .stat {
-    background: var(--bg);
+    background: rgba(5, 7, 10, 0.6);
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px 12px;
@@ -183,11 +249,9 @@
   .stat .label { font-size: 10px; color: var(--text-muted); font-family: var(--font-sans); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
   .stat .value { font-size: 18px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 2px; }
 
-  /* Color utilities for directional stats */
   .pos { color: var(--pos) !important; }
   .neg { color: var(--neg) !important; }
 
-  /* Tables */
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th {
     text-align: left;
@@ -201,7 +265,8 @@
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    background: var(--surface);
+    background: rgba(11, 15, 23, 0.95);
+    backdrop-filter: blur(4px);
   }
   th.num-col, td.num-col { text-align: right; }
   td {
@@ -216,53 +281,74 @@
   tr:hover td { background: var(--surface-2); }
   .reason-cell { color: var(--text-muted); max-width: 240px; font-family: var(--font-sans); font-size: 11px; white-space: normal; line-height: 1.3; }
 
-  /* Compact Badges */
   .outcome-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-family: var(--font-sans); font-weight: 600; text-transform: uppercase; }
-  .outcome-WIN { background: var(--pos-bg); color: var(--pos); }
-  .outcome-LOSS { background: var(--neg-bg); color: var(--neg); }
-  .outcome-VOID { background: rgba(124,135,152,0.12); color: var(--text-muted); }
-  .outcome-PENDING { background: var(--accent-bg); color: var(--accent); }
+  .outcome-WIN { background: var(--pos-bg); color: var(--pos); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .outcome-LOSS { background: var(--neg-bg); color: var(--neg); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .outcome-VOID { background: rgba(100, 116, 139, 0.12); color: var(--text-muted); border: 1px solid rgba(100, 116, 139, 0.3); }
+  .outcome-PENDING { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(245, 158, 11, 0.3); }
 
   .copy-link {
     font-family: var(--font-mono);
     font-size: 10px;
     color: var(--accent);
     text-decoration: none;
-    border: 1px solid rgba(232, 163, 61, 0.4);
+    border: 1px solid rgba(245, 158, 11, 0.4);
     border-radius: 4px;
     padding: 2px 6px;
     white-space: nowrap;
     display: inline-block;
+    transition: all 0.2s ease;
   }
-  .copy-link:hover { background: var(--accent); color: var(--bg); }
+  .copy-link:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 8px var(--accent-glow); }
 
   .empty-state { color: var(--text-muted); font-size: 12px; padding: 24px 0; text-align: center; font-family: var(--font-mono); }
 
   #pnlChart { max-height: 180px; }
 
   .scroll-body { max-height: 520px; overflow-y: auto; }
-  .scroll-body::-webkit-scrollbar { width: 4px; }
+  .scroll-body::-webkit-scrollbar { width: 4px; height: 4px; }
   .scroll-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-  /* Sit-out Bars */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-scroll::-webkit-scrollbar { height: 4px; }
+  .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 640px) {
+    header { padding: 12px 14px 10px; }
+    .toolbar { padding: 10px 14px; justify-content: flex-start; }
+    .filters { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter-btn { white-space: nowrap; }
+    .grid { padding: 0 14px 14px; gap: 12px; }
+    .card { padding: 12px; }
+    .stat-row { gap: 6px; }
+    .stat { padding: 8px 10px; }
+    .stat .value { font-size: 16px; }
+    h1 { font-size: 12px; }
+    .table-scroll table { min-width: 640px; }
+    .reason-cell { max-width: 200px; }
+  }
+
   .sitout-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
   .sitout-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 11px; }
   .sitout-row .reason { color: var(--text-muted); font-family: var(--font-sans); font-size: 11px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px; }
-  .sitout-bar-bg { flex: 1; height: 4px; background: var(--bg); border-radius: 2px; margin: 0 12px; overflow: hidden; border: 1px solid var(--border); }
-  .sitout-bar-fill { height: 100%; background: var(--text-muted); border-radius: 2px; }
+  .sitout-bar-bg { flex: 1; height: 4px; background: rgba(5, 7, 10, 0.6); border-radius: 2px; margin: 0 12px; overflow: hidden; border: 1px solid var(--border); }
+  .sitout-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
   .sitout-row .count { color: var(--text); min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
-
-  <div class="ticker-wrap"><div class="ticker" id="tickerTape"><span>waiting for a decision log to load…</span></div></div>
+  <div class="bottom-glow"></div>
 
   <header>
-    <h1>dreamDEX <span class="dim">/ event contracts agent terminal</span></h1>
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div class="brand">
+      <img class="brand-logo" src="https://i.ibb.co/rGs4v6Qk/IMG-8487.jpg" alt="logo" />
+      <!-- <h1>dreamDEX <span class="dim">/ event contracts agent terminal</span></h1> -->
+    </div>
+    <!-- <div style="display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
       <button class="refresh-btn" id="refreshBtn" title="Fetch now instead of waiting for the next poll">↻ Refresh</button>
       <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">no data loaded</span></div>
-    </div>
+    </div> -->
   </header>
 
   <div class="toolbar">
@@ -301,25 +387,27 @@
 
     <div class="card">
       <div class="card-header">
-        <h2>Decision Feed <span class="sub">— real-time stream</span></h2>
+        <h2>Decision Feed </h2>
       </div>
       <div class="scroll-body">
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Market</th>
-              <th>Signal</th>
-              <th class="num-col">Edge</th>
-              <th>Outcome</th>
-              <th class="num-col">PnL</th>
-              <th>Reasoning</th>
-            </tr>
-          </thead>
-          <tbody id="decisionRows">
-            <tr><td colspan="7" class="empty-state">no decisions logged yet</td></tr>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Market</th>
+                <th>Signal</th>
+                <th class="num-col">Edge</th>
+                <th>Outcome</th>
+                <th class="num-col">PnL</th>
+                <th>Reasoning</th>
+              </tr>
+            </thead>
+            <tbody id="decisionRows">
+              <tr><td colspan="7" class="empty-state">no decisions logged yet</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -449,19 +537,18 @@ function render() {
         </div>`).join("")
     : '<div class="empty-state">no sit-out data yet</div>';
 
-  // Render chart with dynamic directional gradient fill
   const chronoSettled = [...settled].sort((a, b) => new Date(a.settled_at) - new Date(b.settled_at));
   let cumulative = 0;
   const pnlSeries = chronoSettled.map(r => { cumulative += r.pnl; return cumulative; });
   const labels = chronoSettled.map(r => new Date(r.settled_at).toLocaleTimeString());
 
   const isPositiveTrend = (pnlSeries.length > 0 ? pnlSeries[pnlSeries.length - 1] : 0) >= 0;
-  const trendColor = isPositiveTrend ? "#16C784" : "#EA3943";
+  const trendColor = isPositiveTrend ? "#10B981" : "#EF4444";
 
   const ctx = document.getElementById("pnlChart").getContext("2d");
   const gradient = ctx.createLinearGradient(0, 0, 0, 180);
-  gradient.addColorStop(0, isPositiveTrend ? "rgba(22, 199, 132, 0.2)" : "rgba(234, 57, 67, 0.2)");
-  gradient.addColorStop(1, "rgba(11, 14, 20, 0.0)");
+  gradient.addColorStop(0, isPositiveTrend ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)");
+  gradient.addColorStop(1, "rgba(5, 7, 10, 0.0)");
 
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
@@ -487,8 +574,8 @@ function render() {
       scales: {
         x: { display: false },
         y: {
-          grid: { color: "#1E2530", drawTicks: false },
-          ticks: { color: "#7C8798", font: { family: "IBM Plex Mono", size: 10 } }
+          grid: { color: "rgba(255, 255, 255, 0.05)", drawTicks: false },
+          ticks: { color: "#64748B", font: { family: "IBM Plex Mono", size: 10 } }
         },
       },
     },
@@ -517,7 +604,7 @@ async function fetchAndRender() {
     allRecords = parseJsonl(text);
     render();
     liveMode = true;
-    document.getElementById("statusText").textContent = `${allRecords.length} records · live (${POLL_MS / 1000}s)`;
+    document.getElementById("statusText").textContent = `${allRecords.length} records`;
     return true;
   } catch {
     liveMode = false;

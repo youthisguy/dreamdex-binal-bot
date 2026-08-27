@@ -85,6 +85,7 @@ const EDGE = Number(process.env.OF_EDGE ?? 0.03);
 // likely explanation is that the model is wrong and the market knows something
 // it doesn't. Set to 0 or less to disable.
 const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
+const MIN_MARKET_PRICE = Number(process.env.OF_MIN_MARKET_PRICE ?? 0.35);
 const MAX_SHARES = envNum("OF_MAX_SHARES", 5);
 const MAX_EXPOSURE = envNum("OF_MAX_EXPOSURE", 50);
 const COOLDOWN_MS = envNum("OF_COOLDOWN_MS", 30_000);
@@ -423,6 +424,15 @@ async function takeOne(
   // is the raw-layer converter and returns scaled bigints.
   const fairFav = bullish ? pUp : 1 - pUp;
   const marketFair = bullish ? anchorUp : 1 - anchorUp;
+
+  // 8b) Refuse trades where the market itself already prices the favoured
+  // leg below MIN_MARKET_PRICE. This is a floor on marketFair, not on the
+  // edge or the model's fairFav — a wide edge at a low market price is
+  // exactly the shape a mispriced fair-value estimate takes.
+  if (MIN_MARKET_PRICE > 0 && marketFair < MIN_MARKET_PRICE) {
+    note(cycle, "market price below floor");
+    return;
+  }
 
   // 9) Sanity-check the model against the market before believing it. When the
   // model lands far from the market's mid, treat it as a bug rather than a
