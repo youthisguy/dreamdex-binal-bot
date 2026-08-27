@@ -52,6 +52,16 @@
     gap: 8px;
   }
 
+  .symbol-link {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border-bright);
+}
+.symbol-link:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
   header {
     display: flex;
     justify-content: space-between;
@@ -77,38 +87,67 @@
     color: var(--text-bright);
   }
   h1 .dim { color: var(--text-muted); font-weight: 400; }
+/* Toolbar & Filters – responsive */
+.toolbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex: 1;         
+  min-width: 0;        
+}
 
-  /* Toolbar & Filters */
-  .toolbar {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
+.filters {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  overflow-x: auto;              
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;          
+  max-width: 100%;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;                
+}
+
+.filter-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: none;
+  padding: 4px 16px;
+  cursor: pointer;
+  transition: background 0s, color 0s;
+  flex-shrink: 0;                 
+  white-space: nowrap;
+}
+
+.filter-btn.active,
+.filter-btn:hover {
+  color: var(--bg);
+  background: var(--accent);
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  header {
+    gap: 8px;
+    padding: 6px 8px;
   }
-  
-  .filters {
-    display: flex;
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
+
+  .brand h1 {
+    font-size: 12px;
   }
-  
+
   .filter-btn {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    background: var(--bg);
-    border: none;
-    padding: 4px 16px;
-    cursor: pointer;
-    transition: background 0s, color 0s;
+    padding: 4px 12px;            
   }
-  
-  .filter-btn.active, .filter-btn:hover {
-    color: var(--bg);
-    background: var(--accent);
-  }
+}
 
   /* Main Grid */
   .grid {
