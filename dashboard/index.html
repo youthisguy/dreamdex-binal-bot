@@ -1,608 +1,848 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Binal Agent Terminal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-  :root {
-    /* Quant Terminal Color Scheme */
-    --bg: #000000;
-    --surface: #0a0a0a;
-    --surface-2: #141414;
-    --border: #333333;
-    --border-bright: #555555;
-    
-    --text: #d0d0d0;
-    --text-muted: #777777;
-    --text-bright: #ffffff;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Binal Agent Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+      :root {
+        /* Quant Terminal Color Scheme */
+        --bg: #000000;
+        --surface: #0a0a0a;
+        --surface-2: #141414;
+        --border: #333333;
+        --border-bright: #555555;
 
-    --pos: #00ff00;
-    --pos-bg: rgba(0, 255, 0, 0.15);
-    --neg: #ff3333;
-    --neg-bg: rgba(255, 51, 51, 0.15);
+        --text: #d0d0d0;
+        --text-muted: #777777;
+        --text-bright: #ffffff;
 
-    --accent: #00ffff;
-    --accent-bg: rgba(0, 255, 255, 0.15);
+        --pos: #00ff00;
+        --pos-bg: rgba(0, 255, 0, 0.15);
+        --neg: #ff3333;
+        --neg-bg: rgba(255, 51, 51, 0.15);
 
-    --font-mono: 'IBM Plex Mono', 'Consolas', 'Courier New', monospace;
-  }
+        --accent: #00ffff;
+        --accent-bg: rgba(0, 255, 255, 0.15);
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    min-height: 100vh;
-    font-size: 12px;
-    -webkit-font-smoothing: none; /* Crisper rendering for small fonts */
-    overflow-x: hidden;
-  }
+        --font-mono: "IBM Plex Mono", "Consolas", "Courier New", monospace;
+      }
 
-  /* Structural Grid */
-  .layout-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    padding: 8px;
-    gap: 8px;
-  }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-  .symbol-link {
-  color: var(--text);
-  text-decoration: none;
-  border-bottom: 1px dashed var(--border-bright);
-}
-.symbol-link:hover {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
+      html,
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-mono);
+        min-height: 100vh;
+        font-size: 12px;
+        -webkit-font-smoothing: none; /* Crisper rendering for small fonts */
+        overflow-x: hidden;
+      }
 
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    flex-shrink: 0;
-  }
+      /* Structural Grid */
+      .layout-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 8px;
+        gap: 8px;
+      }
 
-  .brand { display: flex; align-items: center; gap: 12px; }
-  .brand-logo {
-    width: 20px;
-    height: 20px;
-    filter: grayscale(100%) contrast(120%);
-  }
-  
-  h1 {
-    font-weight: 600;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-bright);
-  }
-  h1 .dim { color: var(--text-muted); font-weight: 400; }
-/* Toolbar & Filters – responsive */
-.toolbar {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  flex: 1;         
-  min-width: 0;        
-}
+      .symbol-link {
+        color: var(--text);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--border-bright);
+      }
+      .symbol-link:hover {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
 
-.filters {
-  display: flex;
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  overflow-x: auto;              
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;          
-  max-width: 100%;
-}
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        flex-shrink: 0;
+      }
 
-.filters::-webkit-scrollbar {
-  display: none;                
-}
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-logo {
+        width: 20px;
+        height: 20px;
+        filter: grayscale(100%) contrast(120%);
+      }
 
-.filter-btn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: var(--bg);
-  border: none;
-  padding: 4px 16px;
-  cursor: pointer;
-  transition: background 0s, color 0s;
-  flex-shrink: 0;                 
-  white-space: nowrap;
-}
+      h1 {
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-bright);
+      }
+      h1 .dim {
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+      /* Toolbar & Filters – responsive */
+      .toolbar {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+      }
 
-.filter-btn.active,
-.filter-btn:hover {
-  color: var(--bg);
-  background: var(--accent);
-}
+      .filters {
+        display: flex;
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        max-width: 100%;
+      }
 
-/* Mobile adjustments */
-@media (max-width: 640px) {
-  header {
-    gap: 8px;
-    padding: 6px 8px;
-  }
+      .filters::-webkit-scrollbar {
+        display: none;
+      }
 
-  .brand h1 {
-    font-size: 12px;
-  }
+      .filter-btn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        background: var(--bg);
+        border: none;
+        padding: 4px 16px;
+        cursor: pointer;
+        transition: background 0s, color 0s;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
 
-  .filter-btn {
-    padding: 4px 12px;            
-  }
-}
+      .filter-btn.active,
+      .filter-btn:hover {
+        color: var(--bg);
+        background: var(--accent);
+      }
 
-  /* Main Grid */
-  .grid {
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 8px;
-    flex: 1;
-    min-height: 0; /* Important for scrollable children */
-  }
+      /* Mobile adjustments */
+      @media (max-width: 640px) {
+        header {
+          gap: 8px;
+          padding: 6px 8px;
+        }
 
-  @media (max-width: 1024px) { 
-    .grid { grid-template-columns: 1fr; display: flex; flex-direction: column; } 
-    .layout-wrapper { height: auto; }
-  }
+        .brand h1 {
+          font-size: 12px;
+        }
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  
-  .card-header {
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--border);
-    padding: 6px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-  
-  .card h2 {
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--accent);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-  }
-  
-  .card-body {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    flex: 1;
-    min-height: 0;
-  }
+        .filter-btn {
+          padding: 4px 12px;
+        }
+      }
 
-  /* Stats Panel */
-  .stat-grid { 
-    display: grid; 
-    grid-template-columns: repeat(2, 1fr); 
-    gap: 1px; 
-    background: var(--border); 
-    border: 1px solid var(--border);
-  }
-  .stat {
-    background: var(--bg);
-    padding: 8px 12px;
-    display: flex;
-    flex-direction: column;
-  }
-  .stat .label { 
-    font-size: 10px; 
-    color: var(--text-muted); 
-    text-transform: uppercase; 
-  }
-  .stat .value { 
-    font-size: 16px; 
-    font-weight: 600; 
-    margin-top: 4px; 
-  }
+      /* Main Grid */
+      .grid {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 8px;
+        flex: 1;
+        min-height: 0; /* Important for scrollable children */
+      }
 
-  .pos { color: var(--pos) !important; }
-  .neg { color: var(--neg) !important; }
+      @media (max-width: 1024px) {
+        .grid {
+          grid-template-columns: 1fr;
+          display: flex;
+          flex-direction: column;
+        }
+        .layout-wrapper {
+          height: auto;
+        }
+      }
 
-  /* Data Table */
-  .table-container {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: auto;
-    background: var(--bg);
-    border-top: 1px solid var(--border);
-  }
-  
-  .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
-  .table-container::-webkit-scrollbar-track { background: var(--surface); }
-  .table-container::-webkit-scrollbar-thumb { background: var(--border-bright); }
+      /* Footer */
+      .footer {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+      }
 
-  table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
-  
-  th {
-    text-align: left;
-    font-weight: 600;
-    color: var(--accent);
-    text-transform: uppercase;
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface-2);
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-  
-  th.num-col, td.num-col { text-align: right; }
-  
-  td {
-    padding: 6px 12px;
-    border-bottom: 1px solid #1a1a1a;
-    color: var(--text);
-  }
-  
-  tr:hover td { background: #111111; color: var(--text-bright); }
-  
-  .reason-cell { 
-    color: var(--text-muted); 
-    max-width: 250px; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-  }
+      .tg-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: color 0s;
+      }
 
-  .outcome-badge { 
-    display: inline-block; 
-    padding: 2px 6px; 
-    font-weight: 600; 
-    text-transform: uppercase; 
-    font-size: 10px;
-    border: 1px solid;
-  }
-  .outcome-WIN { background: var(--bg); color: var(--pos); border-color: var(--pos); }
-  .outcome-LOSS { background: var(--bg); color: var(--neg); border-color: var(--neg); }
-  .outcome-VOID { background: var(--bg); color: var(--text-muted); border-color: var(--text-muted); }
-  .outcome-PENDING { background: var(--bg); color: var(--accent); border-color: var(--accent); }
+      .tg-link:hover {
+        color: var(--accent);
+      }
 
-  .copy-link {
-    color: var(--accent);
-    text-decoration: none;
-    margin-left: 8px;
-    opacity: 0.6;
-  }
-  .copy-link:hover { opacity: 1; text-decoration: underline; }
+      .tg-logo {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        flex-shrink: 0;
+      }
 
-  /* Sit-out Bars */
-  .sitout-list { display: flex; flex-direction: column; gap: 4px; }
-  .sitout-row { 
-    display: flex; 
-    align-items: center; 
-    font-size: 11px; 
-  }
-  .sitout-row .reason { 
-    color: var(--text-muted); 
-    width: 140px;
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-  }
-  .sitout-bar-bg { 
-    flex: 1; 
-    height: 6px; 
-    background: var(--surface-2); 
-    margin: 0 8px; 
-    border: 1px solid var(--border);
-  }
-  .sitout-bar-fill { height: 100%; background: var(--text-muted); }
-  .sitout-row .count { width: 30px; text-align: right; color: var(--text-bright); }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
 
-  .empty-state { color: var(--text-muted); font-size: 11px; padding: 24px; text-align: center; }
+      .card-header {
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
+        padding: 6px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
 
-  #pnlChart { max-height: 160px; width: 100%; }
+      .card h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
 
-</style>
-</head>
-<body>
+      .card-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        flex: 1;
+        min-height: 0;
+      }
 
-<div class="layout-wrapper">
-  <header>
-    <div class="brand">
-      <h1>SYS<span class="dim">/ BINAL_AGENT</span></h1>
-    </div>
-    <div class="toolbar">
-      <div class="filters" id="filterBar">
-        <button class="filter-btn active" data-filter="all">ALL</button>
-        <button class="filter-btn" data-filter="trades">TRD</button>
-        <button class="filter-btn" data-filter="pending">PND</button>
-        <button class="filter-btn" data-filter="settled">STL</button>
-        <button class="filter-btn" data-filter="BTC">BTC</button>
-        <button class="filter-btn" data-filter="ETH">ETH</button>
-      </div>
-    </div>
-  </header>
+      /* Stats Panel */
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+      }
+      .stat {
+        background: var(--bg);
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+      }
+      .stat .label {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+      }
+      .stat .value {
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 4px;
+      }
 
-  <div class="grid">
-    <!-- Left Column: Stats & Charts -->
-    <div class="layout-column" style="display: flex; flex-direction: column; gap: 8px;">
-      
-      <div class="card">
-        <div class="card-header"><h2>SYSTEM PERFORMANCE</h2></div>
-        <div class="card-body">
-          <div class="stat-grid">
-            <div class="stat"><div class="label">WIN RATE</div><div class="value" id="statWinRate">–</div></div>
-            <div class="stat"><div class="label">TOTAL PNL</div><div class="value" id="statPnl">–</div></div>
-            <div class="stat"><div class="label">EXEC TRADES</div><div class="value" id="statTrades">–</div></div>
-            <div class="stat"><div class="label">SIT-OUT RATE</div><div class="value" id="statSitout">–</div></div>
+      .pos {
+        color: var(--pos) !important;
+      }
+      .neg {
+        color: var(--neg) !important;
+      }
+
+      /* Data Table */
+      .table-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: auto;
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+      }
+
+      .table-container::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .table-container::-webkit-scrollbar-track {
+        background: var(--surface);
+      }
+      .table-container::-webkit-scrollbar-thumb {
+        background: var(--border-bright);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--accent);
+        text-transform: uppercase;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-2);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+
+      th.num-col,
+      td.num-col {
+        text-align: right;
+      }
+
+      td {
+        padding: 6px 12px;
+        border-bottom: 1px solid #1a1a1a;
+        color: var(--text);
+      }
+
+      tr:hover td {
+        background: #111111;
+        color: var(--text-bright);
+      }
+
+      .reason-cell {
+        color: var(--text-muted);
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .outcome-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 10px;
+        border: 1px solid;
+      }
+      .outcome-WIN {
+        background: var(--bg);
+        color: var(--pos);
+        border-color: var(--pos);
+      }
+      .outcome-LOSS {
+        background: var(--bg);
+        color: var(--neg);
+        border-color: var(--neg);
+      }
+      .outcome-VOID {
+        background: var(--bg);
+        color: var(--text-muted);
+        border-color: var(--text-muted);
+      }
+      .outcome-PENDING {
+        background: var(--bg);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .copy-link {
+        color: var(--accent);
+        text-decoration: none;
+        margin-left: 8px;
+        opacity: 0.6;
+      }
+      .copy-link:hover {
+        opacity: 1;
+        text-decoration: underline;
+      }
+
+      /* Sit-out Bars */
+      .sitout-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sitout-row {
+        display: flex;
+        align-items: center;
+        font-size: 11px;
+      }
+      .sitout-row .reason {
+        color: var(--text-muted);
+        width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sitout-bar-bg {
+        flex: 1;
+        height: 6px;
+        background: var(--surface-2);
+        margin: 0 8px;
+        border: 1px solid var(--border);
+      }
+      .sitout-bar-fill {
+        height: 100%;
+        background: var(--text-muted);
+      }
+      .sitout-row .count {
+        width: 30px;
+        text-align: right;
+        color: var(--text-bright);
+      }
+
+      .empty-state {
+        color: var(--text-muted);
+        font-size: 11px;
+        padding: 24px;
+        text-align: center;
+      }
+
+      #pnlChart {
+        max-height: 160px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout-wrapper">
+      <header>
+        <div class="brand">
+          <h1>SYS<span class="dim">/ BINAL_AGENT</span></h1>
+        </div>
+        <div class="toolbar">
+          <div class="filters" id="filterBar">
+            <button class="filter-btn active" data-filter="all">ALL</button>
+            <button class="filter-btn" data-filter="trades">TRD</button>
+            <button class="filter-btn" data-filter="pending">PND</button>
+            <button class="filter-btn" data-filter="settled">STL</button>
+            <button class="filter-btn" data-filter="BTC">BTC</button>
+            <button class="filter-btn" data-filter="ETH">ETH</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- Left Column: Stats & Charts -->
+        <div
+          class="layout-column"
+          style="display: flex; flex-direction: column; gap: 8px"
+        >
+          <div class="card">
+            <div class="card-header"><h2>SYSTEM PERFORMANCE</h2></div>
+            <div class="card-body">
+              <div class="stat-grid">
+                <div class="stat">
+                  <div class="label">WIN RATE</div>
+                  <div class="value" id="statWinRate">–</div>
+                </div>
+                <div class="stat">
+                  <div class="label">TOTAL PNL</div>
+                  <div class="value" id="statPnl">–</div>
+                </div>
+                <div class="stat">
+                  <div class="label">EXEC TRADES</div>
+                  <div class="value" id="statTrades">–</div>
+                </div>
+                <div class="stat">
+                  <div class="label">SIT-OUT RATE</div>
+                  <div class="value" id="statSitout">–</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2>CUMULATIVE PNL (STL)</h2></div>
+            <div class="card-body" style="padding: 12px 12px 0 12px">
+              <canvas id="pnlChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2>EXECUTION SKIPS (LOG)</h2></div>
+            <div class="card-body">
+              <div class="sitout-list" id="sitoutList">
+                <div class="empty-state">AWAITING DATA...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Raw Data Feed -->
+        <div class="card">
+          <div class="card-header"><h2>DECISION FEED [LIVE]</h2></div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>TIME (SYS)</th>
+                  <th>MARKET/TICKER</th>
+                  <th>DIR</th>
+                  <th class="num-col">EDGE</th>
+                  <th>STATUS</th>
+                  <th class="num-col">PNL</th>
+                  <th>ALGO_REASONING</th>
+                </tr>
+              </thead>
+              <tbody id="decisionRows">
+                <tr>
+                  <td colspan="7" class="empty-state">
+                    NO DECISIONS MATCH FILTER OR LOG IS EMPTY
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-
-      <div class="card">
-        <div class="card-header"><h2>CUMULATIVE PNL (STL)</h2></div>
-        <div class="card-body" style="padding: 12px 12px 0 12px;">
-          <canvas id="pnlChart"></canvas>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header"><h2>EXECUTION SKIPS (LOG)</h2></div>
-        <div class="card-body">
-          <div class="sitout-list" id="sitoutList"><div class="empty-state">AWAITING DATA...</div></div>
-        </div>
-      </div>
-
+      <footer class="footer">
+        <a
+          href="https://t.me/binal_bot_signals"
+          target="_blank"
+          rel="noopener"
+          class="tg-link"
+          title="JOIN TG CHANNEL"
+        >
+          <!-- Pixelated TG logo (16×16 style) -->
+          <svg
+            class="tg-logo"
+            viewBox="0 0 16 16"
+            width="16"
+            height="16"
+            aria-hidden="true"
+          >
+            <rect width="16" height="16" fill="#0a0a0a" />
+            <path
+              fill="#00ffff"
+              d="M2 4h1v1H2V4zm1 1h1v1H3V5zm1 1h1v1H4V6zm1 1h1v1H5V7zm1 1h1v1H6V8zm1 1h1v1H7V9zm1 1h1v1H8v-1zm1 1h1v1H9v-1zm1 1h1v1h-1v-1zm1 1h1v1h-1v-1zm1 1h1v1h-1v-1zM3 3h1v1H3V3zm1-1h1v1H4V2zm1-1h1v1H5V1zm1 0h1v1H6V1zm1 0h1v1H7V1zm1 0h1v1H8V1zm1 0h1v1H9V1zm1 1h1v1h-1V2zm1 1h1v1h-1V3zm1 1h1v1h-1V4zm1 1h1v1h-1V5zm1 1h1v1h-1V6zm1 1h1v1h-1V7zm1 1h1v1h-1V8zm0 1h1v1h-1V9zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 0h1v1H9v-1zm-1 0h1v1H8v-1zm-1 0h1v1H7v-1zm-1 0h1v1H6v-1zm-1-1h1v1H5v-1zm-1-1h1v1H4v-1zm-1-1h1v1H3v-1zm-1-1h1v1H2V9zm0-1h1v1H2V8zm0-1h1v1H2V7zm0-1h1v1H2V6zm0-1h1v1H2V5z"
+            />
+            <!-- Cleaner paper-plane style pixel version -->
+            <path
+              fill="#00ffff"
+              d="M3 5h1v1H3V5zm1 0h1v1H4V5zm1 0h1v1H5V5zm1 0h1v1H6V5zm1 0h1v1H7V5zm1 0h1v1H8V5zm1 0h1v1H9V5zm1 0h1v1h-1V5zm1 1h1v1h-1V6zm0 1h1v1h-1V7zm-1 1h1v1h-1V8zm-1 1h1v1h-1V9zm-1 1h1v1H9v-1zm-1 0h1v1H8v-1zm-1 0h1v1H7v-1zm-1-1h1v1H6V9zm-1-1h1v1H5V8zm-1-1h1v1H4V7zm-1-1h1v1H3V6zm1-2h1v1H4V4zm1-1h1v1H5V3zm1 0h1v1H6V3zm1 0h1v1H7V3zm1 1h1v1H8V4zm1 1h1v1H9V5z"
+            />
+          </svg>
+          <span>JOIN TG</span>
+        </a>
+      </footer>
     </div>
 
-    <!-- Right Column: Raw Data Feed -->
-    <div class="card">
-      <div class="card-header"><h2>DECISION FEED [LIVE]</h2></div>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>TIME (SYS)</th>
-              <th>MARKET/TICKER</th>
-              <th>DIR</th>
-              <th class="num-col">EDGE</th>
-              <th>STATUS</th>
-              <th class="num-col">PNL</th>
-              <th>ALGO_REASONING</th>
-            </tr>
-          </thead>
-          <tbody id="decisionRows">
-            <tr><td colspan="7" class="empty-state">NO DECISIONS MATCH FILTER OR LOG IS EMPTY</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
+    <script>
+      let chart;
+      let allRecords = [];
+      let activeFilter = "all";
 
-<script>
-let chart;
-let allRecords = [];
-let activeFilter = "all";
+      const DREAMDEX_MARKET_BASE = "https://app.dreamdex.io/event-contracts";
+      const ASSET_PAIR = { BTC: "WBTC:USDso", ETH: "WETH:USDso" };
 
-const DREAMDEX_MARKET_BASE = "https://app.dreamdex.io/event-contracts";
-const ASSET_PAIR = { BTC: "WBTC:USDso", ETH: "WETH:USDso" };
-
-function copyTradeUrl(asset, window, symbol) {
-  const pair = ASSET_PAIR[asset] || `${asset}:USDso`;
-  return `${DREAMDEX_MARKET_BASE}/${pair}/${window}?market=${encodeURIComponent(symbol)}`;
-}
-
-function fmtPct(v) { return (v === null || v === undefined || isNaN(v)) ? "–" : (v * 100).toFixed(2) + "%"; }
-function fmtSigned(v) {
-  if (v === null || v === undefined || isNaN(v)) return "–";
-  const s = v >= 0 ? "+" : "";
-  return s + v.toFixed(4);
-}
-function fmtMoney(v) {
-  if (v === null || v === undefined || isNaN(v)) return "–";
-  const s = v >= 0 ? "+" : "";
-  return s + v.toFixed(3);
-}
-
-function parseJsonl(text) {
-  return text.split("\n").filter(l => l.trim()).map(l => {
-    try { return JSON.parse(l); } catch { return null; }
-  }).filter(Boolean);
-}
-
-function copyTradeLink(symbol) {
-  return `https://app.dreamdex.io/event-contracts?market=${encodeURIComponent(symbol)}`;
-}
-
-function joinRecords(records) {
-  const decisions = new Map();
-  const settlements = new Map();
-  const cycleSkips = {};
-  let totalScanned = 0, totalTradeDecisions = 0;
-
-  for (const r of records) {
-    if (r.type === "decision") {
-      decisions.set(r.market_id, r);
-      totalTradeDecisions++;
-    } else if (r.type === "settlement") {
-      settlements.set(r.market_id, r);
-    } else if (r.type === "cycle") {
-      totalScanned += r.scanned || 0;
-      for (const [reason, n] of Object.entries(r.skips || {})) {
-        cycleSkips[reason] = (cycleSkips[reason] || 0) + n;
+      function copyTradeUrl(asset, window, symbol) {
+        const pair = ASSET_PAIR[asset] || `${asset}:USDso`;
+        return `${DREAMDEX_MARKET_BASE}/${pair}/${window}?market=${encodeURIComponent(
+          symbol
+        )}`;
       }
-    }
-  }
 
-  const merged = [...decisions.values()].map(d => {
-    const s = settlements.get(d.market_id);
-    return {
-      ...d,
-      outcome: s ? s.outcome : "PENDING",
-      pnl: s ? s.pnl : null,
-      settled_at: s ? s.settled_at : null,
-    };
-  }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      function fmtPct(v) {
+        return v === null || v === undefined || isNaN(v)
+          ? "–"
+          : (v * 100).toFixed(2) + "%";
+      }
+      function fmtSigned(v) {
+        if (v === null || v === undefined || isNaN(v)) return "–";
+        const s = v >= 0 ? "+" : "";
+        return s + v.toFixed(4);
+      }
+      function fmtMoney(v) {
+        if (v === null || v === undefined || isNaN(v)) return "–";
+        const s = v >= 0 ? "+" : "";
+        return s + v.toFixed(3);
+      }
 
-  return { merged, cycleSkips, totalScanned, totalTradeDecisions };
-}
+      function parseJsonl(text) {
+        return text
+          .split("\n")
+          .filter((l) => l.trim())
+          .map((l) => {
+            try {
+              return JSON.parse(l);
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+      }
 
-function applyFilter(merged) {
-  switch (activeFilter) {
-    case "trades": return merged;
-    case "pending": return merged.filter(r => r.outcome === "PENDING");
-    case "settled": return merged.filter(r => r.outcome !== "PENDING");
-    case "BTC": return merged.filter(r => r.asset === "BTC");
-    case "ETH": return merged.filter(r => r.asset === "ETH");
-    default: return merged;
-  }
-}
+      function copyTradeLink(symbol) {
+        return `https://app.dreamdex.io/event-contracts?market=${encodeURIComponent(
+          symbol
+        )}`;
+      }
 
-function render() {
-  const { merged, cycleSkips, totalScanned, totalTradeDecisions } = joinRecords(allRecords);
+      function joinRecords(records) {
+        const decisions = new Map();
+        const settlements = new Map();
+        const cycleSkips = {};
+        let totalScanned = 0,
+          totalTradeDecisions = 0;
 
-  const settled = merged.filter(r => r.outcome === "WIN" || r.outcome === "LOSS");
-  const wins = settled.filter(r => r.outcome === "WIN").length;
-  document.getElementById("statWinRate").textContent = settled.length ? fmtPct(wins / settled.length) : "–";
-  
-  const totalPnl = settled.reduce((sum, r) => sum + (r.pnl || 0), 0);
-  const pnlEl = document.getElementById("statPnl");
-  pnlEl.textContent = settled.length ? fmtMoney(totalPnl) : "–";
-  pnlEl.className = "value " + (totalPnl > 0 ? "pos" : totalPnl < 0 ? "neg" : "");
-  
-  document.getElementById("statTrades").textContent = merged.length;
-  document.getElementById("statSitout").textContent = totalScanned
-    ? fmtPct(1 - totalTradeDecisions / Math.max(totalScanned, totalTradeDecisions))
-    : "–";
+        for (const r of records) {
+          if (r.type === "decision") {
+            decisions.set(r.market_id, r);
+            totalTradeDecisions++;
+          } else if (r.type === "settlement") {
+            settlements.set(r.market_id, r);
+          } else if (r.type === "cycle") {
+            totalScanned += r.scanned || 0;
+            for (const [reason, n] of Object.entries(r.skips || {})) {
+              cycleSkips[reason] = (cycleSkips[reason] || 0) + n;
+            }
+          }
+        }
 
-  const filtered = applyFilter(merged);
-  const rows = filtered.slice(0, 300).map(r => {
-    const sideClass = r.signal === "UP" ? "pos" : "neg";
-    const tradeUrl = (r.asset && r.symbol) ? copyTradeUrl(r.asset, r.window || "15m", r.symbol) : null;
-const symbolCell = tradeUrl
-  ? `<a href="${tradeUrl}" target="_blank" rel="noopener" class="symbol-link" title="TRADE">${r.symbol || ""}</a>`
-  : (r.symbol || "");
-    const time = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('en-GB') : ""; // 24h format fits terminal better
-    return `<tr>
+        const merged = [...decisions.values()]
+          .map((d) => {
+            const s = settlements.get(d.market_id);
+            return {
+              ...d,
+              outcome: s ? s.outcome : "PENDING",
+              pnl: s ? s.pnl : null,
+              settled_at: s ? s.settled_at : null,
+            };
+          })
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        return { merged, cycleSkips, totalScanned, totalTradeDecisions };
+      }
+
+      function applyFilter(merged) {
+        switch (activeFilter) {
+          case "trades":
+            return merged;
+          case "pending":
+            return merged.filter((r) => r.outcome === "PENDING");
+          case "settled":
+            return merged.filter((r) => r.outcome !== "PENDING");
+          case "BTC":
+            return merged.filter((r) => r.asset === "BTC");
+          case "ETH":
+            return merged.filter((r) => r.asset === "ETH");
+          default:
+            return merged;
+        }
+      }
+
+      function render() {
+        const { merged, cycleSkips, totalScanned, totalTradeDecisions } =
+          joinRecords(allRecords);
+
+        const settled = merged.filter(
+          (r) => r.outcome === "WIN" || r.outcome === "LOSS"
+        );
+        const wins = settled.filter((r) => r.outcome === "WIN").length;
+        document.getElementById("statWinRate").textContent = settled.length
+          ? fmtPct(wins / settled.length)
+          : "–";
+
+        const totalPnl = settled.reduce((sum, r) => sum + (r.pnl || 0), 0);
+        const pnlEl = document.getElementById("statPnl");
+        pnlEl.textContent = settled.length ? fmtMoney(totalPnl) : "–";
+        pnlEl.className =
+          "value " + (totalPnl > 0 ? "pos" : totalPnl < 0 ? "neg" : "");
+
+        document.getElementById("statTrades").textContent = merged.length;
+        document.getElementById("statSitout").textContent = totalScanned
+          ? fmtPct(
+              1 -
+                totalTradeDecisions /
+                  Math.max(totalScanned, totalTradeDecisions)
+            )
+          : "–";
+
+        const filtered = applyFilter(merged);
+        const rows = filtered
+          .slice(0, 300)
+          .map((r) => {
+            const sideClass = r.signal === "UP" ? "pos" : "neg";
+            const tradeUrl =
+              r.asset && r.symbol
+                ? copyTradeUrl(r.asset, r.window || "15m", r.symbol)
+                : null;
+            const symbolCell = tradeUrl
+              ? `<a href="${tradeUrl}" target="_blank" rel="noopener" class="symbol-link" title="TRADE">${
+                  r.symbol || ""
+                }</a>`
+              : r.symbol || "";
+            const time = r.timestamp
+              ? new Date(r.timestamp).toLocaleTimeString("en-GB")
+              : ""; // 24h format fits terminal better
+            return `<tr>
       <td>${time}</td>
       <td>
-        ${symbolCell} ${r.dry_run ? "<span style='color:var(--text-muted)'>[DRY]</span>" : ""}
-        <a class="copy-link" href="${copyTradeLink(r.symbol)}" target="_blank" rel="noopener">[TRD]</a>
+        ${symbolCell} ${
+              r.dry_run
+                ? "<span style='color:var(--text-muted)'>[DRY]</span>"
+                : ""
+            }
       </td>
       <td class="${sideClass}">${r.signal || ""}</td>
       <td class="num-col">${fmtSigned(r.edge)}</td>
-      <td><span class="outcome-badge outcome-${r.outcome}">${r.outcome}</span></td>
-      <td class="num-col ${r.pnl > 0 ? 'pos' : r.pnl < 0 ? 'neg' : ''}">${fmtMoney(r.pnl)}</td>
+      <td><span class="outcome-badge outcome-${r.outcome}">${
+              r.outcome
+            }</span></td>
+      <td class="num-col ${
+        r.pnl > 0 ? "pos" : r.pnl < 0 ? "neg" : ""
+      }">${fmtMoney(r.pnl)}</td>
       <td class="reason-cell" title="${r.reason || ""}">${r.reason || ""}</td>
     </tr>`;
-  }).join("");
-  document.getElementById("decisionRows").innerHTML = rows || '<tr><td colspan="7" class="empty-state">NO MATCHING DATA</td></tr>';
+          })
+          .join("");
+        document.getElementById("decisionRows").innerHTML =
+          rows ||
+          '<tr><td colspan="7" class="empty-state">NO MATCHING DATA</td></tr>';
 
-  const sortedSkips = Object.entries(cycleSkips).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const maxSkip = sortedSkips.length ? sortedSkips[0][1] : 1;
-  document.getElementById("sitoutList").innerHTML = sortedSkips.length
-    ? sortedSkips.map(([reason, n]) => `
+        const sortedSkips = Object.entries(cycleSkips)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8);
+        const maxSkip = sortedSkips.length ? sortedSkips[0][1] : 1;
+        document.getElementById("sitoutList").innerHTML = sortedSkips.length
+          ? sortedSkips
+              .map(
+                ([reason, n]) => `
         <div class="sitout-row">
           <span class="reason" title="${reason}">${reason}</span>
-          <span class="sitout-bar-bg"><span class="sitout-bar-fill" style="width:${(n / maxSkip * 100).toFixed(0)}%"></span></span>
+          <span class="sitout-bar-bg"><span class="sitout-bar-fill" style="width:${(
+            (n / maxSkip) *
+            100
+          ).toFixed(0)}%"></span></span>
           <span class="count">${n}</span>
-        </div>`).join("")
-    : '<div class="empty-state">NO SKIPS LOGGED</div>';
+        </div>`
+              )
+              .join("")
+          : '<div class="empty-state">NO SKIPS LOGGED</div>';
 
-  const chronoSettled = [...settled].sort((a, b) => new Date(a.settled_at) - new Date(b.settled_at));
-  let cumulative = 0;
-  const pnlSeries = chronoSettled.map(r => { cumulative += r.pnl; return cumulative; });
-  const labels = chronoSettled.map(r => new Date(r.settled_at).toLocaleTimeString('en-GB'));
+        const chronoSettled = [...settled].sort(
+          (a, b) => new Date(a.settled_at) - new Date(b.settled_at)
+        );
+        let cumulative = 0;
+        const pnlSeries = chronoSettled.map((r) => {
+          cumulative += r.pnl;
+          return cumulative;
+        });
+        const labels = chronoSettled.map((r) =>
+          new Date(r.settled_at).toLocaleTimeString("en-GB")
+        );
 
-  const isPositiveTrend = (pnlSeries.length > 0 ? pnlSeries[pnlSeries.length - 1] : 0) >= 0;
-  const trendColor = isPositiveTrend ? "#00ff00" : "#ff3333";
+        const isPositiveTrend =
+          (pnlSeries.length > 0 ? pnlSeries[pnlSeries.length - 1] : 0) >= 0;
+        const trendColor = isPositiveTrend ? "#00ff00" : "#ff3333";
 
-  const ctx = document.getElementById("pnlChart").getContext("2d");
+        const ctx = document.getElementById("pnlChart").getContext("2d");
 
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        data: pnlSeries,
-        borderColor: trendColor,
-        borderWidth: 1.5,
-        backgroundColor: "transparent",
-        stepped: true, // Creates terminal-like step progression rather than smooth lines
-        fill: false,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: trendColor,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { display: false },
-        y: {
-          position: 'right', // Standard for financial terminals
-          grid: { color: "#222222", drawTicks: false },
-          border: { display: false },
-          ticks: { color: "#777777", font: { family: "IBM Plex Mono", size: 10 } }
-        },
-      },
-      interaction: { intersect: false, mode: 'index' },
-    },
-  });
-}
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                data: pnlSeries,
+                borderColor: trendColor,
+                borderWidth: 1.5,
+                backgroundColor: "transparent",
+                stepped: true, // Creates terminal-like step progression rather than smooth lines
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: trendColor,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { display: false },
+              y: {
+                position: "right", // Standard for financial terminals
+                grid: { color: "#222222", drawTicks: false },
+                border: { display: false },
+                ticks: {
+                  color: "#777777",
+                  font: { family: "IBM Plex Mono", size: 10 },
+                },
+              },
+            },
+            interaction: { intersect: false, mode: "index" },
+          },
+        });
+      }
 
-document.getElementById("filterBar").addEventListener("click", (e) => {
-  if (!e.target.classList.contains("filter-btn")) return;
-  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-  e.target.classList.add("active");
-  activeFilter = e.target.dataset.filter;
-  render();
-});
+      document.getElementById("filterBar").addEventListener("click", (e) => {
+        if (!e.target.classList.contains("filter-btn")) return;
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        e.target.classList.add("active");
+        activeFilter = e.target.dataset.filter;
+        render();
+      });
 
-let pollTimer = null;
-const POLL_MS = 5000;
+      let pollTimer = null;
+      const POLL_MS = 5000;
 
-async function fetchAndRender() {
-  try {
-    const res = await fetch("/decisions.jsonl", { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    allRecords = parseJsonl(text);
-    render();
-    return true;
-  } catch (e) {
-    console.error("SYS FETCH ERR:", e);
-    return false;
-  }
-}
+      async function fetchAndRender() {
+        try {
+          const res = await fetch("/decisions.jsonl", { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const text = await res.text();
+          allRecords = parseJsonl(text);
+          render();
+          return true;
+        } catch (e) {
+          console.error("SYS FETCH ERR:", e);
+          return false;
+        }
+      }
 
-(async () => {
-  if (location.protocol === "file:") return;
-  await fetchAndRender();
-  pollTimer = setInterval(fetchAndRender, POLL_MS);
-})();
-</script>
-</body>
+      (async () => {
+        if (location.protocol === "file:") return;
+        await fetchAndRender();
+        pollTimer = setInterval(fetchAndRender, POLL_MS);
+      })();
+    </script>
+  </body>
 </html>
