@@ -197,6 +197,13 @@ const warned = new Set<string>();
 // below is a second, independent path to clear() that doesn't depend on
 // activeMarkets() still mentioning the symbol at all.
 const positionExpiry = new Map<string, number>();
+// Markets currently failing settlement backfill, keyed by market_id (not
+// symbol — a symbol can be reused across successive markets, a market_id
+// can't). Populated/cleared from backfillSettlements()'s result each
+// heartbeat. sweepExpiredPositions() consults this before releasing
+// exposure for a symbol, so a market that's failing to confirm on-chain
+// doesn't silently free its risk budget on a timer.
+const settlementFailures = new Map<string, { symbol: string; error: string; since: number }>();
 // Grace period past expiry before we assume a market has settled and release
 // its exposure — gives on-chain settlement time to actually land so we don't
 // clear a position that's still technically pending.
@@ -204,11 +211,23 @@ const EXPIRY_CLEAR_GRACE_MS = envNum("OF_EXPIRY_CLEAR_GRACE_MS", 10 * 60_000);
 
 function sweepExpiredPositions(now: number): void {
   for (const [symbol, expiryMs] of positionExpiry) {
-    if (now - expiryMs >= EXPIRY_CLEAR_GRACE_MS) {
-      position.clear(symbol);
-      positionExpiry.delete(symbol);
-      lastTake.delete(symbol);
+    if (now - expiryMs < EXPIRY_CLEAR_GRACE_MS) continue;
+
+    const failure = [...settlementFailures.values()].find((f) => f.symbol === symbol);
+    if (failure) {
+      // Don't silently release exposure for a market we know is failing to
+      // confirm on-chain — that's the exact state that produced the original
+      // stuck-exposure bug. Surface it instead of hiding it behind a timer.
+      log(
+        `WARNING: ${symbol} expired ${Math.round((now - expiryMs) / 60_000)}min ago but settlement ` +
+          `backfill is failing (${failure.error}) — exposure NOT released`,
+      );
+      continue;
     }
+
+    position.clear(symbol);
+    positionExpiry.delete(symbol);
+    lastTake.delete(symbol);
   }
 }
 
@@ -730,8 +749,19 @@ async function main() {
       // Backfill settlement outcomes for the dashboard, on the same throttle
       // as the heartbeat — this only reads chain state, it never redeems (that's
       // maybeClaim's job above), so it's safe to run in dry-run too.
-      backfillSettlements(ctx).catch((e) => log(`settlement backfill failed: ${(e as Error).message}`));
-    }
+      backfillSettlements(ctx)
+        .then(({ failed }) => {
+          const now = Date.now();
+          for (const f of failed) {
+            const prior = settlementFailures.get(f.marketId);
+            settlementFailures.set(f.marketId, { symbol: f.symbol, error: f.error, since: prior?.since ?? now });
+          }
+          // Drop anything that recovered (no longer reported as failing).
+          for (const marketId of [...settlementFailures.keys()]) {
+            if (!failed.some((f) => f.marketId === marketId)) settlementFailures.delete(marketId);
+          }
+        })
+        .catch((e) => log(`settlement backfill failed: ${(e as Error).message}`));    }
     await sleep(INTERVAL_MS, () => stop);
   }
 

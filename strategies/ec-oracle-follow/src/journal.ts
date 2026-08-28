@@ -205,9 +205,18 @@ export function computeStats(): Stats {
  * still `claim.ts`'s job, called separately). Failures on one market don't
  * block the rest — an indexer hiccup shouldn't stall the whole backfill.
  */
-export async function backfillSettlements(ctx: EcContext): Promise<number> {
+export interface SettlementFailure {
+  marketId: string;
+  symbol: string;
+  error: string;
+}
+
+export async function backfillSettlements(
+  ctx: EcContext,
+): Promise<{ settled: number; failed: SettlementFailure[] }> {
   const pending = pendingMarketIds();
   let settledCount = 0;
+  const failed: SettlementFailure[] = [];
 
   for (const p of pending) {
     try {
@@ -265,11 +274,16 @@ export async function backfillSettlements(ctx: EcContext): Promise<number> {
           (e) => console.error(`telegram settlement reply failed: ${(e as Error).message}`),
         );
       }
-    } catch {
-      // one market's indexer/chain call failing shouldn't stop the sweep
+    } catch (e) {
+      // one market's indexer/chain call failing shouldn't stop the sweep —
+      // but it must not vanish either. Loud + reported, so a stuck market
+      // is visible in the log and to the caller instead of just quietly
+      // never settling.
+      console.error(`backfillSettlements: ${p.marketId} (${p.symbol}) failed: ${(e as Error).message}`);
+      failed.push({ marketId: p.marketId, symbol: p.symbol, error: (e as Error).message });
       continue;
     }
   }
 
-  return settledCount;
+  return { settled: settledCount, failed };
 }
