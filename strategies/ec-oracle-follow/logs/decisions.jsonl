@@ -2018,3 +2018,4 @@
 {"timestamp":"2026-08-28T05:14:48.989Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"near expiry":2,"window not in OF_ALLOWED_WINDOWS_MIN":6}}
 {"timestamp":"2026-08-28T05:15:19.742Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"no momentum contribution (OF_REQUIRE_MOMENTUM)":2,"window not in OF_ALLOWED_WINDOWS_MIN":6}}
 {"timestamp":"2026-08-28T05:15:20.530Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000000ba55","outcome":"LOSS","pnl":-4.0200000000000005,"settled_at":"2026-08-28T05:15:20.530Z"}
+{"timestamp":"2026-08-28T05:15:22.024Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000000ba56","outcome":"WIN","pnl":0.7850000000000001,"settled_at":"2026-08-28T05:15:22.024Z"}
