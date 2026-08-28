@@ -467,6 +467,18 @@ async function takeOne(
   }
   const [askPx, askAmt] = top;
 
+  // 9b) EDGE alone doesn't account for WHERE on the probability scale the
+  // edge sits. A 3-cent edge at ask=0.85 clears the same EDGE threshold as a
+  // 3-cent edge at ask=0.50, but the breakeven win rate is completely
+  // different: buying at price p needs win_rate > p to profit, since price
+  // IS probability on this venue. Observed live: 77.8% win rate, avg entry
+  // ~0.82, net LOSS
+  const MAX_ENTRY_PRICE = Number(process.env.OF_MAX_ENTRY_PRICE ?? 0.7);
+  if (askPx > MAX_ENTRY_PRICE) {
+    note(cycle, `entry too rich (ask ${askPx.toFixed(2)} > OF_MAX_ENTRY_PRICE ${MAX_ENTRY_PRICE})`);
+    return;
+  }
+
   const short = askPx - (fairFav - EDGE); // how far the ask is from triggering
   if (short > 0) {
     if (!cycle.best || short < cycle.best.short) {
@@ -596,11 +608,11 @@ async function takeOne(
     expiryMs: info.expiryMs,
     dryRun: ctx.config.dryRun,
     entryPrice: price,
+    size: taken,
     refPrice: ref?.price ?? null,
     refKind: ref?.kind ?? null,
     explorerUrl,
     stats: computeStats(),
-    size: taken,
   }).catch((e) => {
     console.error(`telegram post failed: ${(e as Error).message}`);
     return null;
