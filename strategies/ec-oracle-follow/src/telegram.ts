@@ -1,12 +1,12 @@
 /**
- * Posts trade signals to a Telegram channel as a photo with two inline buttons 
+ * Posts trade signals to a Telegram channel as a photo with two inline buttons
  * — Dashboard and Trade —
  * and a short HTML caption. When the market settles, instead of editing that
  * post in place, we send a NEW message that REPLIES to it (Telegram's
  * reply_to_message_id): the client shows the original signal as a tappable
  * quote above the result, so a follower can jump straight to what triggered
- * the call. 
- * 
+ * the call.
+ *
  * Opt-in: everything here is a no-op (returns null / does nothing) unless
  * TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are set, so this never affects a
  * run that hasn't configured it. Telegram failures are caught and logged,
@@ -18,12 +18,16 @@ export type { Stats };
 
 const BOT_NAME = "Binal Bot";
 
-// Read lazily, NOT captured as module-level constants at import time.  
+// Read lazily, NOT captured as module-level constants at import time.
 const botToken = () => process.env.TELEGRAM_BOT_TOKEN;
 const chatId = () => process.env.TELEGRAM_CHAT_ID;
-const dashboardUrl = () => process.env.DASHBOARD_URL ?? "https://dreamdex-binal-bot.onrender.com";
-const copyBinalUrl = () => process.env.COPY_BINAL_URL ?? "https://dreamdex-binal-bot.onrender.com/copy-trade.html";
-const dreamdexMarketBase = () => process.env.DREAMDEX_MARKET_URL ?? "https://app.dreamdex.io/event-contracts";
+const dashboardUrl = () =>
+  process.env.DASHBOARD_URL ?? "https://dreamdex-binal-bot-ftt9.onrender.com";
+const copyBinalUrl = () =>
+  process.env.COPY_BINAL_URL ??
+  "https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html";
+const dreamdexMarketBase = () =>
+  process.env.DREAMDEX_MARKET_URL ?? "https://app.dreamdex.io/event-contracts";
 const apiBase = () => {
   const t = botToken();
   return t ? `https://api.telegram.org/bot${t}` : null;
@@ -39,7 +43,11 @@ const apiBase = () => {
 const JSON_CALL_TIMEOUT_MS = 8_000;
 const PHOTO_UPLOAD_TIMEOUT_MS = 15_000;
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -70,20 +78,13 @@ export interface SignalPost {
    *  signal.ts's Reference type). Null when unreadable. */
   refPrice: number | null;
   refKind: "strike" | "opening" | null;
-  /** DreamDEX/Somnia's own market explorer page (host derived from
-   *  ctx.config.indexer, path is /markets/{pool address}) — null if the
-   *  pool address wasn't available when this was built. */
   explorerUrl: string | null;
 }
 
-// DreamDEX's asset ticker on the trading-pair path segment isn't the same
-// string as our internal "asset" field (BTC/ETH) — it's the wrapped-token
-// pair, e.g. "WBTC:USDso". Confirmed against a real market URL:
-// https://app.dreamdex.io/event-contracts/WBTC:USDso/15m?market=...
-// Falls back to a same-pattern guess for any asset not in this map, so a
-// new asset doesn't silently produce a broken link — worth re-verifying
-// against the live app if DreamDEX ever adds one.
-const ASSET_PAIR: Record<string, string> = { BTC: "WBTC:USDso", ETH: "WETH:USDso" };
+const ASSET_PAIR: Record<string, string> = {
+  BTC: "WBTC:USDso",
+  ETH: "WETH:USDso",
+};
 
 function copyTradeUrl(asset: string, window: string, symbol: string): string {
   const pair = ASSET_PAIR[asset] ?? `${asset}:USDso`;
@@ -92,7 +93,9 @@ function copyTradeUrl(asset: string, window: string, symbol: string): string {
   // %3A, which doesn't match the real observed URL format (literal ":").
   // symbol DOES need encoding: it contains "/" (e.g. ".../tUSDC") which must
   // become %2F or it'd be read as an extra path segment instead of the query value.
-  return `${dreamdexMarketBase()}/${pair}/${window}?market=${encodeURIComponent(symbol)}`;
+  return `${dreamdexMarketBase()}/${pair}/${window}?market=${encodeURIComponent(
+    symbol
+  )}`;
 }
 
 // Telegram's servers reject inline-button URLs that point at localhost or a
@@ -115,40 +118,52 @@ function isPubliclyReachable(url: string): boolean {
   }
 }
 
-function signalKeyboard(asset: string, window: string, symbol: string): { inline_keyboard: { text: string; url: string }[][] } {
+function signalKeyboard(
+  asset: string,
+  window: string,
+  symbol: string
+): { inline_keyboard: { text: string; url: string }[][] } {
   const rows: { text: string; url: string }[][] = [];
 
   const dash = dashboardUrl();
   if (isPubliclyReachable(dash)) {
     rows.push([{ text: "🖥️ Binal Dashboard", url: dash }]);
   } else {
-    console.warn(`telegram: DASHBOARD_URL "${dash}" isn't publicly reachable — omitting Dashboard button`);
+    console.warn(
+      `telegram: DASHBOARD_URL "${dash}" isn't publicly reachable — omitting Dashboard button`
+    );
   }
 
   const copyBinal = copyBinalUrl();
   if (isPubliclyReachable(copyBinal)) {
     rows.push([{ text: "📋 Copy Binal", url: copyBinal }]);
   } else {
-    console.warn(`telegram: COPY_BINAL_URL "${copyBinal}" isn't publicly reachable — omitting Copy Binal button`);
+    console.warn(
+      `telegram: COPY_BINAL_URL "${copyBinal}" isn't publicly reachable — omitting Copy Binal button`
+    );
   }
 
-  rows.push([{ text: "⚡ Trade on DreamDex", url: copyTradeUrl(asset, window, symbol) }]);
+  rows.push([
+    { text: "⚡ Trade on DreamDex", url: copyTradeUrl(asset, window, symbol) },
+  ]);
   return { inline_keyboard: rows };
 }
 
 /**
  * Settlement replies get ONE button: the on-chain explorer page for this
  * exact market (DreamDEX/Somnia's own indexer explorer, e.g.
- * prd.smk.somnia.host/markets/{pool}) 
+ * prd.smk.somnia.host/markets/{pool})
  */
 function explorerKeyboard(
   explorerUrl: string | null,
   asset: string,
   window: string,
-  symbol: string,
+  symbol: string
 ): { inline_keyboard: { text: string; url: string }[][] } {
   if (explorerUrl && isPubliclyReachable(explorerUrl)) {
-    return { inline_keyboard: [[{ text: "🔗 View Market", url: explorerUrl }]] };
+    return {
+      inline_keyboard: [[{ text: "🔗 View Market", url: explorerUrl }]],
+    };
   }
   return signalKeyboard(asset, window, symbol);
 }
@@ -166,28 +181,37 @@ function signalCaption(p: SignalPost): string {
     edge: p.edge,
   });
 
-  const wr = p.stats.winRate === null 
-    ? "n/a" 
-    : `${(p.stats.winRate * 100).toFixed(1)}%`;
+  const wr =
+    p.stats.winRate === null ? "n/a" : `${(p.stats.winRate * 100).toFixed(1)}%`;
 
-  const pnl = `${p.stats.totalPnl >= 0 ? "+" : ""}${p.stats.totalPnl.toFixed(2)}`;
+  const pnl = `${p.stats.totalPnl >= 0 ? "+" : ""}${p.stats.totalPnl.toFixed(
+    2
+  )}`;
   const dryTag = p.dryRun ? " <i>(dry-run)</i>" : "";
   const arrow = p.signal === "UP" ? "🟢" : "🔴";
 
   // Entry odds: on this venue, price IS the probability (0-1), so "odds" is
   // just the entry price shown as a percentage — there's no separate
   // odds/price conversion the way there would be on a fractional-odds book.
-  const oddsLine = `Entry: ${p.entryPrice.toFixed(3)} (${(p.entryPrice * 100).toFixed(1)}%)`;
-  const stakeLine = `Size: ${p.size} @ ~${(p.size * p.entryPrice).toFixed(2)} USDC`;
+  const oddsLine = `Entry: ${p.entryPrice.toFixed(3)} (${(
+    p.entryPrice * 100
+  ).toFixed(1)}%)`;
+  const stakeLine = `Size: ${p.size} @ ~${(p.size * p.entryPrice).toFixed(
+    2
+  )} USDC`;
   const refLine =
     p.refPrice !== null && p.refKind !== null
-      ? `${p.refKind === "opening" ? "Opening" : "Strike"}: ${p.refPrice.toFixed(2)}`
+      ? `${
+          p.refKind === "opening" ? "Opening" : "Strike"
+        }: ${p.refPrice.toFixed(2)}`
       : null;
 
   return [
     `${arrow} <b>${escapeHtml(p.asset)} ${escapeHtml(p.window)}</b>`,
     ``,
-    `<b>${p.signal}</b>  |  edge +${(p.edge * 100).toFixed(1)}%  |  ${escapeHtml(formatTimeLeft(p.expiryMs, now))}`,
+    `<b>${p.signal}</b>  |  edge +${(p.edge * 100).toFixed(
+      1
+    )}%  |  ${escapeHtml(formatTimeLeft(p.expiryMs, now))}`,
     [oddsLine, stakeLine, refLine].filter(Boolean).join("  |  "),
     ``,
     escapeHtml(reason),
@@ -196,18 +220,31 @@ function signalCaption(p: SignalPost): string {
   ].join("\n");
 }
 
-async function tgCall(method: string, body: Record<string, unknown>): Promise<any | null> {
+async function tgCall(
+  method: string,
+  body: Record<string, unknown>
+): Promise<any | null> {
   const API = apiBase();
   if (!API) return null;
   try {
     const res = await fetchWithTimeout(
       `${API}/${method}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
-      JSON_CALL_TIMEOUT_MS,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      JSON_CALL_TIMEOUT_MS
     );
-    const data = (await res.json()) as { ok: boolean; description?: string; result?: any };
+    const data = (await res.json()) as {
+      ok: boolean;
+      description?: string;
+      result?: any;
+    };
     if (!data.ok) {
-      console.error(`telegram ${method} failed: ${data.description ?? "unknown error"}`);
+      console.error(
+        `telegram ${method} failed: ${data.description ?? "unknown error"}`
+      );
       return null;
     }
     return data.result;
@@ -233,13 +270,28 @@ async function tgSendPhoto(opts: {
     form.append("caption", opts.caption);
     form.append("parse_mode", "HTML");
     form.append("reply_markup", JSON.stringify(opts.keyboard));
-    if (opts.replyToMessageId) form.append("reply_to_message_id", String(opts.replyToMessageId));
-    form.append("photo", new Blob([opts.photo], { type: "image/png" }), "signal.png");
+    if (opts.replyToMessageId)
+      form.append("reply_to_message_id", String(opts.replyToMessageId));
+    form.append(
+      "photo",
+      new Blob([opts.photo], { type: "image/png" }),
+      "signal.png"
+    );
 
-    const res = await fetchWithTimeout(`${API}/sendPhoto`, { method: "POST", body: form }, PHOTO_UPLOAD_TIMEOUT_MS);
-    const data = (await res.json()) as { ok: boolean; description?: string; result?: any };
+    const res = await fetchWithTimeout(
+      `${API}/sendPhoto`,
+      { method: "POST", body: form },
+      PHOTO_UPLOAD_TIMEOUT_MS
+    );
+    const data = (await res.json()) as {
+      ok: boolean;
+      description?: string;
+      result?: any;
+    };
     if (!data.ok) {
-      console.error(`telegram sendPhoto failed: ${data.description ?? "unknown error"}`);
+      console.error(
+        `telegram sendPhoto failed: ${data.description ?? "unknown error"}`
+      );
       return null;
     }
     return data.result;
@@ -258,7 +310,11 @@ export async function postSignal(p: SignalPost): Promise<number | null> {
   if (!apiBase() || !chatId()) return null;
 
   const now = Date.now();
-  const reason = shortReason({ momentumUsed: p.momentumUsed, disagreement: p.disagreement, edge: p.edge });
+  const reason = shortReason({
+    momentumUsed: p.momentumUsed,
+    disagreement: p.disagreement,
+    edge: p.edge,
+  });
 
   let photo: Buffer;
   try {
@@ -291,27 +347,39 @@ export interface SettlementPost {
   messageId: number; // the original signal post's message_id — we reply TO this, never edit it
   outcome: "WIN" | "LOSS" | "VOID";
   pnl: number;
-  stats: Stats; 
-  original: SignalPost; 
+  stats: Stats;
+  original: SignalPost;
 }
 
 /**
  * Post the settlement result as a reply to the original signal message
- * (rather than editing it). Telegram renders the original as a tappable
+ * Telegram renders the original as a tappable
  * quote above this message, so followers can jump straight back to the
  * signal that triggered it.
  */
-export async function postSettlementReply(s: SettlementPost): Promise<number | null> {
+export async function postSettlementReply(
+  s: SettlementPost
+): Promise<number | null> {
   const CHAT_ID = chatId();
   if (!apiBase() || !CHAT_ID) return null;
 
-  const badge = s.outcome === "WIN" ? "✅ WIN" : s.outcome === "LOSS" ? "❌ LOSS" : "⚪ VOID";
+  const badge =
+    s.outcome === "WIN"
+      ? "✅ WIN"
+      : s.outcome === "LOSS"
+      ? "❌ LOSS"
+      : "⚪ VOID";
   const pnlStr = `${s.pnl >= 0 ? "+" : ""}${s.pnl.toFixed(3)}`;
-  const wr = s.stats.winRate === null ? "n/a" : `${(s.stats.winRate * 100).toFixed(1)}%`;
-  const totalPnl = `${s.stats.totalPnl >= 0 ? "+" : ""}${s.stats.totalPnl.toFixed(2)}`;
+  const wr =
+    s.stats.winRate === null ? "n/a" : `${(s.stats.winRate * 100).toFixed(1)}%`;
+  const totalPnl = `${
+    s.stats.totalPnl >= 0 ? "+" : ""
+  }${s.stats.totalPnl.toFixed(2)}`;
 
   const text = [
-    `<b>${escapeHtml(s.original.asset)} ${escapeHtml(s.original.window)}</b> settled`,
+    `<b>${escapeHtml(s.original.asset)} ${escapeHtml(
+      s.original.window
+    )}</b> settled`,
     ``,
     `<b>${badge}</b>  |  ${pnlStr} USDC`,
     ``,
@@ -324,7 +392,12 @@ export async function postSettlementReply(s: SettlementPost): Promise<number | n
     parse_mode: "HTML",
     disable_web_page_preview: true,
     reply_to_message_id: s.messageId,
-    reply_markup: explorerKeyboard(s.original.explorerUrl, s.original.asset, s.original.window, s.original.symbol),
+    reply_markup: explorerKeyboard(
+      s.original.explorerUrl,
+      s.original.asset,
+      s.original.window,
+      s.original.symbol
+    ),
   });
 
   return result?.message_id ?? null;
