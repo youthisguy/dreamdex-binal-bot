@@ -23,6 +23,7 @@ import { estimatePayout, settlementFeeBps } from "@dreamdex-bot-kit/ec-core";
 import { postSettlementReply, type SignalPost, type Stats } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
 import { scheduleCheckpoint } from "./checkpoint.js";
+import { notifyCopySettlement } from "./copy-signal.js";
 
 const JOURNAL_PATH = process.env.JOURNAL_PATH ?? "logs/decisions.jsonl";
 
@@ -250,6 +251,17 @@ export async function backfillSettlements(
 
       logSettlement({ market_id: p.marketId, outcome, pnl, settled_at: new Date().toISOString() });
       settledCount++;
+
+      // payoutPerShare lets the copy-service scale this exact outcome to
+      // whatever size each copying user actually holds, without needing its
+      // own ec-core access to recompute onchain/estimatePayout itself. VOID
+      // pays 0.5/share on both legs, same as the bot's own pnl math above.
+      notifyCopySettlement({
+        marketId: p.marketId,
+        outcome,
+        payoutPerShare: outcome === "VOID" ? 0.5 : pnl / p.size + p.price,
+        dryRun: p.dryRun,
+      });
 
       if (p.telegramMessageId) {
         const original: SignalPost = {

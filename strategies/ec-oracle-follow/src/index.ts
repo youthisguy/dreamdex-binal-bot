@@ -64,6 +64,7 @@ import { Positions } from "./position.js";
 import { logDecision, logCycleSummary, backfillSettlements, computeStats } from "./journal.js";
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
+import { notifyCopyService } from "./copy-signal.js";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -608,6 +609,23 @@ async function takeOne(
     ref_price: ref?.price ?? null,
     ref_kind: ref?.kind ?? null,
     explorer_url: explorerUrl,
+  });
+
+  // Notify the copy-trade service right after the journal write, same
+  // reasoning as Telegram below — never blocks or depends on the bot's own
+  // main loop, and never depends on Telegram's success/failure either.
+  notifyCopyService({
+    id: `${info.marketId}-${now}`,
+    marketId: info.marketId!,
+    symbol: market.symbol,
+    asset: info.asset,
+    window: windowLabel(info.intervalSec),
+    side,
+    price,
+    pool: onchain.pool,
+    expiryMs: info.expiryMs,
+    dryRun: ctx.config.dryRun,
+    timestamp: now,
   });
 
   // Post to Telegram AFTER the journal write so a signal always shows up in

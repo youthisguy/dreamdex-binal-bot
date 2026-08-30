@@ -10,6 +10,7 @@
       rel="stylesheet"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="9fda0d02-bb30-4ed0-8f88-b71a71d7a184"></script>
     <style>
       :root {
         /* Quant Terminal Color Scheme */
@@ -107,8 +108,29 @@
         display: flex;
         justify-content: flex-end;
         align-items: center;
+        gap: 10px;
         flex: 1;
         min-width: 0;
+      }
+
+      .copy-binal-btn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--bg);
+        background: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 5px 14px;
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background 0s, color 0s;
+      }
+      .copy-binal-btn:hover {
+        background: var(--text-bright);
+        border-color: var(--text-bright);
       }
 
       .filters {
@@ -461,6 +483,7 @@
             <button class="filter-btn" data-filter="BTC">BTC</button>
             <button class="filter-btn" data-filter="ETH">ETH</button>
           </div>
+          <a href="/copy-trade.html" class="copy-binal-btn">COPY BINAL</a>
         </div>
       </header>
 
@@ -831,7 +854,6 @@
         activeFilter = e.target.dataset.filter;
         render();
       });
-
       let pollTimer = null;
       const POLL_MS = 5000;
 
@@ -855,5 +877,6 @@
         pollTimer = setInterval(fetchAndRender, POLL_MS);
       })();
     </script>
+    
   </body>
 </html>

@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copy Binal Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="9fda0d02-bb30-4ed0-8f88-b71a71d7a184"></script>
+    <style>
+      :root {
+        /* Same Quant Terminal Color Scheme as the main dashboard */
+        --bg: #000000;
+        --surface: #0a0a0a;
+        --surface-2: #141414;
+        --border: #333333;
+        --border-bright: #555555;
+
+        --text: #d0d0d0;
+        --text-muted: #777777;
+        --text-bright: #ffffff;
+
+        --pos: #00ff00;
+        --pos-bg: rgba(0, 255, 0, 0.15);
+        --neg: #ff3333;
+        --neg-bg: rgba(255, 51, 51, 0.15);
+
+        --accent: #00ffff;
+        --accent-bg: rgba(0, 255, 255, 0.15);
+
+        --font-mono: "IBM Plex Mono", "Consolas", "Courier New", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-mono);
+        min-height: 100vh;
+        font-size: 12px;
+        -webkit-font-smoothing: none;
+        overflow-x: hidden;
+      }
+
+      .layout-wrapper {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding: 8px;
+        gap: 8px;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        flex-shrink: 0;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      h1 {
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-bright);
+      }
+      h1 .dim {
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+
+      .back-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px dashed var(--border-bright);
+      }
+      .back-link:hover {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      /* Buttons — same visual language as .filter-btn on the main dashboard */
+      .btn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-muted);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: background 0s, color 0s, border-color 0s;
+        white-space: nowrap;
+      }
+      .btn:hover:not(:disabled) {
+        color: var(--bg);
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn.primary {
+        color: var(--bg);
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .btn.primary:hover:not(:disabled) {
+        background: var(--text-bright);
+        border-color: var(--text-bright);
+      }
+      .btn.danger {
+        border-color: var(--neg);
+        color: var(--neg);
+      }
+      .btn.danger:hover:not(:disabled) {
+        background: var(--neg);
+        color: var(--bg);
+      }
+
+      .wallet-box {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .wallet-addr {
+        font-size: 11px;
+        color: var(--text-bright);
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        background: var(--surface-2);
+      }
+      .net-badge {
+        font-size: 10px;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border: 1px solid;
+        letter-spacing: 0.03em;
+      }
+      .net-badge.ok {
+        color: var(--pos);
+        border-color: var(--pos);
+      }
+      .net-badge.bad {
+        color: var(--neg);
+        border-color: var(--neg);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+           /* Footer */
+           .footer {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .tg-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: color 0s;
+      }
+
+      .tg-link:hover {
+        color: var(--accent);
+      }
+
+      .tg-logo {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        flex-shrink: 0;
+      }
+
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .card-header {
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
+        padding: 6px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .card h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
+      .card-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+      }
+      .stat {
+        background: var(--bg);
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+      }
+      .stat .label {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+      }
+      .stat .value {
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 4px;
+      }
+      .pos {
+        color: var(--pos) !important;
+      }
+      .neg {
+        color: var(--neg) !important;
+      }
+
+      .field-row {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .field-row label {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 4px;
+      }
+      .field-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      input[type="text"],
+      input[type="number"] {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-bright);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 7px 10px;
+        width: 100%;
+      }
+      input[type="text"]:focus,
+      input[type="number"]:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      input:disabled {
+        opacity: 0.4;
+      }
+
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        background: var(--bg);
+      }
+      .toggle-row .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--text);
+      }
+      .toggle-row .sub {
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .status-line {
+        font-size: 11px;
+        color: var(--text-muted);
+        min-height: 14px;
+      }
+      .status-line.err {
+        color: var(--neg);
+      }
+      .status-line.ok {
+        color: var(--pos);
+      }
+
+      .hint {
+        font-size: 10px;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      /* Data Table — matches main dashboard */
+      .table-container {
+        overflow-x: auto;
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+        max-height: 340px;
+        overflow-y: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--accent);
+        text-transform: uppercase;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-2);
+        position: sticky;
+        top: 0;
+      }
+      th.num-col,
+      td.num-col {
+        text-align: right;
+      }
+      td {
+        padding: 6px 12px;
+        border-bottom: 1px solid #1a1a1a;
+        color: var(--text);
+      }
+      tr:hover td {
+        background: #111111;
+        color: var(--text-bright);
+      }
+      .rank-cell {
+        color: var(--text-muted);
+        width: 30px;
+      }
+      .empty-state {
+        color: var(--text-muted);
+        font-size: 11px;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .footer {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout-wrapper">
+      <header>
+        <div class="brand">
+          <h1>SYS<span class="dim">/ COPY_TRADE</span></h1>
+          <a class="back-link" href="/index.html">&larr; DASHBOARD</a>
+        </div>
+        <div class="wallet-box">
+          <span id="netBadge" class="net-badge" style="display: none"></span>
+          <span id="walletAddr" class="wallet-addr" style="display: none"></span>
+          <button id="connectBtn" class="btn primary">CONNECT WALLET</button>
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- Left: Account controls -->
+        <div class="card">
+          <div class="card-header"><h2>MY COPY ACCOUNT</h2></div>
+          <div class="card-body">
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="label">Idle Balance</div>
+                <div class="value" id="statBalance">–</div>
+              </div>
+              <div class="stat">
+                <div class="label">Locked In Trades</div>
+                <div class="value" id="statLocked">–</div>
+              </div>
+              <div class="stat">
+                <div class="label">My PNL</div>
+                <div class="value" id="statPnl">–</div>
+              </div>
+              <div class="stat">
+                <div class="label">Win Rate</div>
+                <div class="value" id="statWinRate">–</div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-col">
+                <label>Deposit Amount (USDso)</label>
+                <input type="number" id="depositAmt" placeholder="0.00" min="0" step="0.01" disabled />
+              </div>
+              <button id="depositBtn" class="btn" style="align-self: end" disabled>DEPOSIT</button>
+            </div>
+
+            <div class="field-row">
+              <div class="field-col">
+                <label>Withdraw Amount (USDso)</label>
+                <input type="number" id="withdrawAmt" placeholder="0.00" min="0" step="0.01" disabled />
+              </div>
+              <button id="withdrawBtn" class="btn danger" style="align-self: end" disabled>WITHDRAW</button>
+            </div>
+
+            <div class="field-row">
+              <div class="field-col">
+                <label>Max Per-Trade Size (USDso)</label>
+                <input type="number" id="tradeSizeAmt" placeholder="e.g. 15" min="0" step="0.01" disabled />
+              </div>
+              <button id="tradeSizeBtn" class="btn" style="align-self: end" disabled>SET CAP</button>
+            </div>
+            <div class="hint">
+              Caps every single copy trade at this amount, regardless of idle balance —
+              e.g. deposit 100, set this to 15, and the bot can never commit more than
+              15 USDso to any one position.
+            </div>
+
+            <div class="toggle-row">
+              <div>
+                <div class="label">COPY BINAL SIGNALS</div>
+                <div class="sub" id="copyStatusSub">Requires a trade-size cap to be set first</div>
+              </div>
+              <button id="copyToggleBtn" class="btn" disabled>ENABLE</button>
+            </div>
+
+            <div id="statusLine" class="status-line"></div>
+          </div>
+        </div>
+
+        <!-- Right: Recent trades for the connected wallet -->
+        <div class="card">
+          <div class="card-header"><h2>MY RECENT COPY TRADES</h2></div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>MARKET</th>
+                  <th>DIR</th>
+                  <th class="num-col">COLLATERAL</th>
+                  <th>STATUS</th>
+                  <th class="num-col">PNL</th>
+                </tr>
+              </thead>
+              <tbody id="myTradesRows">
+                <tr><td colspan="5" class="empty-state">CONNECT WALLET TO VIEW</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: Leaderboard -->
+      <div class="card">
+        <div class="card-header">
+          <h2>COPY TRADER LEADERBOARD</h2>
+          <span id="activeCopiers" class="hint">–</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="rank-cell">#</th>
+                <th>WALLET</th>
+                <th class="num-col">PNL</th>
+                <th class="num-col">WIN RATE</th>
+                <th class="num-col">SETTLED</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardRows">
+              <tr><td colspan="5" class="empty-state">LOADING...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <footer class="footer">
+        <a
+          href="https://t.me/binal_bot_signals"
+          target="_blank"
+          rel="noopener"
+          class="tg-link"
+          title="JOIN TG CHANNEL"
+        >
+          <!-- Pixelated TG logo (16×16 style) -->
+          <svg
+            class="tg-logo"
+            viewBox="0 0 16 16"
+            width="16"
+            height="16"
+            aria-hidden="true"
+          >
+            <rect width="16" height="16" fill="#0a0a0a" />
+            <path
+              fill="#00ffff"
+              d="M2 4h1v1H2V4zm1 1h1v1H3V5zm1 1h1v1H4V6zm1 1h1v1H5V7zm1 1h1v1H6V8zm1 1h1v1H7V9zm1 1h1v1H8v-1zm1 1h1v1H9v-1zm1 1h1v1h-1v-1zm1 1h1v1h-1v-1zm1 1h1v1h-1v-1zM3 3h1v1H3V3zm1-1h1v1H4V2zm1-1h1v1H5V1zm1 0h1v1H6V1zm1 0h1v1H7V1zm1 0h1v1H8V1zm1 0h1v1H9V1zm1 1h1v1h-1V2zm1 1h1v1h-1V3zm1 1h1v1h-1V4zm1 1h1v1h-1V5zm1 1h1v1h-1V6zm1 1h1v1h-1V7zm1 1h1v1h-1V8zm0 1h1v1h-1V9zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 1h1v1h-1v-1zm-1 0h1v1H9v-1zm-1 0h1v1H8v-1zm-1 0h1v1H7v-1zm-1 0h1v1H6v-1zm-1-1h1v1H5v-1zm-1-1h1v1H4v-1zm-1-1h1v1H3v-1zm-1-1h1v1H2V9zm0-1h1v1H2V8zm0-1h1v1H2V7zm0-1h1v1H2V6zm0-1h1v1H2V5z"
+            />
+            <!-- Cleaner paper-plane style pixel version -->
+            <path
+              fill="#00ffff"
+              d="M3 5h1v1H3V5zm1 0h1v1H4V5zm1 0h1v1H5V5zm1 0h1v1H6V5zm1 0h1v1H7V5zm1 0h1v1H8V5zm1 0h1v1H9V5zm1 0h1v1h-1V5zm1 1h1v1h-1V6zm0 1h1v1h-1V7zm-1 1h1v1h-1V8zm-1 1h1v1h-1V9zm-1 1h1v1H9v-1zm-1 0h1v1H8v-1zm-1 0h1v1H7v-1zm-1-1h1v1H6V9zm-1-1h1v1H5V8zm-1-1h1v1H4V7zm-1-1h1v1H3V6zm1-2h1v1H4V4zm1-1h1v1H5V3zm1 0h1v1H6V3zm1 0h1v1H7V3zm1 1h1v1H8V4zm1 1h1v1H9V5z"
+            />
+          </svg>
+          <span>JOIN TG</span>
+        </a>
+      </footer>
+    </div>
+
+    <script>
+      // ── Config — fill in for your deployment ─────────────────────────
+      const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com"; 
+      const VAULT_ADDRESS = "0x874B144BAE16133e2B6fCFAeF1C0050D03D60734";  
+
+      const SOMNIA_TESTNET = {
+        chainIdHex: "0xc488", // 50312
+        chainName: "Somnia Shannon Testnet",
+        nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
+        rpcUrls: ["https://dream-rpc.somnia.network"],
+      };
+
+      const VAULT_ABI = [
+        "function collateralToken() view returns (address)",
+        "function getAccount(address user) view returns (uint256 balance, uint256 lockedInTrades, bool copyEnabled, uint256 tradeSize)",
+        "function deposit(uint256 amount)",
+        "function withdraw(uint256 amount)",
+        "function setCopyEnabled(bool enabled)",
+        "function setTradeSize(uint256 newSize)",
+      ];
+      const ERC20_ABI = [
+        "function decimals() view returns (uint8)",
+        "function symbol() view returns (string)",
+        "function balanceOf(address) view returns (uint256)",
+        "function approve(address spender, uint256 amount) returns (bool)",
+        "function allowance(address owner, address spender) view returns (uint256)",
+      ];
+
+      let provider, signer, address, vault, token, tokenDecimals = 18;
+      let accountState = { balance: 0, lockedInTrades: 0, copyEnabled: false, tradeSize: 0 };
+
+      const els = {
+        connectBtn: document.getElementById("connectBtn"),
+        walletAddr: document.getElementById("walletAddr"),
+        netBadge: document.getElementById("netBadge"),
+        depositAmt: document.getElementById("depositAmt"),
+        depositBtn: document.getElementById("depositBtn"),
+        withdrawAmt: document.getElementById("withdrawAmt"),
+        withdrawBtn: document.getElementById("withdrawBtn"),
+        tradeSizeAmt: document.getElementById("tradeSizeAmt"),
+        tradeSizeBtn: document.getElementById("tradeSizeBtn"),
+        copyToggleBtn: document.getElementById("copyToggleBtn"),
+        copyStatusSub: document.getElementById("copyStatusSub"),
+        statusLine: document.getElementById("statusLine"),
+        statBalance: document.getElementById("statBalance"),
+        statLocked: document.getElementById("statLocked"),
+        statPnl: document.getElementById("statPnl"),
+        statWinRate: document.getElementById("statWinRate"),
+        myTradesRows: document.getElementById("myTradesRows"),
+        leaderboardRows: document.getElementById("leaderboardRows"),
+        activeCopiers: document.getElementById("activeCopiers"),
+      };
+
+      function setStatus(msg, kind) {
+        els.statusLine.textContent = msg || "";
+        els.statusLine.className = "status-line" + (kind ? " " + kind : "");
+      }
+      function fmt(n, dp = 4) {
+        return n === null || n === undefined || isNaN(n) ? "–" : Number(n).toFixed(dp);
+      }
+      function fmtSigned(n, dp = 3) {
+        if (n === null || n === undefined || isNaN(n)) return "–";
+        return (n >= 0 ? "+" : "") + Number(n).toFixed(dp);
+      }
+      function shortAddr(a) {
+        return a.slice(0, 6) + "…" + a.slice(-4);
+      }
+
+      // ── Network handling ──────────────────────────────────────────────
+      async function ensureNetwork() {
+        const chainId = await window.ethereum.request({ method: "eth_chainId" });
+        if (chainId.toLowerCase() === SOMNIA_TESTNET.chainIdHex) {
+          els.netBadge.textContent = "SOMNIA TESTNET";
+          els.netBadge.className = "net-badge ok";
+          els.netBadge.style.display = "inline-block";
+          return true;
+        }
+        els.netBadge.textContent = "WRONG NETWORK";
+        els.netBadge.className = "net-badge bad";
+        els.netBadge.style.display = "inline-block";
+        try {
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: SOMNIA_TESTNET.chainIdHex }],
+          });
+          return ensureNetwork();
+        } catch (switchErr) {
+          if (switchErr.code === 4902) {
+            try {
+              await window.ethereum.request({
+                method: "wallet_addEthereumChain",
+                params: [
+                  {
+                    chainId: SOMNIA_TESTNET.chainIdHex,
+                    chainName: SOMNIA_TESTNET.chainName,
+                    nativeCurrency: SOMNIA_TESTNET.nativeCurrency,
+                    rpcUrls: SOMNIA_TESTNET.rpcUrls,
+                  },
+                ],
+              });
+              return ensureNetwork();
+            } catch (addErr) {
+              setStatus(`couldn't add Somnia Shannon Testnet: ${addErr.message}`, "err");
+              return false;
+            }
+          }
+          setStatus(`couldn't switch network: ${switchErr.message}`, "err");
+          return false;
+        }
+      }
+
+      // ── Wallet connect ───────────────────────────────────────────────
+      async function connect() {
+        if (!window.ethereum) {
+          setStatus("no injected wallet found — install MetaMask", "err");
+          return;
+        }
+        try {
+          els.connectBtn.disabled = true;
+          els.connectBtn.textContent = "CONNECTING...";
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          address = ethers.getAddress(accounts[0]);
+          const netOk = await ensureNetwork();
+          if (!netOk) {
+            els.connectBtn.disabled = false;
+            els.connectBtn.textContent = "CONNECT WALLET";
+            return;
+          }
+          provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+          vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
+          const tokenAddr = await vault.collateralToken();
+          token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+          tokenDecimals = await token.decimals();
+
+          els.walletAddr.textContent = shortAddr(address);
+          els.walletAddr.style.display = "inline-block";
+          els.connectBtn.textContent = "CONNECTED";
+          [els.depositAmt, els.depositBtn, els.withdrawAmt, els.withdrawBtn, els.tradeSizeAmt, els.tradeSizeBtn].forEach(
+            (el) => (el.disabled = false),
+          );
+
+          // Let the backend know this wallet exists — read-only registration,
+          // never signs or submits anything on the user's behalf.
+          fetch(`${COPY_SERVICE_URL}/api/copy/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ wallet: address }),
+          }).catch(() => {});
+
+          await refreshAccount();
+          await refreshMyTrades();
+          setStatus("wallet connected", "ok");
+        } catch (e) {
+          setStatus(`connect failed: ${e.message}`, "err");
+          els.connectBtn.disabled = false;
+          els.connectBtn.textContent = "CONNECT WALLET";
+        }
+      }
+      els.connectBtn.addEventListener("click", connect);
+
+      // ── On-chain actions ──────────────────────────────────────────────
+      async function refreshAccount() {
+        const [balance, lockedInTrades, copyEnabled, tradeSize] = await vault.getAccount(address);
+        accountState = {
+          balance: Number(ethers.formatUnits(balance, tokenDecimals)),
+          lockedInTrades: Number(ethers.formatUnits(lockedInTrades, tokenDecimals)),
+          copyEnabled,
+          tradeSize: Number(ethers.formatUnits(tradeSize, tokenDecimals)),
+        };
+        els.statBalance.textContent = fmt(accountState.balance, 2);
+        els.statLocked.textContent = fmt(accountState.lockedInTrades, 2);
+        els.copyToggleBtn.disabled = accountState.tradeSize <= 0;
+        els.copyToggleBtn.textContent = accountState.copyEnabled ? "DISABLE" : "ENABLE";
+        els.copyToggleBtn.className = "btn" + (accountState.copyEnabled ? " danger" : " primary");
+        els.copyStatusSub.textContent = accountState.copyEnabled
+          ? `Live — copying every signal up to ${fmt(accountState.tradeSize, 2)} USDso/trade`
+          : accountState.tradeSize > 0
+            ? "Trade-size cap set"
+            : "Requires a trade-size cap to be set first";
+
+        // Pull PNL/winRate from the copy-service (it tracks settlement history)
+        try {
+          const res = await fetch(`${COPY_SERVICE_URL}/api/copy/me?wallet=${address}`);
+          const data = await res.json();
+          els.statPnl.textContent = fmtSigned(data.pnl, 2);
+          els.statPnl.className = "value " + (data.pnl > 0 ? "pos" : data.pnl < 0 ? "neg" : "");
+          els.statWinRate.textContent = data.winRate === null ? "–" : (data.winRate * 100).toFixed(1) + "%";
+        } catch {
+          // copy-service unreachable — on-chain stats above still show, just skip pnl/winrate
+        }
+      }
+
+      async function ensureAllowance(amountRaw) {
+        const allowance = await token.allowance(address, VAULT_ADDRESS);
+        if (allowance < amountRaw) {
+          setStatus("approving...", null);
+          const tx = await token.approve(VAULT_ADDRESS, amountRaw);
+          await tx.wait();
+        }
+      }
+
+      els.depositBtn.addEventListener("click", async () => {
+        const amt = parseFloat(els.depositAmt.value);
+        if (!(amt > 0)) return setStatus("enter a deposit amount", "err");
+        try {
+          els.depositBtn.disabled = true;
+          const amountRaw = ethers.parseUnits(amt.toString(), tokenDecimals);
+          await ensureAllowance(amountRaw);
+          setStatus("depositing...", null);
+          const tx = await vault.deposit(amountRaw);
+          await tx.wait();
+          els.depositAmt.value = "";
+          await refreshAccount();
+          setStatus(`deposited ${amt} USDso`, "ok");
+        } catch (e) {
+          setStatus(`deposit failed: ${e.shortMessage ?? e.message}`, "err");
+        } finally {
+          els.depositBtn.disabled = false;
+        }
+      });
+
+      els.withdrawBtn.addEventListener("click", async () => {
+        const amt = parseFloat(els.withdrawAmt.value);
+        if (!(amt > 0)) return setStatus("enter a withdraw amount", "err");
+        try {
+          els.withdrawBtn.disabled = true;
+          const amountRaw = ethers.parseUnits(amt.toString(), tokenDecimals);
+          setStatus("withdrawing...", null);
+          const tx = await vault.withdraw(amountRaw);
+          await tx.wait();
+          els.withdrawAmt.value = "";
+          await refreshAccount();
+          setStatus(`withdrew ${amt} USDso`, "ok");
+        } catch (e) {
+          setStatus(`withdraw failed: ${e.shortMessage ?? e.message}`, "err");
+        } finally {
+          els.withdrawBtn.disabled = false;
+        }
+      });
+
+      els.tradeSizeBtn.addEventListener("click", async () => {
+        const amt = parseFloat(els.tradeSizeAmt.value);
+        if (!(amt > 0)) return setStatus("enter a per-trade cap", "err");
+        try {
+          els.tradeSizeBtn.disabled = true;
+          const amountRaw = ethers.parseUnits(amt.toString(), tokenDecimals);
+          setStatus("setting trade size...", null);
+          const tx = await vault.setTradeSize(amountRaw);
+          await tx.wait();
+          els.tradeSizeAmt.value = "";
+          await refreshAccount();
+          setStatus(`per-trade cap set to ${amt} USDso`, "ok");
+        } catch (e) {
+          setStatus(`set trade size failed: ${e.shortMessage ?? e.message}`, "err");
+        } finally {
+          els.tradeSizeBtn.disabled = false;
+        }
+      });
+
+      els.copyToggleBtn.addEventListener("click", async () => {
+        const enabling = !accountState.copyEnabled;
+        try {
+          els.copyToggleBtn.disabled = true;
+          setStatus(enabling ? "enabling copy trading..." : "disabling copy trading...", null);
+          const tx = await vault.setCopyEnabled(enabling);
+          await tx.wait();
+          await refreshAccount();
+          setStatus(enabling ? "copy trading ON" : "copy trading OFF — no new positions will open", "ok");
+        } catch (e) {
+          setStatus(`toggle failed: ${e.shortMessage ?? e.message}`, "err");
+        } finally {
+          els.copyToggleBtn.disabled = accountState.tradeSize <= 0;
+        }
+      });
+
+      // ── Read-only data from the copy-service ────────────────────────
+      async function refreshMyTrades() {
+        if (!address) return;
+        try {
+          const res = await fetch(`${COPY_SERVICE_URL}/api/copy/me?wallet=${address}`);
+          const data = await res.json();
+          const rows = (data.recentTrades || [])
+            .map((t) => {
+              const dirClass = t.side === "BUY_YES" ? "pos" : "neg";
+              const pnlClass = t.net_pnl > 0 ? "pos" : t.net_pnl < 0 ? "neg" : "";
+              return `<tr>
+                <td>${t.symbol}</td>
+                <td class="${dirClass}">${t.side === "BUY_YES" ? "UP" : "DOWN"}</td>
+                <td class="num-col">${fmt(t.collateral_at_entry, 2)}</td>
+                <td>${t.status}${t.outcome ? " · " + t.outcome : ""}</td>
+                <td class="num-col ${pnlClass}">${t.net_pnl != null ? fmtSigned(t.net_pnl, 3) : "–"}</td>
+              </tr>`;
+            })
+            .join("");
+          els.myTradesRows.innerHTML = rows || '<tr><td colspan="5" class="empty-state">NO TRADES YET</td></tr>';
+        } catch {
+          els.myTradesRows.innerHTML = '<tr><td colspan="5" class="empty-state">COPY SERVICE UNREACHABLE</td></tr>';
+        }
+      }
+
+      async function refreshLeaderboard() {
+        try {
+          const res = await fetch(`${COPY_SERVICE_URL}/api/copy/leaderboard`);
+          const data = await res.json();
+          els.activeCopiers.textContent = `${data.activeCopiers ?? 0} ACTIVE COPIER(S)`;
+          const rows = (data.leaderboard || [])
+            .map((r, i) => {
+              const pnlClass = r.pnl > 0 ? "pos" : r.pnl < 0 ? "neg" : "";
+              return `<tr>
+                <td class="rank-cell">${i + 1}</td>
+                <td>${shortAddr(r.wallet)}${r.wallet.toLowerCase() === (address || "").toLowerCase() ? " (YOU)" : ""}</td>
+                <td class="num-col ${pnlClass}">${fmtSigned(r.pnl, 3)}</td>
+                <td class="num-col">${r.winRate === null ? "–" : (r.winRate * 100).toFixed(1) + "%"}</td>
+                <td class="num-col">${r.settledCount}</td>
+              </tr>`;
+            })
+            .join("");
+          els.leaderboardRows.innerHTML = rows || '<tr><td colspan="5" class="empty-state">NO COPY TRADES YET</td></tr>';
+        } catch {
+          els.leaderboardRows.innerHTML = '<tr><td colspan="5" class="empty-state">COPY SERVICE UNREACHABLE</td></tr>';
+        }
+      }
+
+      // ── Wallet/network change listeners ─────────────────────────────
+      if (window.ethereum) {
+        window.ethereum.on?.("accountsChanged", () => location.reload());
+        window.ethereum.on?.("chainChanged", () => location.reload());
+      }
+
+      // ── Poll leaderboard (public) regardless of connection state ────
+      refreshLeaderboard();
+      setInterval(() => {
+        refreshLeaderboard();
+        if (address) {
+          refreshAccount();
+          refreshMyTrades();
+        }
+      }, 5000);
+    </script>
+  </body>
+</html>

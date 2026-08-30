@@ -21,7 +21,8 @@ const BOT_NAME = "Binal Bot";
 // Read lazily, NOT captured as module-level constants at import time.  
 const botToken = () => process.env.TELEGRAM_BOT_TOKEN;
 const chatId = () => process.env.TELEGRAM_CHAT_ID;
-const dashboardUrl = () => process.env.DASHBOARD_URL ?? "https://your-dashboard-url-here";
+const dashboardUrl = () => process.env.DASHBOARD_URL ?? "https://dreamdex-binal-bot.onrender.com";
+const copyBinalUrl = () => process.env.COPY_BINAL_URL ?? "https://dreamdex-binal-bot.onrender.com/copy-trade.html";
 const dreamdexMarketBase = () => process.env.DREAMDEX_MARKET_URL ?? "https://app.dreamdex.io/event-contracts";
 const apiBase = () => {
   const t = botToken();
@@ -115,15 +116,24 @@ function isPubliclyReachable(url: string): boolean {
 }
 
 function signalKeyboard(asset: string, window: string, symbol: string): { inline_keyboard: { text: string; url: string }[][] } {
-  const buttons: { text: string; url: string }[] = [];
+  const rows: { text: string; url: string }[][] = [];
+
   const dash = dashboardUrl();
   if (isPubliclyReachable(dash)) {
-    buttons.push({ text: "🖥️ Dashboard", url: dash });
+    rows.push([{ text: "🖥️ Binal Dashboard", url: dash }]);
   } else {
     console.warn(`telegram: DASHBOARD_URL "${dash}" isn't publicly reachable — omitting Dashboard button`);
   }
-  buttons.push({ text: "⚡ Trade", url: copyTradeUrl(asset, window, symbol) });
-  return { inline_keyboard: [buttons] };
+
+  const copyBinal = copyBinalUrl();
+  if (isPubliclyReachable(copyBinal)) {
+    rows.push([{ text: "📋 Copy Binal", url: copyBinal }]);
+  } else {
+    console.warn(`telegram: COPY_BINAL_URL "${copyBinal}" isn't publicly reachable — omitting Copy Binal button`);
+  }
+
+  rows.push([{ text: "⚡ Trade on DreamDex", url: copyTradeUrl(asset, window, symbol) }]);
+  return { inline_keyboard: rows };
 }
 
 /**
@@ -182,7 +192,7 @@ function signalCaption(p: SignalPost): string {
     ``,
     escapeHtml(reason),
     ``,
-    `<i>Track record: ${wr} WR  |  ${pnl} PnL  (n=${p.stats.settledCount})</i>`,
+    `<i>Track record: ${wr} WR  |  ${pnl} PnL  (trades=${p.stats.settledCount})</i>`,
   ].join("\n");
 }
 
@@ -305,7 +315,7 @@ export async function postSettlementReply(s: SettlementPost): Promise<number | n
     ``,
     `<b>${badge}</b>  |  ${pnlStr} USDC`,
     ``,
-    `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (n=${s.stats.settledCount})</i>`,
+    `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (trades=${s.stats.settledCount})</i>`,
   ].join("\n");
 
   const result = await tgCall("sendMessage", {
