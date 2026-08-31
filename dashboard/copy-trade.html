@@ -50,17 +50,21 @@
         background: var(--bg);
         color: var(--text);
         font-family: var(--font-mono);
-        height: 100vh;
         font-size: 12px;
         -webkit-font-smoothing: none;
         overflow-x: hidden;
-        overflow-y: hidden;
+
+        min-height: 100%;
+        height: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .layout-wrapper {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        min-height: 100vh;
+        height: auto;
         padding: 8px;
         gap: 8px;
       }
@@ -641,7 +645,7 @@
     <script>
       // ── Config — fill in for your deployment ─────────────────────────
       const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com";
-      const VAULT_ADDRESS = "0x874B144BAE16133e2B6fCFAeF1C0050D03D60734";
+      const VAULT_ADDRESS = "0xEf8ee009d7D91501764C456010ED235165bF3972";
 
       const SOMNIA_TESTNET = {
         chainIdHex: "0xc488", // 50312
