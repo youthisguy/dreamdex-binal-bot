@@ -3603,3 +3603,45 @@
 {"timestamp":"2026-08-30T23:30:19.930Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"model disagrees with market":2}}
 {"timestamp":"2026-08-30T23:30:22.103Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000000e55e","outcome":"WIN","pnl":41.400000000000006,"settled_at":"2026-08-30T23:30:22.103Z"}
 {"timestamp":"2026-08-30T23:30:24.144Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000000e55f","outcome":"WIN","pnl":43.400000000000006,"settled_at":"2026-08-30T23:30:24.144Z"}
+{"timestamp":"2026-08-31T03:52:48.955Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-08-31T03:53:26.240Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-08-31T03:54:02.550Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-08-31T03:54:40.639Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"market price below floor":2}}
+{"timestamp":"2026-08-31T03:55:17.643Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:55:52.860Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:56:27.745Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:57:03.241Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:57:39.247Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:58:15.143Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:58:51.246Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T03:59:26.553Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-08-31T04:00:02.054Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":2,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"not trading":6}}
+{"timestamp":"2026-08-31T04:00:39.945Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"model disagrees with market":1}}
+{"timestamp":"2026-08-31T04:01:16.238Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"model disagrees with market":1}}
+{"timestamp":"2026-08-31T04:01:51.650Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"model disagrees with market":1}}
+{"timestamp":"2026-08-31T04:02:28.030Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"entry too rich (ask 0.91 > OF_MAX_ENTRY_PRICE 0.8)":1}}
+{"timestamp":"2026-08-31T04:03:04.442Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:03:41.134Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:04:17.943Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:04:53.313Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:05:30.339Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:06:06.655Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:06:43.571Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:07:19.512Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:07:55.240Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:08:31.632Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:09:08.368Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:09:43.938Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"market price below floor":1}}
+{"timestamp":"2026-08-31T04:10:19.219Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:10:55.727Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:11:30.523Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:12:05.525Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:12:40.521Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:13:16.424Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:13:52.124Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:14:28.222Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":7,"near expiry":1}}
+{"timestamp":"2026-08-31T04:15:03.492Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6}}
+{"timestamp":"2026-08-31T04:15:40.930Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"model disagrees with market":2}}
+{"timestamp":"2026-08-31T04:16:17.514Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"model disagrees with market":2,"window not in OF_ALLOWED_WINDOWS_MIN":6}}
+{"timestamp":"2026-08-31T04:16:53.927Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"model disagrees with market":1,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":6}}
+{"timestamp":"2026-08-31T04:17:29.015Z","type":"decision","action":"TRADE_DOWN","outcome":"PENDING","market_id":"0x000000000000000000000000000000000000000000000000000000000000e8df","symbol":"ETH-0-31AUG26-0430/tUSDC","asset":"ETH","window":"15m","side":"BUY_NO","size":200,"price":0.562,"dry_run":true,"signal":"DOWN","fair_prob":0.6093111596563647,"market_mid":0.5455,"edge":0.04931115965636468,"disagreement":0.06381115965636475,"momentum_r":-0.00042184345710370426,"momentum_used":true,"reason":"opening 2414.06 vs spot 2414.09, vol 0.150% assumed, r -0.0004, tilt -0.064 off market 0.545, pUp 0.391, fair 0.609, ask 0.560","expiry_ms":1788150600000,"ref_price":2414.06,"ref_kind":"opening","explorer_url":"https://dev.smk.somnia.host/markets/0x2e50436AFC71fC5eB1b2d81F060FA8D20B3f5819"}
