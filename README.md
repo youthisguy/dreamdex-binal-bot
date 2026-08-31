@@ -4,7 +4,7 @@
 
  Every decision (trade or skip) is logged in it's journal with full reasoning. Every result is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially, with a withdrawal path under their control.
 
-**Live:** [Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) · [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) · [Telegram](https://t.me/binal_bot_signals)
+[Agent Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) | [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) | [Telegram](https://t.me/binal_bot_signals)
 
 ---
 

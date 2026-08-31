@@ -133,6 +133,24 @@ const CROSS_ASSET_CONFIRM_MS = envNum("OF_CROSS_ASSET_CONFIRM_MS", 300_000);
 const lastQualifyingSignal = new Map<Asset, number>();
 const partnerAsset = (a: Asset): Asset => (a === "BTC" ? "ETH" : "BTC");
 
+// lastQualifyingSignal above only proves both assets' SIGNALS cleared every
+// gate near the same time — it says nothing about whether either order
+// actually filled. A partner order can still revert on-chain after this
+// gate passes (see incident notes), leaving one asset holding a naked
+// directional position the gate was supposed to prevent. These two track
+// the fill side of that: lastConfirmedFill records when an asset's order
+// actually filled; unpairedLegs holds any fill still waiting on its
+// partner to also fill within the window.
+const lastConfirmedFill = new Map<Asset, number>();
+const unpairedLegs = new Map<
+  Asset,
+  { symbol: string; size: number; since: number; alerted: boolean }
+>();
+const PARTNER_FILL_GRACE_MS = envNum(
+  "OF_PARTNER_FILL_GRACE_MS",
+  CROSS_ASSET_CONFIRM_MS
+);
+
 // Which window lengths this bot is allowed to trade, in minutes. Comma-
 // separated, e.g. "15,60". Defaults to 15-minute ONLY, because that's the
 // only window the EMA(3,12) signal was ever backtested/validated against
@@ -254,6 +272,15 @@ const EXPIRY_CLEAR_GRACE_MS = envNum("OF_EXPIRY_CLEAR_GRACE_MS", 10 * 60_000);
 // grace-period sweep after expiry) — never left to grow unbounded.
 const enteredMarkets = new Set<string>();
 
+// Release any unpairedLegs flag whose symbol just cleared, from whichever
+// path cleared it (expiry sweep or isTradable()===false) — so a resolved
+// naked position doesn't keep blocking new entries for that asset forever.
+function clearUnpairedLeg(symbol: string): void {
+  for (const [asset, leg] of unpairedLegs) {
+    if (leg.symbol === symbol) unpairedLegs.delete(asset);
+  }
+}
+
 function sweepExpiredPositions(now: number): void {
   for (const [symbol, expiryMs] of positionExpiry) {
     if (now - expiryMs >= EXPIRY_CLEAR_GRACE_MS) {
@@ -261,6 +288,28 @@ function sweepExpiredPositions(now: number): void {
       positionExpiry.delete(symbol);
       lastTake.delete(symbol);
       enteredMarkets.delete(symbol);
+      clearUnpairedLeg(symbol);
+    }
+  }
+}
+
+// Alert (once) on any leg that's been waiting past PARTNER_FILL_GRACE_MS
+// with no confirmed partner fill — this is the case a chain-level revert on
+// the other leg produces: the gate passed, this leg filled, the partner
+// never did. It stays in unpairedLegs (blocking new entries on that asset)
+// until the position itself clears via clearUnpairedLeg above.
+function sweepUnpairedLegs(now: number): void {
+  for (const [asset, leg] of unpairedLegs) {
+    if (!leg.alerted && now - leg.since >= PARTNER_FILL_GRACE_MS) {
+      leg.alerted = true;
+      log(
+        `🚨 CROSS-ASSET PAIR FAILED: ${asset} ${leg.symbol} filled ${leg.size} ` +
+          `shares with no ${partnerAsset(asset)} partner fill within ` +
+          `${(PARTNER_FILL_GRACE_MS / 60_000).toFixed(1)}min — likely a reverted ` +
+          `partner order. This is naked directional exposure the cross-asset ` +
+          `gate was meant to prevent. New ${asset} entries stay blocked until ` +
+          `this position settles.`
+      );
     }
   }
 }
@@ -342,6 +391,7 @@ async function takeOne(
     lastTake.delete(market.symbol);
     enteredMarkets.delete(market.symbol);
     warned.delete(`opp:${market.symbol}`);
+    clearUnpairedLeg(market.symbol);
     note(cycle, "not trading");
     return;
   }
@@ -363,6 +413,10 @@ async function takeOne(
     note(cycle, "unknown asset");
     return;
   }
+  // Hoisted once the asset is known to be a valid Asset — used by both the
+  // cross-asset confirm gate (signal-level) and the fill-reconciliation
+  // block after a successful take (fill-level).
+  const thisAsset = info.asset as Asset;
 
   const now = Date.now();
 
@@ -599,9 +653,20 @@ async function takeOne(
   // 10b) Cross-asset confirmation. This signal just cleared every gate
   // above — record it, then require the OTHER asset to have qualified
   // within the same rolling window before this one is allowed to fire.
+  //
+  // A signal-level "confirmed" only proves both assets' SIGNALS lined up —
+  // it says nothing about whether either order actually filled. If this
+  // asset currently has an unresolved unpaired fill (its own order filled
+  // earlier but the partner leg never confirmed — e.g. the partner's IOC
+  // reverted on-chain after both sides passed this same gate), refuse new
+  // entries on this asset until that position resolves. Otherwise the bot
+  // just keeps compounding naked exposure on the same side.
   if (CROSS_ASSET_CONFIRM_ENABLED) {
+    if (unpairedLegs.has(thisAsset)) {
+      note(cycle, "asset has an unresolved unpaired leg — refusing to compound");
+      return;
+    }
     const confirmNow = Date.now();
-    const thisAsset = info.asset as Asset; // safe: isAsset(info.asset) already gated this function's entry
     lastQualifyingSignal.set(thisAsset, confirmNow);
     const partnerLast = lastQualifyingSignal.get(partnerAsset(thisAsset));
     const confirmed =
@@ -693,6 +758,37 @@ async function takeOne(
     taken = order.filled;
     log(`${side} ${taken}/${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
     if (taken <= 0) return; // nothing crossed; leave the cooldown clear to retry
+  }
+
+  // 10c) Reconcile against the partner's actual FILL, not its signal. This
+  // fill just landed — check whether the partner asset also has a fill
+  // recorded within the confirm window. If so, both legs are genuinely
+  // paired and any prior unpaired flags on either asset are cleared. If
+  // not, this is the naked-leg case (the gate passed on signals, but the
+  // partner's order never actually filled — e.g. it reverted on-chain): flag
+  // this asset as carrying an unpaired leg so new entries on it are blocked
+  // (via the unpairedLegs.has() check above) until the position resolves.
+  if (CROSS_ASSET_CONFIRM_ENABLED) {
+    const other = partnerAsset(thisAsset);
+    const partnerFilledRecently =
+      (lastConfirmedFill.get(other) ?? 0) >= now - CROSS_ASSET_CONFIRM_MS;
+    lastConfirmedFill.set(thisAsset, now);
+    if (partnerFilledRecently) {
+      unpairedLegs.delete(thisAsset);
+      unpairedLegs.delete(other);
+    } else {
+      unpairedLegs.set(thisAsset, {
+        symbol: market.symbol,
+        size: taken,
+        since: now,
+        alerted: false,
+      });
+      log(
+        `⚠️ ${thisAsset} filled ${taken} ${fav} without a confirmed ${other} ` +
+          `partner fill — flagged unpaired, new ${thisAsset} entries blocked ` +
+          `until this position resolves`
+      );
+    }
   }
 
   // Book the fill against the LEG we bought, in BOTH modes. A dry run that
@@ -859,6 +955,10 @@ async function main() {
       // comment on positionExpiry above for why this can't just rely on
       // isTradable() being seen again for a symbol that already settled.
       sweepExpiredPositions(Date.now());
+      // Independent pass over unpairedLegs: alert once a naked leg has sat
+      // unresolved past PARTNER_FILL_GRACE_MS. Runs on the same heartbeat
+      // cadence as the expiry sweep above.
+      sweepUnpairedLegs(Date.now());
       const markets = await withTimeout(
         activeMarkets(ctx),
         20_000,
