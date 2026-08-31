@@ -61,7 +61,12 @@ import {
   type SpotReader,
 } from "./signal.js";
 import { Positions } from "./position.js";
-import { logDecision, logCycleSummary, backfillSettlements, computeStats } from "./journal.js";
+import {
+  logDecision,
+  logCycleSummary,
+  backfillSettlements,
+  computeStats,
+} from "./journal.js";
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
 import { notifyCopyService } from "./copy-signal.js";
@@ -109,6 +114,25 @@ const windowLabel = (intervalSec: number | null): string => {
   return `${Math.round(intervalSec / 60)}m`;
 };
 
+// Cross-asset confirmation: only execute once BOTH BTC and ETH have
+// independently cleared every gate above within the same rolling window —
+// a signal that never gets a same-window partner is effectively discarded
+// (it just keeps failing this gate on every subsequent cycle until its own
+// edge disappears or the market goes near-expiry). Asset-level, not
+// market-specific: BTC/ETH each roll through many back-to-back 15m windows,
+// and what this is checking is "is the underlying showing a real move on
+// both legs right now," not any one specific pair of markets.
+//
+// NOTE: this confirms on EITHER asset qualifying, regardless of direction
+// (BTC UP + ETH DOWN within the window still confirms). If you want to
+// require the same direction on both legs, change the `confirmed` check
+// below to also compare recorded signal direction.
+const CROSS_ASSET_CONFIRM_ENABLED =
+  (process.env.OF_CROSS_ASSET_CONFIRM ?? "true") !== "false";
+const CROSS_ASSET_CONFIRM_MS = envNum("OF_CROSS_ASSET_CONFIRM_MS", 300_000);
+const lastQualifyingSignal = new Map<Asset, number>();
+const partnerAsset = (a: Asset): Asset => (a === "BTC" ? "ETH" : "BTC");
+
 // Which window lengths this bot is allowed to trade, in minutes. Comma-
 // separated, e.g. "15,60". Defaults to 15-minute ONLY, because that's the
 // only window the EMA(3,12) signal was ever backtested/validated against
@@ -135,7 +159,8 @@ function windowAllowed(intervalSec: number | null): boolean {
 // original placeholder-grade model, same category they flagged as unproven.
 // Default true so real funds only ride the validated signal; set to "false"
 // to let the (unvalidated) strike-only trades through again.
-const REQUIRE_MOMENTUM = (process.env.OF_REQUIRE_MOMENTUM ?? "true") !== "false";
+const REQUIRE_MOMENTUM =
+  (process.env.OF_REQUIRE_MOMENTUM ?? "true") !== "false";
 
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
@@ -153,13 +178,15 @@ const MAX_HORIZONS = envNum("OF_MAX_HORIZONS", 30);
 // The feed ticks ~1/s. Anything older than this means the oracle stalled, and a
 // frozen price reads as "no momentum" rather than "no data" — refuse it.
 const MAX_SPOT_AGE_MS = envNum("OF_MAX_SPOT_AGE_MS", 15_000);
-const MODEL = (process.env.OF_MODEL ?? "strike") === "momentum" ? "momentum" : "strike";
+const MODEL =
+  (process.env.OF_MODEL ?? "strike") === "momentum" ? "momentum" : "strike";
 // Which momentum computation feeds the drift term: the original single-window
 // return ("window"), or the EMA(fast)/EMA(slow) crossover validated in the
 // Python backtest ("ema", default — see signal.ts's SpotHistory.emaMomentum).
 // Falling back to "window" is a one-line env change if the live behavior
 // needs comparing against the original.
-const MOMENTUM_SOURCE = (process.env.OF_MOMENTUM_SOURCE ?? "ema") === "window" ? "window" : "ema";
+const MOMENTUM_SOURCE =
+  (process.env.OF_MOMENTUM_SOURCE ?? "ema") === "window" ? "window" : "ema";
 const EMA_FAST_SPAN = envNum("OF_EMA_FAST_SPAN", 3);
 const EMA_SLOW_SPAN = envNum("OF_EMA_SLOW_SPAN", 12);
 const SPOT_SOURCE = (process.env.OF_SPOT_SOURCE ?? "sdk").toLowerCase();
@@ -168,7 +195,8 @@ const SPOT_SOURCE = (process.env.OF_SPOT_SOURCE ?? "sdk").toLowerCase();
 const HEARTBEAT_MS = envNum("OF_HEARTBEAT_MS", 30_000);
 
 const ASSETS: readonly Asset[] = ["BTC", "ETH"];
-const isAsset = (a: string): a is Asset => (ASSETS as readonly string[]).includes(a);
+const isAsset = (a: string): a is Asset =>
+  (ASSETS as readonly string[]).includes(a);
 
 // Interruptible sleep — wakes within ~500ms of the stop flag (see ec-maker).
 const sleep = async (ms: number, stopped?: () => boolean) => {
@@ -181,7 +209,13 @@ const log = (s: string) => console.log(`${new Date().toISOString()} ${s}`);
 
 // Retention is set by the volatility estimate, not by momentum: measuring how
 // much the underlying moves needs far more samples than one lookback window.
-const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS, EMA_FAST_SPAN, EMA_SLOW_SPAN);
+const history = new SpotHistory(
+  WINDOW_MS,
+  MAX_SPOT_AGE_MS,
+  VOL_WINDOW_MS,
+  EMA_FAST_SPAN,
+  EMA_SLOW_SPAN
+);
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
 const position = new Positions();
@@ -204,7 +238,10 @@ const positionExpiry = new Map<string, number>();
 // heartbeat. sweepExpiredPositions() consults this before releasing
 // exposure for a symbol, so a market that's failing to confirm on-chain
 // doesn't silently free its risk budget on a timer.
-const settlementFailures = new Map<string, { symbol: string; error: string; since: number }>();
+const settlementFailures = new Map<
+  string,
+  { symbol: string; error: string; since: number }
+>();
 // Grace period past expiry before we assume a market has settled and release
 // its exposure — gives on-chain settlement time to actually land so we don't
 // clear a position that's still technically pending.
@@ -214,14 +251,18 @@ function sweepExpiredPositions(now: number): void {
   for (const [symbol, expiryMs] of positionExpiry) {
     if (now - expiryMs < EXPIRY_CLEAR_GRACE_MS) continue;
 
-    const failure = [...settlementFailures.values()].find((f) => f.symbol === symbol);
+    const failure = [...settlementFailures.values()].find(
+      (f) => f.symbol === symbol
+    );
     if (failure) {
       // Don't silently release exposure for a market we know is failing to
       // confirm on-chain — that's the exact state that produced the original
       // stuck-exposure bug. Surface it instead of hiding it behind a timer.
       log(
-        `WARNING: ${symbol} expired ${Math.round((now - expiryMs) / 60_000)}min ago but settlement ` +
-          `backfill is failing (${failure.error}) — exposure NOT released`,
+        `WARNING: ${symbol} expired ${Math.round(
+          (now - expiryMs) / 60_000
+        )}min ago but settlement ` +
+          `backfill is failing (${failure.error}) — exposure NOT released`
       );
       continue;
     }
@@ -253,12 +294,19 @@ interface Cycle {
   widest?: { symbol: string; model: number; market: number; by: number };
 }
 const newCycle = (): Cycle => ({ scanned: 0, skips: new Map() });
-const note = (c: Cycle, reason: string) => c.skips.set(reason, (c.skips.get(reason) ?? 0) + 1);
+const note = (c: Cycle, reason: string) =>
+  c.skips.set(reason, (c.skips.get(reason) ?? 0) + 1);
 
 /** Binary-market fields the signal needs. Non-binary rows return null. */
 function marketInfo(
-  m: UnifiedMarket,
-): { asset: string; strike?: string; marketId?: string; expiryMs: number | null; intervalSec: number | null } | null {
+  m: UnifiedMarket
+): {
+  asset: string;
+  strike?: string;
+  marketId?: string;
+  expiryMs: number | null;
+  intervalSec: number | null;
+} | null {
   if (m.info.marketType !== "BINARY") return null;
   const expiry = Number(m.info.expiry); // unix SECONDS as a string on the row
   const interval = Number(m.info.intervalSec);
@@ -281,7 +329,7 @@ async function takeOne(
   spot: SpotReader,
   refs: ReferenceReader,
   market: UnifiedMarket,
-  cycle: Cycle,
+  cycle: Cycle
 ): Promise<void> {
   if (UNDERLYING && !market.symbol.toUpperCase().includes(UNDERLYING)) return;
   // 1) Authoritative status. The indexer lags; only this snapshot decides.
@@ -294,7 +342,9 @@ async function takeOne(
   // info.marketId (a 32-byte indexer-side identifier) — confirmed against
   // settlement.ts's own `address: onchain.pool` usage.
   const explorerUrl = onchain.pool
-    ? `${ctx.config.indexerUrl.replace(/\/v1\/graphql$/, "")}/markets/${onchain.pool}`
+    ? `${ctx.config.indexerUrl.replace(/\/v1\/graphql$/, "")}/markets/${
+        onchain.pool
+      }`
     : null;
   if (!isTradable(onchain)) {
     position.clear(market.symbol);
@@ -315,7 +365,9 @@ async function takeOne(
   if (!isAsset(info.asset)) {
     if (!warned.has(info.asset)) {
       warned.add(info.asset);
-      log(`skipping ${info.asset} markets — no price feed wired for that asset`);
+      log(
+        `skipping ${info.asset} markets — no price feed wired for that asset`
+      );
     }
     note(cycle, "unknown asset");
     return;
@@ -335,7 +387,10 @@ async function takeOne(
   // 3) Sample the underlying and measure the short-window return.
   const observed = await spot.getSpot(info.asset);
   if (observed) history.record(info.asset, observed);
-  const mom = MOMENTUM_SOURCE === "ema" ? history.emaMomentum(info.asset, now) : history.momentum(info.asset, now);
+  const mom =
+    MOMENTUM_SOURCE === "ema"
+      ? history.emaMomentum(info.asset, now)
+      : history.momentum(info.asset, now);
   if (!mom) {
     if (!warned.has(`warm:${info.asset}`)) {
       warned.add(`warm:${info.asset}`);
@@ -352,18 +407,27 @@ async function takeOne(
   // is priceable from the oracle alone — how far spot sits from the reference,
   // over how long, against how much the underlying actually moves.
   const ttl = info.expiryMs === null ? null : info.expiryMs - now;
-  const ref = await refs.referenceFor({ marketId: info.marketId, strike: info.strike }, mom.spot);
+  const ref = await refs.referenceFor(
+    { marketId: info.marketId, strike: info.strike },
+    mom.spot
+  );
 
   // 5) Momentum is only admissible when its horizon is near the contract's. A
   // 60-second return says nothing about eight hours, so past MAX_HORIZONS it is
   // dropped — but that mutes the momentum TERM rather than vetoing the market,
   // because moneyness against a known reference prices any horizon honestly.
-  const horizonOk = MAX_HORIZONS <= 0 || (ttl !== null && ttl <= MAX_HORIZONS * WINDOW_MS);
+  const horizonOk =
+    MAX_HORIZONS <= 0 || (ttl !== null && ttl <= MAX_HORIZONS * WINDOW_MS);
   // Below the threshold the return is feed noise, not a view.
   const useMomentum = horizonOk && Math.abs(mom.r) >= THRESHOLD;
 
   if (!ref && !useMomentum) {
-    note(cycle, horizonOk ? "no view and no reference price" : "no reference, and expiry too far out for momentum");
+    note(
+      cycle,
+      horizonOk
+        ? "no view and no reference price"
+        : "no reference, and expiry too far out for momentum"
+    );
     return;
   }
 
@@ -431,8 +495,12 @@ async function takeOne(
     if (!warned.has(`opp:${market.symbol}`)) {
       warned.add(`opp:${market.symbol}`);
       log(
-        `${market.symbol}: signal favours ${bullish ? "YES" : "NO"} but we hold ${opposing} ` +
-          `${bullish ? "NO" : "YES"} — sitting out (buying the other leg would only mint sets)`,
+        `${market.symbol}: signal favours ${
+          bullish ? "YES" : "NO"
+        } but we hold ${opposing} ` +
+          `${
+            bullish ? "NO" : "YES"
+          } — sitting out (buying the other leg would only mint sets)`
       );
     }
     note(cycle, "holding the opposing leg");
@@ -465,7 +533,12 @@ async function takeOne(
   const disagreement = Math.abs(fairFav - marketFair);
   if (MAX_DISAGREEMENT > 0 && disagreement > MAX_DISAGREEMENT) {
     if (!cycle.widest || disagreement > cycle.widest.by) {
-      cycle.widest = { symbol: fav, model: fairFav, market: marketFair, by: disagreement };
+      cycle.widest = {
+        symbol: fav,
+        model: fairFav,
+        market: marketFair,
+        by: disagreement,
+      };
     }
     note(cycle, "model disagrees with market");
     return;
@@ -495,7 +568,12 @@ async function takeOne(
   // ~0.82, net LOSS
   const MAX_ENTRY_PRICE = Number(process.env.OF_MAX_ENTRY_PRICE ?? 0.7);
   if (askPx > MAX_ENTRY_PRICE) {
-    note(cycle, `entry too rich (ask ${askPx.toFixed(2)} > OF_MAX_ENTRY_PRICE ${MAX_ENTRY_PRICE})`);
+    note(
+      cycle,
+      `entry too rich (ask ${askPx.toFixed(
+        2
+      )} > OF_MAX_ENTRY_PRICE ${MAX_ENTRY_PRICE})`
+    );
     return;
   }
 
@@ -510,11 +588,30 @@ async function takeOne(
         ask: askPx,
         short,
         ref: ref ? `${ref.kind} ${ref.price.toFixed(2)}` : "none",
-        vol: `${(expectedMove * 100).toFixed(3)}%${measured === null ? " assumed" : ""}`,
+        vol: `${(expectedMove * 100).toFixed(3)}%${
+          measured === null ? " assumed" : ""
+        }`,
       };
     }
     note(cycle, "no edge");
     return;
+  }
+
+  // 10b) Cross-asset confirmation. This signal just cleared every gate
+  // above — record it, then require the OTHER asset to have qualified
+  // within the same rolling window before this one is allowed to fire.
+  if (CROSS_ASSET_CONFIRM_ENABLED) {
+    const confirmNow = Date.now();
+    const thisAsset = info.asset as Asset; // safe: isAsset(info.asset) already gated this function's entry
+    lastQualifyingSignal.set(thisAsset, confirmNow);
+    const partnerLast = lastQualifyingSignal.get(partnerAsset(thisAsset));
+    const confirmed =
+      partnerLast !== undefined &&
+      confirmNow - partnerLast <= CROSS_ASSET_CONFIRM_MS;
+    if (!confirmed) {
+      note(cycle, "waiting for cross-asset confirmation");
+      return;
+    }
   }
 
   // 11) Risk limits, counted in DIRECTIONAL shares. The opposing-leg guard above
@@ -545,7 +642,9 @@ async function takeOne(
 
   // Cross a touch past the best so we still match if the book shifts, snapped
   // to the tick grid and the (0,1) bounds.
-  const price = clampProbability(ctx.exchange.priceToPrecision(fav, askPx + 0.002));
+  const price = clampProbability(
+    ctx.exchange.priceToPrecision(fav, askPx + 0.002)
+  );
   assertProbability(price);
 
   const side = bullish ? "BUY_YES" : "BUY_NO";
@@ -553,11 +652,23 @@ async function takeOne(
   // market settles against and the volatility scaling it — because when this bot
   // is wrong, it is almost always one of those two that was wrong first.
   const why =
-    `${ref ? `${ref.kind} ${ref.price.toFixed(2)} vs spot ${mom.spot.toFixed(2)}` : "no reference"}, ` +
-    `vol ${(expectedMove * 100).toFixed(3)}%${measured === null ? " assumed" : " measured"}, ` +
-    `r ${useMomentum ? `${mom.r >= 0 ? "+" : ""}${mom.r.toFixed(4)}` : "muted"}, ` +
-    `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(3)} off market ${marketFair.toFixed(3)}, ` +
-    `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${askPx.toFixed(3)}`;
+    `${
+      ref
+        ? `${ref.kind} ${ref.price.toFixed(2)} vs spot ${mom.spot.toFixed(2)}`
+        : "no reference"
+    }, ` +
+    `vol ${(expectedMove * 100).toFixed(3)}%${
+      measured === null ? " assumed" : " measured"
+    }, ` +
+    `r ${
+      useMomentum ? `${mom.r >= 0 ? "+" : ""}${mom.r.toFixed(4)}` : "muted"
+    }, ` +
+    `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
+      3
+    )} off market ${marketFair.toFixed(3)}, ` +
+    `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${askPx.toFixed(
+      3
+    )}`;
 
   let taken = size;
   if (ctx.config.dryRun) {
@@ -570,8 +681,13 @@ async function takeOne(
     // receipt itself; handing the SDK a float price reverts outright on an
     // 18-decimal venue, and a revert reports zero fill rather than throwing.
     const order = await placeLimit(ctx, {
-      market, onchain, outcome: bullish ? "YES" : "NO", side: "buy",
-      price, size, type: "ioc",
+      market,
+      onchain,
+      outcome: bullish ? "YES" : "NO",
+      side: "buy",
+      price,
+      size,
+      type: "ioc",
     });
     // IOC cancels whatever didn't cross, so the requested size is an upper
     // bound, not the position. Count what actually filled.
@@ -690,13 +806,13 @@ async function main() {
   if (SPOT_SOURCE !== "sdk") {
     throw new Error(
       `OF_SPOT_SOURCE="${SPOT_SOURCE}" is not wired. The default "sdk" reads the ` +
-        `underlying price feed; to use a REST ticker, build a restSpotReader in signal.ts.`,
+        `underlying price feed; to use a REST ticker, build a restSpotReader in signal.ts.`
     );
   }
   if (!ctx.config.priceFeed) {
     throw new Error(
       "No price feed configured — this bot needs the UNDERLYING price, which no market row carries. " +
-        "Set PRICE_FEED_URL in .env (testnet has a bundled default; mainnet does not yet).",
+        "Set PRICE_FEED_URL in .env (testnet has a bundled default; mainnet does not yet)."
     );
   }
   const spot = sdkSpotReader(ctx);
@@ -707,6 +823,7 @@ async function main() {
       `model=${MODEL} interval=${INTERVAL_MS}ms window=${WINDOW_MS}ms edge=${EDGE} ` +
       `maxDisagreement=${MAX_DISAGREEMENT > 0 ? MAX_DISAGREEMENT : "off"} ` +
       `maxHorizons=${MAX_HORIZONS > 0 ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(0)}min)` : "off"} ` +
+      `crossAssetConfirm=${CROSS_ASSET_CONFIRM_ENABLED ? `${(CROSS_ASSET_CONFIRM_MS / 60_000).toFixed(1)}min` : "off"} ` +
       `allowedWindows=${ALLOWED_WINDOW_MIN.length ? ALLOWED_WINDOW_MIN.join(",") + "min" : "ALL (unfiltered!)"}`,
   );
 
@@ -722,11 +839,15 @@ async function main() {
       // Collect anything that settled since the last pass. Self-throttled
       // (AUTO_CLAIM_INTERVAL_MS) and a no-op under AUTO_CLAIM=false.
       await withTimeout(maybeClaim(ctx), 20_000, "maybeClaim");
-            // Independent of whatever activeMarkets() returns this cycle — see the
+      // Independent of whatever activeMarkets() returns this cycle — see the
       // comment on positionExpiry above for why this can't just rely on
       // isTradable() being seen again for a symbol that already settled.
       sweepExpiredPositions(Date.now());
-      const markets = await withTimeout(activeMarkets(ctx), 20_000, "activeMarkets");
+      const markets = await withTimeout(
+        activeMarkets(ctx),
+        20_000,
+        "activeMarkets"
+      );
       for (const m of markets) {
         if (stop) break;
         try {
@@ -734,7 +855,11 @@ async function main() {
           // call must not freeze every other tradable market behind it for
           // the rest of this cycle (or, since the loop is sequential, forever
           // — see timeout.ts for why this can't be fixed inside the SDK itself).
-          await withTimeout(takeOne(ctx, spot, refs, m, cycle), 20_000, `takeOne(${m.symbol})`);
+          await withTimeout(
+            takeOne(ctx, spot, refs, m, cycle),
+            20_000,
+            `takeOne(${m.symbol})`
+          );
         } catch (e) {
           log(`${m.symbol} error: ${(e as Error).message}`);
         }
@@ -746,23 +871,38 @@ async function main() {
 
     if (HEARTBEAT_MS > 0 && Date.now() >= nextHeartbeat) {
       nextHeartbeat = Date.now() + HEARTBEAT_MS;
-      const reasons = [...cycle.skips].map(([r, n]) => `${r} ×${n}`).join(", ") || "none";
+      const reasons =
+        [...cycle.skips].map(([r, n]) => `${r} ×${n}`).join(", ") || "none";
       const b = cycle.best;
       const closest = b
-        ? ` · closest ${b.symbol} ref ${b.ref} vol ${b.vol} tilt ${b.tilt >= 0 ? "+" : ""}${b.tilt.toFixed(3)} fair ${b.fair.toFixed(3)} ask ${b.ask.toFixed(3)} (needs ${b.short.toFixed(3)} more)`
+        ? ` · closest ${b.symbol} ref ${b.ref} vol ${b.vol} tilt ${
+            b.tilt >= 0 ? "+" : ""
+          }${b.tilt.toFixed(3)} fair ${b.fair.toFixed(3)} ask ${b.ask.toFixed(
+            3
+          )} (needs ${b.short.toFixed(3)} more)`
         : "";
       const w = cycle.widest;
       const gap = w
-        ? ` · ${w.symbol} model ${w.model.toFixed(3)} vs market ${w.market.toFixed(3)} (off by ${w.by.toFixed(3)})`
+        ? ` · ${w.symbol} model ${w.model.toFixed(
+            3
+          )} vs market ${w.market.toFixed(3)} (off by ${w.by.toFixed(3)})`
         : "";
       // Report GROSS alongside net: if they ever diverge, the bot is holding
       // offsetting legs and the difference is capital locked in complete sets.
       const gross = position.totalGross();
       const netTotal = position.totalNet();
-      const book = gross === 0 ? "flat" : `net ${netTotal}${gross === netTotal ? "" : ` of ${gross} gross`}`;
-      log(`idle · ${cycle.scanned} tradable · ${book} · ${reasons}${gap}${closest}`);
+      const book =
+        gross === 0
+          ? "flat"
+          : `net ${netTotal}${gross === netTotal ? "" : ` of ${gross} gross`}`;
+      log(
+        `idle · ${cycle.scanned} tradable · ${book} · ${reasons}${gap}${closest}`
+      );
 
-      logCycleSummary({ scanned: cycle.scanned, skips: Object.fromEntries(cycle.skips) });
+      logCycleSummary({
+        scanned: cycle.scanned,
+        skips: Object.fromEntries(cycle.skips),
+      });
 
       // Backfill settlement outcomes for the dashboard, on the same throttle
       // as the heartbeat — this only reads chain state, it never redeems (that's
@@ -772,14 +912,22 @@ async function main() {
           const now = Date.now();
           for (const f of failed) {
             const prior = settlementFailures.get(f.marketId);
-            settlementFailures.set(f.marketId, { symbol: f.symbol, error: f.error, since: prior?.since ?? now });
+            settlementFailures.set(f.marketId, {
+              symbol: f.symbol,
+              error: f.error,
+              since: prior?.since ?? now,
+            });
           }
           // Drop anything that recovered (no longer reported as failing).
           for (const marketId of [...settlementFailures.keys()]) {
-            if (!failed.some((f) => f.marketId === marketId)) settlementFailures.delete(marketId);
+            if (!failed.some((f) => f.marketId === marketId))
+              settlementFailures.delete(marketId);
           }
         })
-        .catch((e) => log(`settlement backfill failed: ${(e as Error).message}`));    }
+        .catch((e) =>
+          log(`settlement backfill failed: ${(e as Error).message}`)
+        );
+    }
     await sleep(INTERVAL_MS, () => stop);
   }
 
@@ -793,5 +941,5 @@ main().then(
   (e) => {
     console.error(e);
     process.exit(1);
-  },
+  }
 );

@@ -1,6 +1,6 @@
 // * Fire-and-forget notifications to the copy-trade service. 
 //  */
-const copyServiceUrl = () => process.env.COPY_SERVICE_URL; // e.g. http://localhost:8788
+const copyServiceUrl = () => process.env.COPY_SERVICE_URL;  
 
 const CALL_TIMEOUT_MS = 5_000;
 
