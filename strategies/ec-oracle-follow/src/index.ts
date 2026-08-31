@@ -92,8 +92,8 @@ const EDGE = Number(process.env.OF_EDGE ?? 0.03);
 // it doesn't. Set to 0 or less to disable.
 const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
 const MIN_MARKET_PRICE = Number(process.env.OF_MIN_MARKET_PRICE ?? 0.35);
-const MAX_SHARES = envNum("OF_MAX_SHARES", 5);
-const MAX_EXPOSURE = envNum("OF_MAX_EXPOSURE", 50);
+const MAX_SHARES = envNum("OF_MAX_SHARES", 777);
+const MAX_EXPOSURE = envNum("OF_MAX_EXPOSURE", 7770);
 const COOLDOWN_MS = envNum("OF_COOLDOWN_MS", 30_000);
 // Stop taking this long before expiry. The venue can lock between your snapshot
 // and your send, and a late IOC then looks like filled=0 with no error (SDK
@@ -246,30 +246,22 @@ const settlementFailures = new Map<
 // its exposure — gives on-chain settlement time to actually land so we don't
 // clear a position that's still technically pending.
 const EXPIRY_CLEAR_GRACE_MS = envNum("OF_EXPIRY_CLEAR_GRACE_MS", 10 * 60_000);
+// Guards against multiple fills in the SAME market window. Without this,
+// COOLDOWN_MS + a generous MAX_SHARES/MAX_EXPOSURE combination lets the bot
+// re-enter a market it already traded every time cooldown clears, pyramiding
+// into one view rather than diversifying across markets. Cleared in the same
+// two places position/positionExpiry are (market goes untradable, or the
+// grace-period sweep after expiry) — never left to grow unbounded.
+const enteredMarkets = new Set<string>();
 
 function sweepExpiredPositions(now: number): void {
   for (const [symbol, expiryMs] of positionExpiry) {
-    if (now - expiryMs < EXPIRY_CLEAR_GRACE_MS) continue;
-
-    const failure = [...settlementFailures.values()].find(
-      (f) => f.symbol === symbol
-    );
-    if (failure) {
-      // Don't silently release exposure for a market we know is failing to
-      // confirm on-chain — that's the exact state that produced the original
-      // stuck-exposure bug. Surface it instead of hiding it behind a timer.
-      log(
-        `WARNING: ${symbol} expired ${Math.round(
-          (now - expiryMs) / 60_000
-        )}min ago but settlement ` +
-          `backfill is failing (${failure.error}) — exposure NOT released`
-      );
-      continue;
+    if (now - expiryMs >= EXPIRY_CLEAR_GRACE_MS) {
+      position.clear(symbol);
+      positionExpiry.delete(symbol);
+      lastTake.delete(symbol);
+      enteredMarkets.delete(symbol);
     }
-
-    position.clear(symbol);
-    positionExpiry.delete(symbol);
-    lastTake.delete(symbol);
   }
 }
 
@@ -298,9 +290,7 @@ const note = (c: Cycle, reason: string) =>
   c.skips.set(reason, (c.skips.get(reason) ?? 0) + 1);
 
 /** Binary-market fields the signal needs. Non-binary rows return null. */
-function marketInfo(
-  m: UnifiedMarket
-): {
+function marketInfo(m: UnifiedMarket): {
   asset: string;
   strike?: string;
   marketId?: string;
@@ -350,6 +340,7 @@ async function takeOne(
     position.clear(market.symbol);
     positionExpiry.delete(market.symbol);
     lastTake.delete(market.symbol);
+    enteredMarkets.delete(market.symbol);
     warned.delete(`opp:${market.symbol}`);
     note(cycle, "not trading");
     return;
@@ -504,6 +495,14 @@ async function takeOne(
       );
     }
     note(cycle, "holding the opposing leg");
+    return;
+  }
+  // One entry per market, period — regardless of remaining MAX_SHARES/
+  // MAX_EXPOSURE headroom. A market that already has a fill from us doesn't
+  // get a second one; the signal firing again on the same window isn't a
+  // second independent view, it's the same view re-confirming itself.
+  if (enteredMarkets.has(market.symbol)) {
+    note(cycle, "already entered this market");
     return;
   }
   // On this venue a leg's price IS its probability in human units, and the
@@ -702,6 +701,7 @@ async function takeOne(
   // of what you want to see before handing it a funded key.
   position.add(market.symbol, leg, taken);
   lastTake.set(market.symbol, now);
+  enteredMarkets.add(market.symbol);
   if (info.expiryMs !== null) positionExpiry.set(market.symbol, info.expiryMs);
 
   logDecision({
@@ -819,12 +819,28 @@ async function main() {
   const refs = referenceReader(ctx);
 
   log(
-    `oracle-follow up as ${ctx.exchange.walletAddress ?? "(no key, dry run)"} · dryRun=${ctx.config.dryRun} · ` +
+    `oracle-follow up as ${
+      ctx.exchange.walletAddress ?? "(no key, dry run)"
+    } · dryRun=${ctx.config.dryRun} · ` +
       `model=${MODEL} interval=${INTERVAL_MS}ms window=${WINDOW_MS}ms edge=${EDGE} ` +
       `maxDisagreement=${MAX_DISAGREEMENT > 0 ? MAX_DISAGREEMENT : "off"} ` +
-      `maxHorizons=${MAX_HORIZONS > 0 ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(0)}min)` : "off"} ` +
-      `crossAssetConfirm=${CROSS_ASSET_CONFIRM_ENABLED ? `${(CROSS_ASSET_CONFIRM_MS / 60_000).toFixed(1)}min` : "off"} ` +
-      `allowedWindows=${ALLOWED_WINDOW_MIN.length ? ALLOWED_WINDOW_MIN.join(",") + "min" : "ALL (unfiltered!)"}`,
+      `maxHorizons=${
+        MAX_HORIZONS > 0
+          ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(
+              0
+            )}min)`
+          : "off"
+      } ` +
+      `crossAssetConfirm=${
+        CROSS_ASSET_CONFIRM_ENABLED
+          ? `${(CROSS_ASSET_CONFIRM_MS / 60_000).toFixed(1)}min`
+          : "off"
+      } ` +
+      `allowedWindows=${
+        ALLOWED_WINDOW_MIN.length
+          ? ALLOWED_WINDOW_MIN.join(",") + "min"
+          : "ALL (unfiltered!)"
+      }`
   );
 
   let stop = false;

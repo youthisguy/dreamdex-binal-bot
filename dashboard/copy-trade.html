@@ -10,7 +10,11 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="9fda0d02-bb30-4ed0-8f88-b71a71d7a184"></script>
+    <script
+      defer
+      src="https://cloud.umami.is/script.js"
+      data-website-id="9fda0d02-bb30-4ed0-8f88-b71a71d7a184"
+    ></script>
     <style>
       :root {
         /* Same Quant Terminal Color Scheme as the main dashboard */
@@ -46,18 +50,28 @@
         background: var(--bg);
         color: var(--text);
         font-family: var(--font-mono);
-        min-height: 100vh;
+        height: 100vh;
         font-size: 12px;
         -webkit-font-smoothing: none;
         overflow-x: hidden;
+        overflow-y: hidden;
       }
 
       .layout-wrapper {
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        height: 100vh;
         padding: 8px;
         gap: 8px;
+      }
+
+      .leaderboard-card {
+        flex: 1;
+        min-height: 0;
+      }
+      .leaderboard-card .table-container {
+        flex: 1;
+        max-height: none;
       }
 
       header {
@@ -184,8 +198,8 @@
         }
       }
 
-           /* Footer */
-           .footer {
+      /* Footer */
+      .footer {
         flex-shrink: 0;
         display: flex;
         justify-content: center;
@@ -217,7 +231,6 @@
         image-rendering: crisp-edges;
         flex-shrink: 0;
       }
-
 
       .card {
         background: var(--surface);
@@ -424,7 +437,11 @@
         </div>
         <div class="wallet-box">
           <span id="netBadge" class="net-badge" style="display: none"></span>
-          <span id="walletAddr" class="wallet-addr" style="display: none"></span>
+          <span
+            id="walletAddr"
+            class="wallet-addr"
+            style="display: none"
+          ></span>
           <button id="connectBtn" class="btn primary">CONNECT WALLET</button>
         </div>
       </header>
@@ -456,36 +473,80 @@
             <div class="field-row">
               <div class="field-col">
                 <label>Deposit Amount (USDso)</label>
-                <input type="number" id="depositAmt" placeholder="0.00" min="0" step="0.01" disabled />
+                <input
+                  type="number"
+                  id="depositAmt"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  disabled
+                />
               </div>
-              <button id="depositBtn" class="btn" style="align-self: end" disabled>DEPOSIT</button>
+              <button
+                id="depositBtn"
+                class="btn"
+                style="align-self: end"
+                disabled
+              >
+                DEPOSIT
+              </button>
             </div>
 
             <div class="field-row">
               <div class="field-col">
                 <label>Withdraw Amount (USDso)</label>
-                <input type="number" id="withdrawAmt" placeholder="0.00" min="0" step="0.01" disabled />
+                <input
+                  type="number"
+                  id="withdrawAmt"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  disabled
+                />
               </div>
-              <button id="withdrawBtn" class="btn danger" style="align-self: end" disabled>WITHDRAW</button>
+              <button
+                id="withdrawBtn"
+                class="btn danger"
+                style="align-self: end"
+                disabled
+              >
+                WITHDRAW
+              </button>
             </div>
 
             <div class="field-row">
               <div class="field-col">
                 <label>Max Per-Trade Size (USDso)</label>
-                <input type="number" id="tradeSizeAmt" placeholder="e.g. 15" min="0" step="0.01" disabled />
+                <input
+                  type="number"
+                  id="tradeSizeAmt"
+                  placeholder="e.g. 15"
+                  min="0"
+                  step="0.01"
+                  disabled
+                />
               </div>
-              <button id="tradeSizeBtn" class="btn" style="align-self: end" disabled>SET CAP</button>
+              <button
+                id="tradeSizeBtn"
+                class="btn"
+                style="align-self: end"
+                disabled
+              >
+                SET CAP
+              </button>
             </div>
             <div class="hint">
-              Caps every single copy trade at this amount, regardless of idle balance —
-              e.g. deposit 100, set this to 15, and the bot can never commit more than
-              15 USDso to any one position.
+              Caps every single copy trade at this amount, regardless of idle
+              balance — e.g. deposit 100, set this to 15, and the bot can never
+              commit more than 15 USDso to any one position.
             </div>
 
             <div class="toggle-row">
               <div>
                 <div class="label">COPY BINAL SIGNALS</div>
-                <div class="sub" id="copyStatusSub">Requires a trade-size cap to be set first</div>
+                <div class="sub" id="copyStatusSub">
+                  Requires a trade-size cap to be set first
+                </div>
               </div>
               <button id="copyToggleBtn" class="btn" disabled>ENABLE</button>
             </div>
@@ -509,7 +570,11 @@
                 </tr>
               </thead>
               <tbody id="myTradesRows">
-                <tr><td colspan="5" class="empty-state">CONNECT WALLET TO VIEW</td></tr>
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    CONNECT WALLET TO VIEW
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -517,7 +582,7 @@
       </div>
 
       <!-- Bottom: Leaderboard -->
-      <div class="card">
+      <div class="card leaderboard-card">
         <div class="card-header">
           <h2>COPY TRADER LEADERBOARD</h2>
           <span id="activeCopiers" class="hint">–</span>
@@ -534,7 +599,9 @@
               </tr>
             </thead>
             <tbody id="leaderboardRows">
-              <tr><td colspan="5" class="empty-state">LOADING...</td></tr>
+              <tr>
+                <td colspan="5" class="empty-state">LOADING...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -573,13 +640,17 @@
 
     <script>
       // ── Config — fill in for your deployment ─────────────────────────
-      const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com"; 
-      const VAULT_ADDRESS = "0x874B144BAE16133e2B6fCFAeF1C0050D03D60734";  
+      const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com";
+      const VAULT_ADDRESS = "0x874B144BAE16133e2B6fCFAeF1C0050D03D60734";
 
       const SOMNIA_TESTNET = {
         chainIdHex: "0xc488", // 50312
         chainName: "Somnia Shannon Testnet",
-        nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
+        nativeCurrency: {
+          name: "Somnia Test Token",
+          symbol: "STT",
+          decimals: 18,
+        },
         rpcUrls: ["https://dream-rpc.somnia.network"],
       };
 
@@ -599,8 +670,18 @@
         "function allowance(address owner, address spender) view returns (uint256)",
       ];
 
-      let provider, signer, address, vault, token, tokenDecimals = 18;
-      let accountState = { balance: 0, lockedInTrades: 0, copyEnabled: false, tradeSize: 0 };
+      let provider,
+        signer,
+        address,
+        vault,
+        token,
+        tokenDecimals = 18;
+      let accountState = {
+        balance: 0,
+        lockedInTrades: 0,
+        copyEnabled: false,
+        tradeSize: 0,
+      };
 
       const els = {
         connectBtn: document.getElementById("connectBtn"),
@@ -629,7 +710,9 @@
         els.statusLine.className = "status-line" + (kind ? " " + kind : "");
       }
       function fmt(n, dp = 4) {
-        return n === null || n === undefined || isNaN(n) ? "–" : Number(n).toFixed(dp);
+        return n === null || n === undefined || isNaN(n)
+          ? "–"
+          : Number(n).toFixed(dp);
       }
       function fmtSigned(n, dp = 3) {
         if (n === null || n === undefined || isNaN(n)) return "–";
@@ -641,7 +724,9 @@
 
       // ── Network handling ──────────────────────────────────────────────
       async function ensureNetwork() {
-        const chainId = await window.ethereum.request({ method: "eth_chainId" });
+        const chainId = await window.ethereum.request({
+          method: "eth_chainId",
+        });
         if (chainId.toLowerCase() === SOMNIA_TESTNET.chainIdHex) {
           els.netBadge.textContent = "SOMNIA TESTNET";
           els.netBadge.className = "net-badge ok";
@@ -673,7 +758,10 @@
               });
               return ensureNetwork();
             } catch (addErr) {
-              setStatus(`couldn't add Somnia Shannon Testnet: ${addErr.message}`, "err");
+              setStatus(
+                `couldn't add Somnia Shannon Testnet: ${addErr.message}`,
+                "err"
+              );
               return false;
             }
           }
@@ -691,7 +779,9 @@
         try {
           els.connectBtn.disabled = true;
           els.connectBtn.textContent = "CONNECTING...";
-          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await window.ethereum.request({
+            method: "eth_requestAccounts",
+          });
           address = ethers.getAddress(accounts[0]);
           const netOk = await ensureNetwork();
           if (!netOk) {
@@ -709,9 +799,14 @@
           els.walletAddr.textContent = shortAddr(address);
           els.walletAddr.style.display = "inline-block";
           els.connectBtn.textContent = "CONNECTED";
-          [els.depositAmt, els.depositBtn, els.withdrawAmt, els.withdrawBtn, els.tradeSizeAmt, els.tradeSizeBtn].forEach(
-            (el) => (el.disabled = false),
-          );
+          [
+            els.depositAmt,
+            els.depositBtn,
+            els.withdrawAmt,
+            els.withdrawBtn,
+            els.tradeSizeAmt,
+            els.tradeSizeBtn,
+          ].forEach((el) => (el.disabled = false));
 
           // Let the backend know this wallet exists — read-only registration,
           // never signs or submits anything on the user's behalf.
@@ -734,31 +829,44 @@
 
       // ── On-chain actions ──────────────────────────────────────────────
       async function refreshAccount() {
-        const [balance, lockedInTrades, copyEnabled, tradeSize] = await vault.getAccount(address);
+        const [balance, lockedInTrades, copyEnabled, tradeSize] =
+          await vault.getAccount(address);
         accountState = {
           balance: Number(ethers.formatUnits(balance, tokenDecimals)),
-          lockedInTrades: Number(ethers.formatUnits(lockedInTrades, tokenDecimals)),
+          lockedInTrades: Number(
+            ethers.formatUnits(lockedInTrades, tokenDecimals)
+          ),
           copyEnabled,
           tradeSize: Number(ethers.formatUnits(tradeSize, tokenDecimals)),
         };
         els.statBalance.textContent = fmt(accountState.balance, 2);
         els.statLocked.textContent = fmt(accountState.lockedInTrades, 2);
         els.copyToggleBtn.disabled = accountState.tradeSize <= 0;
-        els.copyToggleBtn.textContent = accountState.copyEnabled ? "DISABLE" : "ENABLE";
-        els.copyToggleBtn.className = "btn" + (accountState.copyEnabled ? " danger" : " primary");
+        els.copyToggleBtn.textContent = accountState.copyEnabled
+          ? "DISABLE"
+          : "ENABLE";
+        els.copyToggleBtn.className =
+          "btn" + (accountState.copyEnabled ? " danger" : " primary");
         els.copyStatusSub.textContent = accountState.copyEnabled
-          ? `Live — copying every signal up to ${fmt(accountState.tradeSize, 2)} USDso/trade`
+          ? `Live — copying every signal up to ${fmt(
+              accountState.tradeSize,
+              2
+            )} USDso/trade`
           : accountState.tradeSize > 0
-            ? "Trade-size cap set"
-            : "Requires a trade-size cap to be set first";
+          ? "Trade-size cap set"
+          : "Requires a trade-size cap to be set first";
 
         // Pull PNL/winRate from the copy-service (it tracks settlement history)
         try {
-          const res = await fetch(`${COPY_SERVICE_URL}/api/copy/me?wallet=${address}`);
+          const res = await fetch(
+            `${COPY_SERVICE_URL}/api/copy/me?wallet=${address}`
+          );
           const data = await res.json();
           els.statPnl.textContent = fmtSigned(data.pnl, 2);
-          els.statPnl.className = "value " + (data.pnl > 0 ? "pos" : data.pnl < 0 ? "neg" : "");
-          els.statWinRate.textContent = data.winRate === null ? "–" : (data.winRate * 100).toFixed(1) + "%";
+          els.statPnl.className =
+            "value " + (data.pnl > 0 ? "pos" : data.pnl < 0 ? "neg" : "");
+          els.statWinRate.textContent =
+            data.winRate === null ? "–" : (data.winRate * 100).toFixed(1) + "%";
         } catch {
           // copy-service unreachable — on-chain stats above still show, just skip pnl/winrate
         }
@@ -825,7 +933,10 @@
           await refreshAccount();
           setStatus(`per-trade cap set to ${amt} USDso`, "ok");
         } catch (e) {
-          setStatus(`set trade size failed: ${e.shortMessage ?? e.message}`, "err");
+          setStatus(
+            `set trade size failed: ${e.shortMessage ?? e.message}`,
+            "err"
+          );
         } finally {
           els.tradeSizeBtn.disabled = false;
         }
@@ -835,11 +946,19 @@
         const enabling = !accountState.copyEnabled;
         try {
           els.copyToggleBtn.disabled = true;
-          setStatus(enabling ? "enabling copy trading..." : "disabling copy trading...", null);
+          setStatus(
+            enabling ? "enabling copy trading..." : "disabling copy trading...",
+            null
+          );
           const tx = await vault.setCopyEnabled(enabling);
           await tx.wait();
           await refreshAccount();
-          setStatus(enabling ? "copy trading ON" : "copy trading OFF — no new positions will open", "ok");
+          setStatus(
+            enabling
+              ? "copy trading ON"
+              : "copy trading OFF — no new positions will open",
+            "ok"
+          );
         } catch (e) {
           setStatus(`toggle failed: ${e.shortMessage ?? e.message}`, "err");
         } finally {
@@ -851,24 +970,34 @@
       async function refreshMyTrades() {
         if (!address) return;
         try {
-          const res = await fetch(`${COPY_SERVICE_URL}/api/copy/me?wallet=${address}`);
+          const res = await fetch(
+            `${COPY_SERVICE_URL}/api/copy/me?wallet=${address}`
+          );
           const data = await res.json();
           const rows = (data.recentTrades || [])
             .map((t) => {
               const dirClass = t.side === "BUY_YES" ? "pos" : "neg";
-              const pnlClass = t.net_pnl > 0 ? "pos" : t.net_pnl < 0 ? "neg" : "";
+              const pnlClass =
+                t.net_pnl > 0 ? "pos" : t.net_pnl < 0 ? "neg" : "";
               return `<tr>
                 <td>${t.symbol}</td>
-                <td class="${dirClass}">${t.side === "BUY_YES" ? "UP" : "DOWN"}</td>
+                <td class="${dirClass}">${
+                t.side === "BUY_YES" ? "UP" : "DOWN"
+              }</td>
                 <td class="num-col">${fmt(t.collateral_at_entry, 2)}</td>
                 <td>${t.status}${t.outcome ? " · " + t.outcome : ""}</td>
-                <td class="num-col ${pnlClass}">${t.net_pnl != null ? fmtSigned(t.net_pnl, 3) : "–"}</td>
+                <td class="num-col ${pnlClass}">${
+                t.net_pnl != null ? fmtSigned(t.net_pnl, 3) : "–"
+              }</td>
               </tr>`;
             })
             .join("");
-          els.myTradesRows.innerHTML = rows || '<tr><td colspan="5" class="empty-state">NO TRADES YET</td></tr>';
+          els.myTradesRows.innerHTML =
+            rows ||
+            '<tr><td colspan="5" class="empty-state">NO TRADES YET</td></tr>';
         } catch {
-          els.myTradesRows.innerHTML = '<tr><td colspan="5" class="empty-state">COPY SERVICE UNREACHABLE</td></tr>';
+          els.myTradesRows.innerHTML =
+            '<tr><td colspan="5" class="empty-state">COPY SERVICE UNREACHABLE</td></tr>';
         }
       }
 
@@ -876,22 +1005,33 @@
         try {
           const res = await fetch(`${COPY_SERVICE_URL}/api/copy/leaderboard`);
           const data = await res.json();
-          els.activeCopiers.textContent = `${data.activeCopiers ?? 0} ACTIVE COPIER(S)`;
+          els.activeCopiers.textContent = `${
+            data.activeCopiers ?? 0
+          } ACTIVE COPIER(S)`;
           const rows = (data.leaderboard || [])
             .map((r, i) => {
               const pnlClass = r.pnl > 0 ? "pos" : r.pnl < 0 ? "neg" : "";
               return `<tr>
                 <td class="rank-cell">${i + 1}</td>
-                <td>${shortAddr(r.wallet)}${r.wallet.toLowerCase() === (address || "").toLowerCase() ? " (YOU)" : ""}</td>
+                <td>${shortAddr(r.wallet)}${
+                r.wallet.toLowerCase() === (address || "").toLowerCase()
+                  ? " (YOU)"
+                  : ""
+              }</td>
                 <td class="num-col ${pnlClass}">${fmtSigned(r.pnl, 3)}</td>
-                <td class="num-col">${r.winRate === null ? "–" : (r.winRate * 100).toFixed(1) + "%"}</td>
+                <td class="num-col">${
+                  r.winRate === null ? "–" : (r.winRate * 100).toFixed(1) + "%"
+                }</td>
                 <td class="num-col">${r.settledCount}</td>
               </tr>`;
             })
             .join("");
-          els.leaderboardRows.innerHTML = rows || '<tr><td colspan="5" class="empty-state">NO COPY TRADES YET</td></tr>';
+          els.leaderboardRows.innerHTML =
+            rows ||
+            '<tr><td colspan="5" class="empty-state">NO COPY TRADES YET</td></tr>';
         } catch {
-          els.leaderboardRows.innerHTML = '<tr><td colspan="5" class="empty-state">COPY SERVICE UNREACHABLE</td></tr>';
+          els.leaderboardRows.innerHTML =
+            '<tr><td colspan="5" class="empty-state">COPY SERVICE UNREACHABLE</td></tr>';
         }
       }
 

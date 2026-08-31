@@ -2,15 +2,17 @@
 
 **A validated, autonomous, and copyable trading agent for DreamDEX Event Contracts.**
 
- Every decision — trade or pass — is logged in it's journal with full reasoning. Every result, win or loss, is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially, with a withdrawal path that always works regardless of what the bot is doing.
+ Every decision (trade or skip) is logged in it's journal with full reasoning. Every result is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially, with a withdrawal path under their control.
+
+**Live:** [Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) · [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) · [Telegram](https://t.me/binal_bot_signals)
 
 ---
 
 ## What it is
 
-Binal Bot is an automated signal bot trading binary Up/Down event contracts on [DreamDEX](https://docs.dreamdex.io) — a prediction-market venue on Somnia. It watches short-window markets (15m, and other horizons as they're validated) on BTC/ETH, computes a fair probability against the market's own price, and takes a directional position (`BUY_YES`/`BUY_NO`) whenever its edge clears a threshold, never outside the odds regime its edge was actually proven in.
+Binal Bot is an automated signal bot trading binary Up/Down event contracts on [DreamDEX](https://docs.dreamdex.io) (Somnia). It watches short-window markets, computes a fair probability against the market's own price, and takes a directional position (`BUY_YES`/`BUY_NO`) whenever its edge clears a threshold, never outside the odds regime its edge was proven in.
 
-Every signal is logged, posted to a public Telegram channel as a stat-card image, and shown on a live dashboard in real time. On top of that, a copy-trade system lets any wallet holder mirror Binal's signals automatically with their own funds, sized to their own risk tolerance.
+Every signal is logged, posted to the Binal Bot Signals Telegram channel as a stat-card image, and shown on the [agent dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) in real time. On top of that, a copy-trade system lets any wallet holder mirror Binal's signals automatically with their own funds, sized to their own risk tolerance.
 
 ---
 
