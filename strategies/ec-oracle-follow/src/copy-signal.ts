@@ -1,6 +1,6 @@
-// * Fire-and-forget notifications to the copy-trade service. 
+// * Fire-and-forget notifications to the copy-trade service.
 //  */
-const copyServiceUrl = () => process.env.COPY_SERVICE_URL;  
+const copyServiceUrl = () => process.env.COPY_SERVICE_URL;
 
 const CALL_TIMEOUT_MS = 5_000;
 
@@ -11,16 +11,24 @@ function post(path: string, body: unknown): void {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
 
+  const secret = process.env.COPY_WEBHOOK_SECRET;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (secret) {
+    headers["x-webhook-secret"] = secret;
+  } else {
+    console.error(
+      `copy-service ${path}: COPY_WEBHOOK_SECRET not set — call will be rejected if the service requires it`
+    );
+  }
+
   fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
     signal: controller.signal,
-  })
-    .catch((e) => {
-      console.error(`copy-service ${path} failed: ${(e as Error).message}`);
-    })
-    .finally(() => clearTimeout(timer));
+  });
 }
 
 export interface CopySignal {
