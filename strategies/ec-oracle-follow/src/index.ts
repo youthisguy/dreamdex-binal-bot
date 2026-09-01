@@ -305,7 +305,9 @@ function sweepUnpairedLegs(now: number): void {
       log(
         `🚨 CROSS-ASSET PAIR FAILED: ${asset} ${leg.symbol} filled ${leg.size} ` +
           `shares with no ${partnerAsset(asset)} partner fill within ` +
-          `${(PARTNER_FILL_GRACE_MS / 60_000).toFixed(1)}min — likely a reverted ` +
+          `${(PARTNER_FILL_GRACE_MS / 60_000).toFixed(
+            1
+          )}min — likely a reverted ` +
           `partner order. This is naked directional exposure the cross-asset ` +
           `gate was meant to prevent. New ${asset} entries stay blocked until ` +
           `this position settles.`
@@ -650,34 +652,6 @@ async function takeOne(
     return;
   }
 
-  // 10b) Cross-asset confirmation. This signal just cleared every gate
-  // above — record it, then require the OTHER asset to have qualified
-  // within the same rolling window before this one is allowed to fire.
-  //
-  // A signal-level "confirmed" only proves both assets' SIGNALS lined up —
-  // it says nothing about whether either order actually filled. If this
-  // asset currently has an unresolved unpaired fill (its own order filled
-  // earlier but the partner leg never confirmed — e.g. the partner's IOC
-  // reverted on-chain after both sides passed this same gate), refuse new
-  // entries on this asset until that position resolves. Otherwise the bot
-  // just keeps compounding naked exposure on the same side.
-  if (CROSS_ASSET_CONFIRM_ENABLED) {
-    if (unpairedLegs.has(thisAsset)) {
-      note(cycle, "asset has an unresolved unpaired leg — refusing to compound");
-      return;
-    }
-    const confirmNow = Date.now();
-    lastQualifyingSignal.set(thisAsset, confirmNow);
-    const partnerLast = lastQualifyingSignal.get(partnerAsset(thisAsset));
-    const confirmed =
-      partnerLast !== undefined &&
-      confirmNow - partnerLast <= CROSS_ASSET_CONFIRM_MS;
-    if (!confirmed) {
-      note(cycle, "waiting for cross-asset confirmation");
-      return;
-    }
-  }
-
   // 11) Risk limits, counted in DIRECTIONAL shares. The opposing-leg guard above
   // means one leg is always zero here, so the net is what we hold in `fav` — but
   // derive it rather than assume, so the limits stay honest if that guard ever
@@ -702,6 +676,37 @@ async function takeOne(
   if (size <= 0) {
     note(cycle, "below one lot");
     return;
+  }
+
+  // 10b) Cross-asset confirmation. This signal just cleared every gate
+  // above — record it, then require the OTHER asset to have qualified
+  // within the same rolling window before this one is allowed to fire.
+  //
+  // A signal-level "confirmed" only proves both assets' SIGNALS lined up —
+  // it says nothing about whether either order actually filled. If this
+  // asset currently has an unresolved unpaired fill (its own order filled
+  // earlier but the partner leg never confirmed — e.g. the partner's IOC
+  // reverted on-chain after both sides passed this same gate), refuse new
+  // entries on this asset until that position resolves. Otherwise the bot
+  // just keeps compounding naked exposure on the same side.
+  if (CROSS_ASSET_CONFIRM_ENABLED) {
+    if (unpairedLegs.has(thisAsset)) {
+      note(
+        cycle,
+        "asset has an unresolved unpaired leg — refusing to compound"
+      );
+      return;
+    }
+    const confirmNow = Date.now();
+    lastQualifyingSignal.set(thisAsset, confirmNow);
+    const partnerLast = lastQualifyingSignal.get(partnerAsset(thisAsset));
+    const confirmed =
+      partnerLast !== undefined &&
+      confirmNow - partnerLast <= CROSS_ASSET_CONFIRM_MS;
+    if (!confirmed) {
+      note(cycle, "waiting for cross-asset confirmation");
+      return;
+    }
   }
 
   // Cross a touch past the best so we still match if the book shifts, snapped
