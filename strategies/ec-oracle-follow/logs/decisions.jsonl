@@ -1152,3 +1152,19 @@
 {"timestamp":"2026-09-01T18:44:29.549Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
 {"timestamp":"2026-09-01T18:45:08.703Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"empty book":2,"window not in OF_ALLOWED_WINDOWS_MIN":6}}
 {"timestamp":"2026-09-01T18:45:09.339Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000001063e","outcome":"WIN","pnl":39.79999999999998,"settled_at":"2026-09-01T18:45:09.338Z"}
+{"timestamp":"2026-09-01T18:54:46.087Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-09-01T18:55:23.689Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:55:59.995Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:56:35.894Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:57:11.888Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:57:48.682Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:58:25.102Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:59:01.096Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T18:59:36.794Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"near expiry":2}}
+{"timestamp":"2026-09-01T19:00:13.213Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-09-01T19:00:50.278Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-09-01T19:01:27.585Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"warming up":2}}
+{"timestamp":"2026-09-01T19:02:06.278Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"model disagrees with market":2}}
+{"timestamp":"2026-09-01T19:02:42.692Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"no momentum contribution (OF_REQUIRE_MOMENTUM)":2}}
+{"timestamp":"2026-09-01T19:03:20.085Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":8,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":6,"no momentum contribution (OF_REQUIRE_MOMENTUM)":2}}
+{"timestamp":"2026-09-01T19:03:57.346Z","type":"decision","action":"TRADE_UP","outcome":"PENDING","market_id":"0x0000000000000000000000000000000000000000000000000000000000010698","symbol":"BTC-0-01SEP26-1915/tUSDC","asset":"BTC","window":"15m","side":"BUY_YES","size":200,"price":0.562,"dry_run":false,"signal":"UP","fair_prob":0.6432360367038729,"market_mid":0.5455000000000001,"edge":0.0832360367038728,"disagreement":0.09773603670387276,"momentum_r":0.00025055928360422054,"momentum_used":true,"reason":"opening 77136.38 vs spot 77161.35, vol 0.094% measured, r +0.0003, tilt +0.098 off market 0.546, pUp 0.643, fair 0.643, ask 0.560","expiry_ms":1788290100000,"ref_price":77136.38,"ref_kind":"opening","explorer_url":"https://dev.smk.somnia.host/markets/0xA34e33f71C566134CeeCdd6869BcC693B3D69c17"}
