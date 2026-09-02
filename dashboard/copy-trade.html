@@ -476,7 +476,10 @@
 
             <div class="field-row">
               <div class="field-col">
-                <label>Deposit Amount (USDso)</label>
+                <label
+                  >Deposit Amount (<span id="labelDepositCurrency">USDso</span
+                  >)</label
+                >
                 <input
                   type="number"
                   id="depositAmt"
@@ -498,7 +501,10 @@
 
             <div class="field-row">
               <div class="field-col">
-                <label>Withdraw Amount (USDso)</label>
+                <label
+                  >Withdraw Amount (<span id="labelWithdrawCurrency">USDso</span
+                  >)</label
+                >
                 <input
                   type="number"
                   id="withdrawAmt"
@@ -520,7 +526,11 @@
 
             <div class="field-row">
               <div class="field-col">
-                <label>Max Per-Trade Size (USDso)</label>
+                <label
+                  >Max Per-Trade Size (<span id="labelTradeSizeCurrency"
+                    >USDso</span
+                  >)</label
+                >
                 <input
                   type="number"
                   id="tradeSizeAmt"
@@ -542,7 +552,8 @@
             <div class="hint">
               Caps every single copy trade at this amount, regardless of idle
               balance — e.g. deposit 100, set this to 15, and the bot can never
-              commit more than 15 USDso to any one position.
+              commit more than 15 <span id="hintCurrency">USDso</span> to any
+              one position.
             </div>
 
             <div class="toggle-row">
@@ -646,7 +657,7 @@
       // ── Config — fill in for your deployment ─────────────────────────
       const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com";
       const VAULT_ADDRESS = "0xBE24664ebC322aBA45bbA28d05b11B0f9D3E5Ed0";
-
+      const QUOTE_CURRENCY = "tUSDC";
       const SOMNIA_TESTNET = {
         chainIdHex: "0xc488", // 50312
         chainName: "Somnia Shannon Testnet",
@@ -708,7 +719,13 @@
         leaderboardRows: document.getElementById("leaderboardRows"),
         activeCopiers: document.getElementById("activeCopiers"),
       };
-
+      document.getElementById("labelDepositCurrency").textContent =
+        QUOTE_CURRENCY;
+      document.getElementById("labelWithdrawCurrency").textContent =
+        QUOTE_CURRENCY;
+      document.getElementById("labelTradeSizeCurrency").textContent =
+        QUOTE_CURRENCY;
+      document.getElementById("hintCurrency").textContent = QUOTE_CURRENCY;
       function setStatus(msg, kind) {
         els.statusLine.textContent = msg || "";
         els.statusLine.className = "status-line" + (kind ? " " + kind : "");
@@ -855,7 +872,7 @@
           ? `Live — copying every signal up to ${fmt(
               accountState.tradeSize,
               2
-            )} USDso/trade`
+            )} ${QUOTE_CURRENCY}/trade`
           : accountState.tradeSize > 0
           ? "Trade-size cap set"
           : "Requires a trade-size cap to be set first";
@@ -897,7 +914,7 @@
           await tx.wait();
           els.depositAmt.value = "";
           await refreshAccount();
-          setStatus(`deposited ${amt} USDso`, "ok");
+          setStatus(`deposited ${amt} ${QUOTE_CURRENCY}`, "ok");
         } catch (e) {
           setStatus(`deposit failed: ${e.shortMessage ?? e.message}`, "err");
         } finally {
@@ -916,7 +933,7 @@
           await tx.wait();
           els.withdrawAmt.value = "";
           await refreshAccount();
-          setStatus(`withdrew ${amt} USDso`, "ok");
+          setStatus(`withdrew ${amt} ${QUOTE_CURRENCY}`, "ok");
         } catch (e) {
           setStatus(`withdraw failed: ${e.shortMessage ?? e.message}`, "err");
         } finally {
@@ -935,7 +952,7 @@
           await tx.wait();
           els.tradeSizeAmt.value = "";
           await refreshAccount();
-          setStatus(`per-trade cap set to ${amt} USDso`, "ok");
+          setStatus(`per-trade cap set to ${amt} ${QUOTE_CURRENCY}`, "ok");
         } catch (e) {
           setStatus(
             `set trade size failed: ${e.shortMessage ?? e.message}`,

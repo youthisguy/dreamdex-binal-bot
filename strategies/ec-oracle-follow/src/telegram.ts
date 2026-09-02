@@ -32,6 +32,9 @@ const apiBase = () => {
   const t = botToken();
   return t ? `https://api.telegram.org/bot${t}` : null;
 };
+/** Quote currency shown in captions. Testnet uses tUSDC; mainnet uses USDce. */
+const quoteCurrency = () =>
+  (process.env.NETWORK ?? "").toLowerCase() === "testnet" ? "tUSDC" : "USDso";
 
 // Node's fetch has NO default timeout. An unguarded call here can hang
 // forever on a dropped connection, silently freezing the bot's entire
@@ -198,7 +201,7 @@ function signalCaption(p: SignalPost): string {
   ).toFixed(1)}%)`;
   const stakeLine = `Size: ${p.size} @ ~${(p.size * p.entryPrice).toFixed(
     2
-  )} USDC`;
+  )} ${quoteCurrency()}`;
   const refLine =
     p.refPrice !== null && p.refKind !== null
       ? `${
@@ -381,7 +384,7 @@ export async function postSettlementReply(
       s.original.window
     )}</b> settled`,
     ``,
-    `<b>${badge}</b>  |  ${pnlStr} USDC`,
+    `<b>${badge}</b>  |  ${pnlStr} ${quoteCurrency()}`,
     ``,
     `<i>Track record: ${wr} WR  |  ${totalPnl} PnL  (trades=${s.stats.settledCount})</i>`,
   ].join("\n");
