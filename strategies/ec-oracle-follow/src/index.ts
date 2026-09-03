@@ -828,20 +828,30 @@ async function takeOne(
     explorer_url: explorerUrl,
   });
 
-  // Notify the copy-trade service right after the journal write, same
-  // reasoning as Telegram below — never blocks or depends on the bot's own
-  // main loop, and never depends on Telegram's success/failure either.
+  // Calculate a price ceiling that sweeps deeper order book levels for copiers
+  const COPY_SLIPPAGE_BUFFER = Number(process.env.OF_COPY_SLIPPAGE_BUFFER ?? 0.15);
+  const MAX_COPY_PRICE = Number(process.env.OF_COPY_MAX_PRICE ?? 0.99);
+  
+  const copierLimitPrice = Math.min(
+    MAX_COPY_PRICE,
+    Number((askPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
+  );
+
+const marketId = info.marketId ?? onchain.pool;
+
+  // Notify the copy-trade service right after the journal write 
   notifyCopyService({
-    id: `${info.marketId}-${now}`,
-    marketId: info.marketId!,
+    id: `sig_${marketId}_${now}`,
+    marketId: marketId,
     symbol: market.symbol,
     asset: info.asset,
     window: windowLabel(info.intervalSec),
-    side,
-    price,
+    side: bullish ? "BUY_YES" : "BUY_NO",
+    price: askPx,                 // Bot's execution price
+    limitPrice: copierLimitPrice,  // Price copiers will use to cross remaining depth
     pool: onchain.pool,
     expiryMs: info.expiryMs,
-    dryRun: ctx.config.dryRun,
+    dryRun: false,
     timestamp: now,
   });
 

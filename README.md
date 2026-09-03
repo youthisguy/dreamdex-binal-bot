@@ -4,7 +4,7 @@
 
  Every decision (trade or skip) is logged in it's journal with full reasoning. Every result is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially, with a withdrawal path under their control.
 
-[Agent Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) | [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) | [Telegram](https://t.me/binal_bot_signals)
+[Agent Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) | [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) | [Copy-service repo](https://github.com/youthisguy/Binal_copy_serve) | [Telegram](https://t.me/binal_bot_signals)
 
 ---
 
@@ -18,13 +18,13 @@ Every signal is logged, posted to the Binal Bot Signals Telegram channel as a st
 
 ## The signal
 
-DreamDEX's own reference implementation for Event Contract trading explicitly documents its forecasting model as a placeholder. Binal Bot fills that gap with a real one: an EMA(3)/EMA(12) momentum crossover, validated through a full research pipeline — 180 days of BTC/ETH price history, a 36-combination grid search with Bonferroni-corrected significance testing, and a chronological walk-forward split that never let the model see its own test data. The result held up out-of-sample: a **56.8% win rate on fully unseen data, statistically significant at p=0.00033**.
+DreamDEX's own reference implementation for Event Contract trading documents its forecasting model as a placeholder. Binal Bot fills that gap with a real one: an EMA(3)/EMA(12) momentum crossover, validated through a full research pipeline — 180 days of BTC/ETH price history, a 36-combination grid search with Bonferroni-corrected significance testing, and a chronological walk-forward split that never let the model see its own test data. The result held up out-of-sample: a **56.8% win rate on fully unseen data, statistically significant at p=0.00033**.
 
 That signal now runs live, gated by risk controls tuned against real production behavior:
 
 - **Window filter** — restricts trading to the validated 15-minute horizon (`OF_ALLOWED_WINDOWS_MIN`), since the signal was never backtested on longer windows the platform also offers
 - **Momentum-required gate** — a trade only fires when the validated EMA signal actually contributed (`OF_REQUIRE_MOMENTUM`), not when the platform's own unvalidated strike/moneyness pricing alone would trigger one
-- **Entry-price ceiling** — refuses entries priced above a configurable threshold (`OF_MAX_ENTRY_PRICE`), keeping the bot inside the odds regime its win rate was actually proven at rather than laying unfavorable prices on deep favorites
+- **Entry-price ceiling** — refuses entries priced above a configurable threshold (`OF_MAX_ENTRY_PRICE`), keeping the bot inside the odds regime its win rate was actually proven  at
 
 ---
 
@@ -40,21 +40,53 @@ Because the bot runs on infrastructure with ephemeral disk, trade history is che
 
 ## Copy trading
 
-Binal Bot's signals aren't just observable — they're actionable. `CopyVault` is a non-custodial, per-user smart contract that lets anyone follow the bot's exact trades with their own funds: deposit, set a per-trade size cap, opt in, and every signal the bot takes is mirrored into your own position automatically.
+Binal's signals aren't just observable — they're actionable. Users interact with **`CopyVault`** (a non-custodial, per-user contract) through the [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) page:
 
-- **Not pooled.** Every user's balance and every position is tracked individually — no shared pool, no share-price math, no cross-user contamination.
-- **Withdrawal always works**, independent of operator or copy-toggle state. That's the real kill switch.
-- **Fees apply only to realized profit**, hard-capped in the contract itself — never on deposits, never on losses.
-- **The operator can only act for users who explicitly opted in**, capped per-trade by each user's own self-set size limit. It can never touch a non-opted-in user, and can never withdraw anyone's funds.
+1. Connect wallet → approve + **deposit**
+2. **Set trade size** (a hard per-position cap)
+3. **Enable copy**
+4. Every live signal is mirrored for opted-in wallets; settlements credit idle balance
+5. **Withdraw** anytime from idle funds
 
----
+Design properties:
+
+- **Not pooled** — every user's balance and position is tracked individually
+- **Withdraw always works** — independent of operator or copy-toggle state
+- **Fees only on realized profit** — hard-capped in the contract, never on deposits or losses
+- **Operator can only act for opted-in users**, capped by each user's own `tradeSize`
+
+The bot never holds user funds. It only notifies the copy service:
+
+| Webhook | When | Payload (conceptually) |
+|---|---|---|
+| `POST /api/signal` | Bot takes a trade | `marketId`, `side`, `price`, `pool`, `expiryMs`, … |
+| `POST /api/settlement` | Market resolves | `marketId`, `outcome`, `payoutPerShare`, `winningSide` |
+
+Both require a shared secret header (`x-webhook-secret`). Full contract, API, and deploy detail: **[Binal_copy_serve](https://github.com/youthisguy/Binal_copy_serve)**.
+
+
 
 ## Architecture
+ 
+Two independent deployments, deliberately decoupled — the copy service can be down, slow, or mid-redeploy without ever affecting the main bot's own trading loop.
+ 
+```
+Main bot (ec-core, journal, Telegram)
+        │
+        │  POST /api/signal      (+ secret)
+        │  POST /api/settlement  (+ secret)
+        ▼
+Copy service (ethers + SQLite)
+        │
+        │  openPositionFor / redeemMarket / settlePosition
+        ▼
+CopyVault (per-user balances)
+```
+ 
 
-Two independent deployments, deliberately decoupled — the copy-trade service can be down, slow, or mid-redeploy without ever affecting the main bot's own trading loop.
 
 **1. Main bot** — runs the trading loop and serves the live dashboard.
-**2. Copy-trade service** — a fully standalone Node service (only `ethers` + `better-sqlite3`, no shared code with the main bot's monorepo). Talks to the bot only via two webhooks (push, not poll), and to the blockchain directly.
+**2. Copy-trade service** — a fully standalone Node service. Talks to the bot only via two webhooks (push, not poll), and to the blockchain directly.
 
 ### Main bot components
 
@@ -142,11 +174,6 @@ node --env-file=.env local-server.mjs
 ## Status
 
 **Confirmed working on testnet:** the full signal → validated backtest → live trading pipeline; the journal/dashboard/Telegram transparency layer, including reply-based settlement and automatic git checkpointing; and the full copy-trade path — deposit, set trade-size cap, enable/disable copying, withdraw, and the push-based signal → open-position → settle → leaderboard pipeline.
-
-**Notes for anyone deploying this further:**
-- Node is pinned to `20.18.1` for the copy-service (`better-sqlite3` has no prebuilt binary for newer Node releases and fails to compile from source against changed V8 APIs).
-- The copy-service's SQLite database lives on ephemeral disk by default — a Render Persistent Disk (or equivalent) is recommended before relying on long-term trade history through redeploys.
-- Both services benefit from a paid hosting tier rather than a free tier with external uptime pinging — a cold start on a free tier can occasionally exceed the signal webhook's timeout window.
 
 ---
 

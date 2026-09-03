@@ -38,11 +38,8 @@ export interface CopySignal {
   asset: string;
   window: string;
   side: "BUY_YES" | "BUY_NO";
-  price: number; // the exact price the bot itself crossed at
-  /** Pool address for THIS market, from the bot's own onchain snapshot —
-   *  passed through so the copy-service never has to rediscover it via
-   *  ec-core (which it doesn't have access to). Pool addresses recycle
-   *  across market windows, so this is only ever used for this one signal. */
+  price: number;       // The exact price the main bot crossed at
+  limitPrice: number;  // Higher limit price with slippage buffer for copiers
   pool: string;
   expiryMs: number | null;
   dryRun: boolean;
