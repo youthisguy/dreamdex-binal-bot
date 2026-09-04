@@ -1,12 +1,21 @@
-// * Fire-and-forget notifications to the copy-trade service.
-//  */
+/**
+ * Fire-and-forget notifications to the copy-trade service.
+ */
 const copyServiceUrl = () => process.env.COPY_SERVICE_URL;
 
-const CALL_TIMEOUT_MS = 5_000;
+const CALL_TIMEOUT_MS = 8_000;
+const SETTLE_IMMEDIATE_RETRIES = 3;
+const SETTLE_RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
+/** Extra re-posts after first success/attempt (covers copy-service / RPC outages). */
+const SETTLE_FOLLOWUP_MS = [60_000, 5 * 60_000, 15 * 60_000];
 
-function post(path: string, body: unknown): void {
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function postOnce(path: string, body: unknown): Promise<boolean> {
   const url = copyServiceUrl();
-  if (!url) return; // copy-trading not configured for this run — silent no-op
+  if (!url) return false;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
@@ -19,16 +28,35 @@ function post(path: string, body: unknown): void {
     headers["x-webhook-secret"] = secret;
   } else {
     console.error(
-      `copy-service ${path}: COPY_WEBHOOK_SECRET not set — call will be rejected if the service requires it`
+      `copy-service ${path}: COPY_WEBHOOK_SECRET not set — call will be rejected if the service requires it`,
     );
   }
 
-  fetch(`${url}${path}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: controller.signal,
-  });
+  try {
+    const res = await fetch(`${url}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      console.error(`copy-service ${path}: HTTP ${res.status}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(
+      `copy-service ${path}: ${(e as Error).message ?? e}`,
+    );
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Signal: keep fire-and-forget (time-critical). */
+function post(path: string, body: unknown): void {
+  void postOnce(path, body);
 }
 
 export interface CopySignal {
@@ -38,8 +66,8 @@ export interface CopySignal {
   asset: string;
   window: string;
   side: "BUY_YES" | "BUY_NO";
-  price: number;       // The exact price the main bot crossed at
-  limitPrice: number;  // Higher limit price with slippage buffer for copiers
+  price: number;
+  limitPrice: number;
   pool: string;
   expiryMs: number | null;
   dryRun: boolean;
@@ -53,14 +81,43 @@ export function notifyCopyService(signal: CopySignal): void {
 export interface CopySettlement {
   marketId: string;
   outcome: "WIN" | "LOSS" | "VOID";
-  /** Payout per unit of shares held, e.g. if the bot's own trade held 10
-   *  shares and its payout was 10, payoutPerShare = 1. Every copying
-   *  user's payout is their own shares * this ratio — same market, same
-   *  outcome, so the ratio is identical regardless of position size. */
   payoutPerShare: number;
   dryRun: boolean;
+  /** Optional — helps vault redeem side */
+  winningSide?: "BUY_YES" | "BUY_NO";
 }
 
+/**
+ * Notify copy service of settlement with immediate retries + delayed follow-ups.
+ * Safe to call multiple times: copy service settles remaining OPEN rows only.
+ */
 export function notifyCopySettlement(settlement: CopySettlement): void {
-  post("/api/settlement", settlement);
+  if (!copyServiceUrl()) return;
+
+  void (async () => {
+    // Immediate attempts (same outage window)
+    for (let i = 0; i < SETTLE_IMMEDIATE_RETRIES; i++) {
+      const ok = await postOnce("/api/settlement", settlement);
+      if (ok) {
+        console.log(
+          `copy-service settlement ok for ${settlement.marketId} (attempt ${i + 1})`,
+        );
+        break;
+      }
+      const delay = SETTLE_RETRY_DELAYS_MS[i] ?? 5_000;
+      console.error(
+        `copy-service settlement retry ${i + 1}/${SETTLE_IMMEDIATE_RETRIES} for ${settlement.marketId} in ${delay}ms`,
+      );
+      await sleep(delay);
+    }
+
+    // Delayed follow-ups (RPC/copy service back later)
+    for (const wait of SETTLE_FOLLOWUP_MS) {
+      await sleep(wait);
+      const ok = await postOnce("/api/settlement", settlement);
+      console.log(
+        `copy-service settlement follow-up for ${settlement.marketId}: ${ok ? "ok" : "failed"} (after ${wait}ms)`,
+      );
+    }
+  })();
 }
