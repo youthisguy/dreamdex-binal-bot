@@ -374,6 +374,23 @@ export function marketImpliedUp(book: { bids: [number, number][]; asks: [number,
 }
 
 /**
+ * REST reader that pulls live BTC/ETH spot from Coinbase.
+ */
+export function coinbaseSpotReader(): SpotReader {
+  return restSpotReader({
+    urlFor: (asset) => {
+      const symbol = asset === "BTC" ? "BTC-USD" : "ETH-USD";
+      return `https://api.coinbase.com/v2/prices/${symbol}/spot`;
+    },
+    parse: (json: unknown) => {
+      const price = Number((json as any)?.data?.amount);
+      if (!(price > 0)) throw new Error("invalid Coinbase price");
+      return price;
+    },
+  });
+}
+
+/**
  * A market row's strike, rescaled into the same units as the price feed.
  *
  * The two live on DIFFERENT scales: the feed reports 18-decimal human numbers

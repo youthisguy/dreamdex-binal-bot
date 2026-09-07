@@ -51,6 +51,7 @@ import {
 } from "@dreamdex-bot-kit/ec-core";
 import {
   SpotHistory,
+  coinbaseSpotReader,
   estimateUp,
   marketBoundUp,
   marketImpliedUp,
@@ -208,6 +209,8 @@ const MOMENTUM_SOURCE =
 const EMA_FAST_SPAN = envNum("OF_EMA_FAST_SPAN", 3);
 const EMA_SLOW_SPAN = envNum("OF_EMA_SLOW_SPAN", 12);
 const SPOT_SOURCE = (process.env.OF_SPOT_SOURCE ?? "sdk").toLowerCase();
+
+let spot: SpotReader;
 // Most cycles end in "no edge", which is silent. Without a heartbeat the bot
 // looks hung when it's working correctly, so summarise what it saw.
 const HEARTBEAT_MS = envNum("OF_HEARTBEAT_MS", 30_000);
@@ -689,43 +692,45 @@ async function takeOne(
   // reverted on-chain after both sides passed this same gate), refuse new
   // entries on this asset until that position resolves. Otherwise the bot
   // just keeps compounding naked exposure on the same side.
-if (CROSS_ASSET_CONFIRM_ENABLED) {
-  if (unpairedLegs.has(thisAsset)) {
-    note(cycle, "asset has an unresolved unpaired leg — refusing to compound");
-    return;
-  }
+  if (CROSS_ASSET_CONFIRM_ENABLED) {
+    if (unpairedLegs.has(thisAsset)) {
+      note(
+        cycle,
+        "asset has an unresolved unpaired leg — refusing to compound"
+      );
+      return;
+    }
 
-  const confirmNow = Date.now();
-  const other = partnerAsset(thisAsset);
+    const confirmNow = Date.now();
+    const other = partnerAsset(thisAsset);
 
-  const partnerFillTs   = lastConfirmedFill.get(other) ?? 0;
-  const partnerSignalTs = lastQualifyingSignal.get(other) ?? 0;
+    const partnerFillTs = lastConfirmedFill.get(other) ?? 0;
+    const partnerSignalTs = lastQualifyingSignal.get(other) ?? 0;
 
-  // Strongest: partner already has a recent real fill
-  const byFill =
-    partnerFillTs > 0 &&
-    confirmNow - partnerFillTs <= CROSS_ASSET_CONFIRM_MS;
+    // Strongest: partner already has a recent real fill
+    const byFill =
+      partnerFillTs > 0 && confirmNow - partnerFillTs <= CROSS_ASSET_CONFIRM_MS;
 
-  // Fallback: partner has a recent signal AND does not currently carry an unpaired leg.
-  // This is what allows the first leg of a new pair to fire.
-  const bySignal =
-    !byFill &&
-    partnerSignalTs > 0 &&
-    confirmNow - partnerSignalTs <= CROSS_ASSET_CONFIRM_MS &&
-    !unpairedLegs.has(other);
+    // Fallback: partner has a recent signal AND does not currently carry an unpaired leg.
+    // This is what allows the first leg of a new pair to fire.
+    const bySignal =
+      !byFill &&
+      partnerSignalTs > 0 &&
+      confirmNow - partnerSignalTs <= CROSS_ASSET_CONFIRM_MS &&
+      !unpairedLegs.has(other);
 
-  const confirmed = byFill || bySignal;
+    const confirmed = byFill || bySignal;
 
-  if (!confirmed) {
-    // Record our signal so a partner arriving later can confirm against us
+    if (!confirmed) {
+      // Record our signal so a partner arriving later can confirm against us
+      lastQualifyingSignal.set(thisAsset, confirmNow);
+      note(cycle, "waiting for cross-asset confirmation");
+      return;
+    }
+
+    // We are allowed to fire
     lastQualifyingSignal.set(thisAsset, confirmNow);
-    note(cycle, "waiting for cross-asset confirmation");
-    return;
   }
-
-  // We are allowed to fire
-  lastQualifyingSignal.set(thisAsset, confirmNow);
-}
 
   // Cross a touch past the best so we still match if the book shifts, snapped
   // to the tick grid and the (0,1) bounds.
@@ -847,17 +852,19 @@ if (CROSS_ASSET_CONFIRM_ENABLED) {
   });
 
   // Calculate a price ceiling that sweeps deeper order book levels for copiers
-  const COPY_SLIPPAGE_BUFFER = Number(process.env.OF_COPY_SLIPPAGE_BUFFER ?? 0.15);
+  const COPY_SLIPPAGE_BUFFER = Number(
+    process.env.OF_COPY_SLIPPAGE_BUFFER ?? 0.15
+  );
   const MAX_COPY_PRICE = Number(process.env.OF_COPY_MAX_PRICE ?? 0.99);
-  
+
   const copierLimitPrice = Math.min(
     MAX_COPY_PRICE,
     Number((askPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
   );
 
-const marketId = info.marketId ?? onchain.pool;
+  const marketId = info.marketId ?? onchain.pool;
 
-  // Notify the copy-trade service right after the journal write 
+  // Notify the copy-trade service right after the journal write
   notifyCopyService({
     id: `sig_${marketId}_${now}`,
     marketId: marketId,
@@ -865,8 +872,8 @@ const marketId = info.marketId ?? onchain.pool;
     asset: info.asset,
     window: windowLabel(info.intervalSec),
     side: bullish ? "BUY_YES" : "BUY_NO",
-    price: askPx,                 // Bot's execution price
-    limitPrice: copierLimitPrice,  // Price copiers will use to cross remaining depth
+    price: askPx, // Bot's execution price
+    limitPrice: copierLimitPrice, // Price copiers will use to cross remaining depth
     pool: onchain.pool,
     expiryMs: info.expiryMs,
     dryRun: false,
@@ -932,19 +939,25 @@ async function main() {
   // reason about live books and a live feed with no key at all.
   const ctx = createExchange({ withSigner: !loadConfig().dryRun });
 
-  if (SPOT_SOURCE !== "sdk") {
+  if (SPOT_SOURCE === "binance" || process.env.NETWORK === "mainnet") {
+    spot = coinbaseSpotReader();
+    log(`using Coinbase REST spot reader (mainnet)`);
+  } else if (SPOT_SOURCE === "sdk") {
+    if (!ctx.config.priceFeed) {
+      throw new Error(
+        "No price feed configured — this bot needs the UNDERLYING price. " +
+          "On mainnet set OF_SPOT_SOURCE=binance or wait for an official PRICE_FEED_URL."
+      );
+    }
+    spot = sdkSpotReader(ctx);
+  } else {
     throw new Error(
-      `OF_SPOT_SOURCE="${SPOT_SOURCE}" is not wired. The default "sdk" reads the ` +
-        `underlying price feed; to use a REST ticker, build a restSpotReader in signal.ts.`
+      `OF_SPOT_SOURCE="${SPOT_SOURCE}" is not wired. ` +
+        `Supported values: "sdk" | "binance"`
     );
   }
-  if (!ctx.config.priceFeed) {
-    throw new Error(
-      "No price feed configured — this bot needs the UNDERLYING price, which no market row carries. " +
-        "Set PRICE_FEED_URL in .env (testnet has a bundled default; mainnet does not yet)."
-    );
-  }
-  const spot = sdkSpotReader(ctx);
+
+
   const refs = referenceReader(ctx);
 
   log(
