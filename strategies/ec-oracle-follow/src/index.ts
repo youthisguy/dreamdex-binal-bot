@@ -689,25 +689,43 @@ async function takeOne(
   // reverted on-chain after both sides passed this same gate), refuse new
   // entries on this asset until that position resolves. Otherwise the bot
   // just keeps compounding naked exposure on the same side.
-  if (CROSS_ASSET_CONFIRM_ENABLED) {
-    if (unpairedLegs.has(thisAsset)) {
-      note(
-        cycle,
-        "asset has an unresolved unpaired leg — refusing to compound"
-      );
-      return;
-    }
-    const confirmNow = Date.now();
-    lastQualifyingSignal.set(thisAsset, confirmNow);
-    const partnerLast = lastQualifyingSignal.get(partnerAsset(thisAsset));
-    const confirmed =
-      partnerLast !== undefined &&
-      confirmNow - partnerLast <= CROSS_ASSET_CONFIRM_MS;
-    if (!confirmed) {
-      note(cycle, "waiting for cross-asset confirmation");
-      return;
-    }
+if (CROSS_ASSET_CONFIRM_ENABLED) {
+  if (unpairedLegs.has(thisAsset)) {
+    note(cycle, "asset has an unresolved unpaired leg — refusing to compound");
+    return;
   }
+
+  const confirmNow = Date.now();
+  const other = partnerAsset(thisAsset);
+
+  const partnerFillTs   = lastConfirmedFill.get(other) ?? 0;
+  const partnerSignalTs = lastQualifyingSignal.get(other) ?? 0;
+
+  // Strongest: partner already has a recent real fill
+  const byFill =
+    partnerFillTs > 0 &&
+    confirmNow - partnerFillTs <= CROSS_ASSET_CONFIRM_MS;
+
+  // Fallback: partner has a recent signal AND does not currently carry an unpaired leg.
+  // This is what allows the first leg of a new pair to fire.
+  const bySignal =
+    !byFill &&
+    partnerSignalTs > 0 &&
+    confirmNow - partnerSignalTs <= CROSS_ASSET_CONFIRM_MS &&
+    !unpairedLegs.has(other);
+
+  const confirmed = byFill || bySignal;
+
+  if (!confirmed) {
+    // Record our signal so a partner arriving later can confirm against us
+    lastQualifyingSignal.set(thisAsset, confirmNow);
+    note(cycle, "waiting for cross-asset confirmation");
+    return;
+  }
+
+  // We are allowed to fire
+  lastQualifyingSignal.set(thisAsset, confirmNow);
+}
 
   // Cross a touch past the best so we still match if the book shifts, snapped
   // to the tick grid and the (0,1) bounds.

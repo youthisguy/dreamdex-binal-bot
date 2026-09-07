@@ -2,7 +2,7 @@
 
 **A validated, autonomous, and copyable trading agent for DreamDEX Event Contracts.**
 
- Every decision (trade or skip) is logged in it's journal with full reasoning. Every result is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially, with a withdrawal path under their control.
+ Every decision (trade or skip) is logged in it's journal with full reasoning. Every result is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially.
 
 [Agent Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) | [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) | [Copy-service repo](https://github.com/youthisguy/Binal_copy_serve) | [Telegram](https://t.me/binal_bot_signals)
 
@@ -12,27 +12,27 @@
 
 Binal Bot is an automated signal bot trading binary Up/Down event contracts on [DreamDEX](https://docs.dreamdex.io) (Somnia). It watches short-window markets, computes a fair probability against the market's own price, and takes a directional position (`BUY_YES`/`BUY_NO`) whenever its edge clears a threshold, never outside the odds regime its edge was proven in.
 
-Every signal is logged, posted to the Binal Bot Signals Telegram channel as a stat-card image, and shown on the [agent dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) in real time. On top of that, a copy-trade system lets any wallet holder mirror Binal's signals automatically with their own funds, sized to their own risk tolerance.
+Every signal is logged, posted to the Binal Bot [Telegram channel](https://t.me/binal_bot_signals) as a stat-card image, and shown on the [agent dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) in real time. On top of that, a copy-trade system lets any wallet holder mirror Binal's signals automatically with their own funds, sized to their own risk tolerance.
 
 ---
 
 ## The signal
 
-DreamDEX's own reference implementation for Event Contract trading documents its forecasting model as a placeholder. Binal Bot fills that gap with a real one: an EMA(3)/EMA(12) momentum crossover, validated through a full research pipeline — 180 days of BTC/ETH price history, a 36-combination grid search with Bonferroni-corrected significance testing, and a chronological walk-forward split that never let the model see its own test data. The result held up out-of-sample: a **56.8% win rate on fully unseen data, statistically significant at p=0.00033**.
+DreamDEX's own reference implementation for Event Contract trading documents its forecasting model as a placeholder. Binal Bot fills that gap with a real one: an EMA(3)/EMA(12) momentum crossover, validated through a full research pipeline (180 days of BTC/ETH price history), a 36-combination grid search with Bonferroni-corrected significance testing, and a chronological walk-forward split that never let the model see its own test data. The result held up out-of-sample: a **56.8% win rate on fully unseen data, statistically significant at p=0.00033**.
 
 That signal now runs live, gated by risk controls tuned against real production behavior:
 
-- **Window filter** — restricts trading to the validated 15-minute horizon (`OF_ALLOWED_WINDOWS_MIN`), since the signal was never backtested on longer windows the platform also offers
-- **Momentum-required gate** — a trade only fires when the validated EMA signal actually contributed (`OF_REQUIRE_MOMENTUM`), not when the platform's own unvalidated strike/moneyness pricing alone would trigger one
-- **Entry-price ceiling** — refuses entries priced above a configurable threshold (`OF_MAX_ENTRY_PRICE`), keeping the bot inside the odds regime its win rate was actually proven  at
+1. **Window filter:** restricts trading to the validated 15-minute horizon (`OF_ALLOWED_WINDOWS_MIN`)
+2. **Momentum-required gate:** a trade only fires when the validated EMA signal actually contributed (`OF_REQUIRE_MOMENTUM`)
+3. **Entry-price ceiling:** refuses entries priced above a configurable threshold (`OF_MAX_ENTRY_PRICE`), keeping the bot inside the odds regime its win rate was actually proven  at
 
 ---
 
 ## The transparency layer
 
-Every trade is written to a structured, append-only journal the moment it happens — reasoning, entry odds, the reference price it's trading against, and a direct link to the market on-chain. A live dashboard reads that journal in real time: running win rate, cumulative PnL, and — just as importantly — why the bot chose *not* to trade on every pass it sat out, so its discipline is as visible as its wins.
+Every trade is written to a structured, append-only journal the moment it happens. It's reasoning, entry odds, the reference price it's trading against, and a direct link to the market. A live dashboard reads that journal in real time: running win rate, cumulative PnL, and why the bot chose *not* to trade on every pass it sat out, so its discipline is as visible as its wins.
 
-The same data feeds a public Telegram channel. Every signal posts as a rich card — direction, edge, entry price, stake size, time remaining, and the bot's running track record — with a one-tap link straight into the DreamDEX market. When that market settles, the result posts as a reply to the original call, so the outcome is permanently and visibly tied to the reasoning that produced it. Nothing gets edited away, nothing gets cherry-picked.
+The same data feeds a public Telegram channel. Every signal posts as a stats card message — direction, edge, entry price, stake size, time remaining, and the bot's running track record, with a one-tap link straight into the DreamDEX market. When that market settles, the result posts as a reply to the original call, so the outcome is permanently and visibly tied to the reasoning that produced it. 
 
 ## The persistence layer
 
@@ -40,7 +40,7 @@ Because the bot runs on infrastructure with ephemeral disk, trade history is che
 
 ## Copy trading
 
-Binal's signals aren't just observable — they're actionable. Users interact with **`CopyVault`** (a non-custodial, per-user contract) through the [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) page:
+Binal's signals aren't just observable, they're actionable. Users interact with **`CopyVault`** (a non-custodial, per-user contract) through the [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) page:
 
 1. Connect wallet → approve + **deposit**
 2. **Set trade size** (a hard per-position cap)
@@ -48,14 +48,7 @@ Binal's signals aren't just observable — they're actionable. Users interact wi
 4. Every live signal is mirrored for opted-in wallets; settlements credit idle balance
 5. **Withdraw** anytime from idle funds
 
-Design properties:
-
-- **Not pooled** — every user's balance and position is tracked individually
-- **Withdraw always works** — independent of operator or copy-toggle state
-- **Fees only on realized profit** — hard-capped in the contract, never on deposits or losses
-- **Operator can only act for opted-in users**, capped by each user's own `tradeSize`
-
-The bot never holds user funds. It only notifies the copy service:
+The agent never holds user funds. It only notifies the copy service:
 
 | Webhook | When | Payload (conceptually) |
 |---|---|---|
@@ -85,8 +78,8 @@ CopyVault (per-user balances)
  
 
 
-**1. Main bot** — runs the trading loop and serves the live dashboard.
-**2. Copy-trade service** — a fully standalone Node service. Talks to the bot only via two webhooks (push, not poll), and to the blockchain directly.
+**1. Main bot:** runs the trading loop and serves the live dashboard.
+**2. Copy-trade service:** a fully standalone Node service. Talks only to the bot only via two webhooks (push, not poll), and to the blockchain directly.
 
 ### Main bot components
 
@@ -106,7 +99,7 @@ CopyVault (per-user balances)
 
 | File | Role |
 |---|---|
-| `CopyVault.sol` | Deployed contract. Per-user tracked balances (not pooled). `deposit`/`withdraw` always available to the user. Operator can only `openPositionFor`/`settlePosition` on users who opted in (`copyEnabled`), capped per-trade by each user's own `tradeSize`. Fee taken only on realized profit, hard-capped at 20% in code |
+| `CopyVault.sol` | Deployed contract. Per-user tracked balances. `deposit`/`withdraw` always available to the user. Operator can only `openPositionFor`/`settlePosition` on users who opted in (`copyEnabled`), capped per-trade by each user's own `tradeSize`. Fee taken only on realized profit, hard-capped at 20% in code |
 | `local-server.mjs` | Standalone backend. Receives signal/settlement webhooks, opens/settles vault positions as the operator, tracks trade history + leaderboard in SQLite, serves the dashboard's API |
 | `copy-trade.html` | Dashboard page: wallet connect (MetaMask, auto-prompts adding Somnia Shannon Testnet), deposit/withdraw, set trade-size cap, enable/disable copying, live leaderboard and personal trade history |
 
@@ -132,7 +125,7 @@ CopyVault (per-user balances)
 **User-facing flow:**
 
 - Connect wallet → approve + `deposit()` → `setTradeSize()` (per-trade cap) → `setCopyEnabled(true)`.
-- `withdraw()` always works regardless of operator or copy state — the real kill switch.
+- `withdraw()` always works regardless of operator or copy state.
 - Leaderboard and personal trade history poll `local-server.mjs`'s API every 5 seconds.
 
 ---
@@ -146,7 +139,7 @@ cp .env.example .env    # PRIVATE_KEY, NETWORK=testnet, VENUE_ID
 npm start -w ec-oracle-follow
 ```
 
-The bot defaults to `DRY_RUN=true` — it logs exactly what it would do without signing anything. See `strategies/ec-oracle-follow/README.md` for the full signal/config reference.
+See `strategies/ec-oracle-follow/README.md` for the full signal/config reference.
 
 ### Key environment variables
 
