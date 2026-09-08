@@ -33,6 +33,11 @@ import {
   type UnifiedMarket,
 } from "@somnia-chain/markets-sdk";
 import { assertTxOk, type EcContext } from "./exchange.js";
+import { Chain, createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { erc20WriteAbi } from "@somnia-chain/markets-sdk";
+import { makeChain } from "./config.js";
+
 
 /** Which leg of the market an order is on. */
 export type Outcome = "YES" | "NO";
@@ -84,28 +89,25 @@ const SIDES: Record<`${Outcome}-${"buy" | "sell"}`, BinarySide> = {
 /** Pools we've already approved for max collateral this process lifetime. */
 const approvedPools = new Set<string>();
 
-const ERC20_APPROVE_ABI = [
-  {
-    name: "approve",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-  },
-  {
-    name: "allowance",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ type: "uint256" }],
-  },
-] as const;
+/**
+ * One local signer for the process lifetime, built directly from the same
+ * PRIVATE_KEY the exchange itself uses — not reached through exchange/trader/
+ * client. The SDK's `trader` (client.createTrader) is scoped to trading-domain
+ * writes (placeOrder, mintSet, redeem, …) and deliberately exposes no generic
+ * ERC20 write; approvals are a caller concern, which is exactly why the SDK
+ * publishes `erc20WriteAbi` instead of an approve() verb on trader.
+ */
+let cachedWalletClient: ReturnType<typeof createWalletClient<ReturnType<typeof http>, Chain, ReturnType<typeof privateKeyToAccount>>> | null = null;
+function getWalletClient(ctx: EcContext) {
+  if (cachedWalletClient) return cachedWalletClient;
+  if (!ctx.config.privateKey) return null;
+  cachedWalletClient = createWalletClient({
+    account: privateKeyToAccount(ctx.config.privateKey),
+    chain: makeChain(ctx.config),
+    transport: http(ctx.config.rpcUrl),
+  });
+  return cachedWalletClient;
+}
 
 /**
  * Binary placeOrder does not auto-approve USDso → pool on mainnet.
@@ -126,12 +128,11 @@ async function ensureCollateralAllowance(
   const token = onchain.collateral as `0x${string}`;
   const spender = onchain.pool as `0x${string}`;
 
-  // Current allowance (public client is fine for reads)
   let allowance = 0n;
   try {
     allowance = (await publicClient.readContract({
       address: token,
-      abi: ERC20_APPROVE_ABI,
+      abi: erc20WriteAbi,
       functionName: "allowance",
       args: [me as `0x${string}`, spender],
     })) as bigint;
@@ -144,58 +145,24 @@ async function ensureCollateralAllowance(
     return;
   }
 
-  const max = 2n ** 256n - 1n;
-  console.log(
-    `[approve] ${token} → pool ${spender} (need ${need}, had ${allowance})`,
-  );
-
-  // Prefer SDK write helpers if present
-  const trader = ctx.exchange.trader as any;
-  const client = ctx.exchange.client as any;
-
-  if (typeof trader.approve === "function") {
-    const res = await trader.approve({ token, spender, amount: max });
-    assertTxOk(res, `approve ${spender}`);
-  } else if (typeof client.writeErc20Approve === "function") {
-    const res = await client.writeErc20Approve({ token, spender, amount: max });
-    assertTxOk(res, `approve ${spender}`);
-  } else if (typeof client.getWalletClient === "function") {
-    // Wallet client path (has account + writeContract)
-    const wallet = client.getWalletClient();
-    const hash = await wallet.writeContract({
-      address: token,
-      abi: ERC20_APPROVE_ABI,
-      functionName: "approve",
-      args: [spender, max],
-      account: me as `0x${string}`,
-      chain: wallet.chain,
-    });
-    await publicClient.waitForTransactionReceipt({ hash });
-    console.log(`[approve] confirmed ${hash}`);
-  } else {
-    // Last resort: use the same transport the trader uses via walletClient on exchange
-    const walletClient =
-      (ctx.exchange as any).walletClient ??
-      (ctx.exchange as any).client?.walletClient;
-    if (!walletClient) {
-      throw new Error(
-        "cannot approve: no trader.approve / writeErc20Approve / walletClient on exchange",
-      );
-    }
-    const { encodeFunctionData } = await import("viem");
-    const data = encodeFunctionData({
-      abi: ERC20_APPROVE_ABI,
-      functionName: "approve",
-      args: [spender, max],
-    });
-    const hash = await walletClient.sendTransaction({
-      to: token,
-      data,
-      account: me as `0x${string}`,
-    });
-    await publicClient.waitForTransactionReceipt({ hash });
-    console.log(`[approve] confirmed ${hash}`);
+  const wallet = getWalletClient(ctx);
+  if (!wallet) {
+    throw new Error("cannot approve collateral: no PRIVATE_KEY configured (read-only exchange).");
   }
+
+  const max = 2n ** 256n - 1n;
+  console.log(`[approve] ${token} → pool ${spender} (need ${need}, had ${allowance})`);
+
+  const hash = await wallet.writeContract({
+    address: token,
+    abi: erc20WriteAbi,
+    functionName: "approve",
+    args: [spender, max],
+    chain: wallet.chain,
+    account: wallet.account,
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  console.log(`[approve] confirmed ${hash}`);
 
   approvedPools.add(poolKey);
 }
