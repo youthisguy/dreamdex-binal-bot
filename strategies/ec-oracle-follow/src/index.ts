@@ -152,6 +152,17 @@ const PARTNER_FILL_GRACE_MS = envNum(
   CROSS_ASSET_CONFIRM_MS
 );
 
+// A signal that qualifies but has no live partner yet is HELD here rather
+// than discarded, so that when the partner confirms later, both sides
+// trade — not just the second one to arrive. Keyed by asset; overwritten
+// by a fresher qualifying signal for the same asset, consumed (deleted) by
+// either side once a pairing fires.
+interface PendingConfirmation {
+  since: number;
+  fire: () => Promise<void>;
+}
+const pendingConfirmation = new Map<Asset, PendingConfirmation>();
+
 // Which window lengths this bot is allowed to trade, in minutes. Comma-
 // separated, e.g. "15,60". Defaults to 15-minute ONLY, because that's the
 // only window the EMA(3,12) signal was ever backtested/validated against
@@ -319,6 +330,7 @@ function sweepUnpairedLegs(now: number): void {
   }
 }
 
+ 
 /** What one cycle saw, so a quiet bot can still show its work. */
 interface Cycle {
   scanned: number;
@@ -676,235 +688,123 @@ async function takeOne(
     return;
   }
 
-  // 10b) Cross-asset confirmation. This signal just cleared every gate
-  // above — record it, then require the OTHER asset to have qualified
-  // within the same rolling window before this one is allowed to fire.
-  //
-  // A signal-level "confirmed" only proves both assets' SIGNALS lined up —
-  // it says nothing about whether either order actually filled. If this
-  // asset currently has an unresolved unpaired fill (its own order filled
-  // earlier but the partner leg never confirmed — e.g. the partner's IOC
-  // reverted on-chain after both sides passed this same gate), refuse new
-  // entries on this asset until that position resolves. Otherwise the bot
-  // just keeps compounding naked exposure on the same side.
-  if (CROSS_ASSET_CONFIRM_ENABLED) {
-    if (unpairedLegs.has(thisAsset)) {
-      note(
-        cycle,
-        "asset has an unresolved unpaired leg — refusing to compound"
-      );
-      return;
-    }
-
-    const confirmNow = Date.now();
-    const other = partnerAsset(thisAsset);
-
-    const partnerFillTs = lastConfirmedFill.get(other) ?? 0;
-    const partnerSignalTs = lastQualifyingSignal.get(other) ?? 0;
-
-    // Strongest: partner already has a recent real fill
-    const byFill =
-      partnerFillTs > 0 && confirmNow - partnerFillTs <= CROSS_ASSET_CONFIRM_MS;
-
-    // Fallback: partner has a recent signal AND does not currently carry an unpaired leg.
-    // This is what allows the first leg of a new pair to fire.
-    const bySignal =
-      !byFill &&
-      partnerSignalTs > 0 &&
-      confirmNow - partnerSignalTs <= CROSS_ASSET_CONFIRM_MS &&
-      !unpairedLegs.has(other);
-
-    const confirmed = byFill || bySignal;
-
-    if (!confirmed) {
-      // Record our signal so a partner arriving later can confirm against us
-      lastQualifyingSignal.set(thisAsset, confirmNow);
-      note(cycle, "waiting for cross-asset confirmation");
-      return;
-    }
-
-    // We are allowed to fire
-    lastQualifyingSignal.set(thisAsset, confirmNow);
-  }
-
-  // Cross a touch past the best so we still match if the book shifts, snapped
-  // to the tick grid and the (0,1) bounds.
-  const price = clampProbability(
-    ctx.exchange.priceToPrecision(fav, askPx + 0.002)
-  );
-  assertProbability(price);
-
-  const side = bullish ? "BUY_YES" : "BUY_NO";
-  // Lead with the two inputs the fair value actually rests on — the level the
-  // market settles against and the volatility scaling it — because when this bot
-  // is wrong, it is almost always one of those two that was wrong first.
-  const why =
-    `${
-      ref
-        ? `${ref.kind} ${ref.price.toFixed(2)} vs spot ${mom.spot.toFixed(2)}`
-        : "no reference"
-    }, ` +
-    `vol ${(expectedMove * 100).toFixed(3)}%${
-      measured === null ? " assumed" : " measured"
-    }, ` +
-    `r ${
-      useMomentum ? `${mom.r >= 0 ? "+" : ""}${mom.r.toFixed(4)}` : "muted"
-    }, ` +
-    `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
-      3
-    )} off market ${marketFair.toFixed(3)}, ` +
-    `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${askPx.toFixed(
-      3
-    )}`;
-
-  let taken = size;
-  if (ctx.config.dryRun) {
-    log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
-  } else {
-    // IOC: fill what crosses now, cancel the rest. A resting remainder would sit
-    // there with its escrow locked (docs/event-contracts.md, sharp edge 2), and because nothing
-    // rests there is nothing to cancel on shutdown.
-    // placeLimit snaps the price to the tick grid as integers and checks the
-    // receipt itself; handing the SDK a float price reverts outright on an
-    // 18-decimal venue, and a revert reports zero fill rather than throwing.
-    const order = await placeLimit(ctx, {
-      market,
-      onchain,
-      outcome: bullish ? "YES" : "NO",
-      side: "buy",
-      price,
-      size,
-      type: "ioc",
-    });
-    // IOC cancels whatever didn't cross, so the requested size is an upper
-    // bound, not the position. Count what actually filled.
-    taken = order.filled;
-    log(`${side} ${taken}/${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
-    if (taken <= 0) return; // nothing crossed; leave the cooldown clear to retry
-  }
-
-  // 10c) Reconcile against the partner's actual FILL, not its signal. This
-  // fill just landed — check whether the partner asset also has a fill
-  // recorded within the confirm window. If so, both legs are genuinely
-  // paired and any prior unpaired flags on either asset are cleared. If
-  // not, this is the naked-leg case (the gate passed on signals, but the
-  // partner's order never actually filled — e.g. it reverted on-chain): flag
-  // this asset as carrying an unpaired leg so new entries on it are blocked
-  // (via the unpairedLegs.has() check above) until the position resolves.
-  if (CROSS_ASSET_CONFIRM_ENABLED) {
-    const other = partnerAsset(thisAsset);
-    const partnerFilledRecently =
-      (lastConfirmedFill.get(other) ?? 0) >= now - CROSS_ASSET_CONFIRM_MS;
-    lastConfirmedFill.set(thisAsset, now);
-    if (partnerFilledRecently) {
-      unpairedLegs.delete(thisAsset);
-      unpairedLegs.delete(other);
-    } else {
-      unpairedLegs.set(thisAsset, {
-        symbol: market.symbol,
-        size: taken,
-        since: now,
-        alerted: false,
-      });
+  // This signal has cleared every trading gate. Everything that actually
+  // sends the order and records it is wrapped in `fire()` so it can be
+  // invoked either right away (cross-asset confirm disabled, or this
+  // signal is the one that completes a pairing) or later, when a partner
+  // signal on the other asset confirms it (see the gate below).
+  const fire = async (): Promise<void> => {
+    // Re-check the near-expiry stop at execution time: this closure may run
+    // significantly later than when it was captured, if it sat waiting on a
+    // cross-asset partner.
+    if (
+      info.expiryMs !== null &&
+      info.expiryMs - Date.now() < nearExpiryStopMs(info.intervalSec)
+    ) {
       log(
-        `⚠️ ${thisAsset} filled ${taken} ${fav} without a confirmed ${other} ` +
-          `partner fill — flagged unpaired, new ${thisAsset} entries blocked ` +
-          `until this position resolves`
+        `${market.symbol}: held cross-asset trade dropped — expiry approaching`
       );
+      return;
     }
-  }
 
-  // Book the fill against the LEG we bought, in BOTH modes. A dry run that
-  // ignored its own cooldown and exposure caps would re-take the same market
-  // every cycle and tell you nothing about how the limits behave — which is most
-  // of what you want to see before handing it a funded key.
-  position.add(market.symbol, leg, taken);
-  lastTake.set(market.symbol, now);
-  enteredMarkets.add(market.symbol);
-  if (info.expiryMs !== null) positionExpiry.set(market.symbol, info.expiryMs);
+    // Cross a touch past the best so we still match if the book shifts, snapped
+    // to the tick grid and the (0,1) bounds.
+    const price = clampProbability(
+      ctx.exchange.priceToPrecision(fav, askPx + 0.002)
+    );
+    assertProbability(price);
 
-  logDecision({
-    market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
-    symbol: market.symbol,
-    asset: info.asset,
-    window: windowLabel(info.intervalSec),
-    side,
-    size: taken,
-    price,
-    dry_run: ctx.config.dryRun,
-    signal: bullish ? "UP" : "DOWN",
-    fair_prob: fairFav,
-    market_mid: marketFair,
-    edge: fairFav - askPx,
-    disagreement,
-    momentum_r: useMomentum ? mom.r : null,
-    momentum_used: useMomentum,
-    reason: why,
-    expiry_ms: info.expiryMs,
-    ref_price: ref?.price ?? null,
-    ref_kind: ref?.kind ?? null,
-    explorer_url: explorerUrl,
-  });
+    const side = bullish ? "BUY_YES" : "BUY_NO";
+    // Lead with the two inputs the fair value actually rests on — the level the
+    // market settles against and the volatility scaling it — because when this bot
+    // is wrong, it is almost always one of those two that was wrong first.
+    const why =
+      `${
+        ref
+          ? `${ref.kind} ${ref.price.toFixed(2)} vs spot ${mom.spot.toFixed(2)}`
+          : "no reference"
+      }, ` +
+      `vol ${(expectedMove * 100).toFixed(3)}%${
+        measured === null ? " assumed" : " measured"
+      }, ` +
+      `r ${
+        useMomentum ? `${mom.r >= 0 ? "+" : ""}${mom.r.toFixed(4)}` : "muted"
+      }, ` +
+      `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
+        3
+      )} off market ${marketFair.toFixed(3)}, ` +
+      `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${askPx.toFixed(
+        3
+      )}`;
 
-  // Calculate a price ceiling that sweeps deeper order book levels for copiers
-  const COPY_SLIPPAGE_BUFFER = Number(
-    process.env.OF_COPY_SLIPPAGE_BUFFER ?? 0.15
-  );
-  const MAX_COPY_PRICE = Number(process.env.OF_COPY_MAX_PRICE ?? 0.99);
+    let taken = size;
+    if (ctx.config.dryRun) {
+      log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
+    } else {
+      // IOC: fill what crosses now, cancel the rest. A resting remainder would sit
+      // there with its escrow locked (docs/event-contracts.md, sharp edge 2), and because nothing
+      // rests there is nothing to cancel on shutdown.
+      // placeLimit snaps the price to the tick grid as integers and checks the
+      // receipt itself; handing the SDK a float price reverts outright on an
+      // 18-decimal venue, and a revert reports zero fill rather than throwing.
+      const order = await placeLimit(ctx, {
+        market,
+        onchain,
+        outcome: bullish ? "YES" : "NO",
+        side: "buy",
+        price,
+        size,
+        type: "ioc",
+      });
+      // IOC cancels whatever didn't cross, so the requested size is an upper
+      // bound, not the position. Count what actually filled.
+      taken = order.filled;
+      log(`${side} ${taken}/${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
+      if (taken <= 0) return; // nothing crossed; leave the cooldown clear to retry
+    }
 
-  const copierLimitPrice = Math.min(
-    MAX_COPY_PRICE,
-    Number((askPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
-  );
+    // Reconcile against the partner's actual FILL, not its signal. This
+    // fill just landed — check whether the partner asset also has a fill
+    // recorded within the confirm window. If so, both legs are genuinely
+    // paired and any prior unpaired flags on either asset are cleared. If
+    // not, this is the naked-leg case (the gate passed on signals, but the
+    // partner's order never actually filled — e.g. it reverted on-chain): flag
+    // this asset as carrying an unpaired leg so new entries on it are blocked
+    // (via the unpairedLegs.has() check above) until the position resolves.
+    if (CROSS_ASSET_CONFIRM_ENABLED) {
+      const other = partnerAsset(thisAsset);
+      const partnerFilledRecently =
+        (lastConfirmedFill.get(other) ?? 0) >= Date.now() - CROSS_ASSET_CONFIRM_MS;
+      lastConfirmedFill.set(thisAsset, Date.now());
+      if (partnerFilledRecently) {
+        unpairedLegs.delete(thisAsset);
+        unpairedLegs.delete(other);
+      } else {
+        unpairedLegs.set(thisAsset, {
+          symbol: market.symbol,
+          size: taken,
+          since: Date.now(),
+          alerted: false,
+        });
+        log(
+          `⚠️ ${thisAsset} filled ${taken} ${fav} without a confirmed ${other} ` +
+            `partner fill — flagged unpaired, new ${thisAsset} entries blocked ` +
+            `until this position resolves`
+        );
+      }
+    }
 
-  const marketId = info.marketId ?? onchain.pool;
+    // Book the fill against the LEG we bought, in BOTH modes. A dry run that
+    // ignored its own cooldown and exposure caps would re-take the same market
+    // every cycle and tell you nothing about how the limits behave — which is most
+    // of what you want to see before handing it a funded key.
+    position.add(market.symbol, leg, taken);
+    lastTake.set(market.symbol, Date.now());
+    enteredMarkets.add(market.symbol);
+    if (info.expiryMs !== null) positionExpiry.set(market.symbol, info.expiryMs);
 
-  // Notify the copy-trade service right after the journal write
-  notifyCopyService({
-    id: `sig_${marketId}_${now}`,
-    marketId: marketId,
-    symbol: market.symbol,
-    asset: info.asset,
-    window: windowLabel(info.intervalSec),
-    side: bullish ? "BUY_YES" : "BUY_NO",
-    price: askPx, // Bot's execution price
-    limitPrice: copierLimitPrice, // Price copiers will use to cross remaining depth
-    pool: onchain.pool,
-    expiryMs: info.expiryMs,
-    dryRun: false,
-    timestamp: now,
-  });
-
-  // Post to Telegram AFTER the journal write so a signal always shows up in
-  // the dashboard even if the Telegram call fails or isn't configured — then
-  // log a second decision record with the message_id attached, so the last-
-  // write-wins read pattern (see journal.ts) picks it up for settlement edits
-  // without needing a distinct "update" record type.
-  const messageId = await postSignal({
-    marketId: info.marketId!,
-    symbol: market.symbol,
-    asset: info.asset,
-    window: windowLabel(info.intervalSec),
-    signal: bullish ? "UP" : "DOWN",
-    edge: fairFav - askPx,
-    disagreement,
-    momentumUsed: useMomentum,
-    expiryMs: info.expiryMs,
-    dryRun: ctx.config.dryRun,
-    entryPrice: price,
-    size: taken,
-    refPrice: ref?.price ?? null,
-    refKind: ref?.kind ?? null,
-    explorerUrl,
-    stats: computeStats(),
-  }).catch((e) => {
-    console.error(`telegram post failed: ${(e as Error).message}`);
-    return null;
-  });
-
-  if (messageId) {
     logDecision({
-      market_id: info.marketId!,
+      market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
       symbol: market.symbol,
       asset: info.asset,
       window: windowLabel(info.intervalSec),
@@ -924,9 +824,138 @@ async function takeOne(
       ref_price: ref?.price ?? null,
       ref_kind: ref?.kind ?? null,
       explorer_url: explorerUrl,
-      telegram_message_id: messageId,
     });
+
+    // Calculate a price ceiling that sweeps deeper order book levels for copiers
+    const COPY_SLIPPAGE_BUFFER = Number(
+      process.env.OF_COPY_SLIPPAGE_BUFFER ?? 0.15
+    );
+    const MAX_COPY_PRICE = Number(process.env.OF_COPY_MAX_PRICE ?? 0.99);
+
+    const copierLimitPrice = Math.min(
+      MAX_COPY_PRICE,
+      Number((askPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
+    );
+
+    const marketId = info.marketId ?? onchain.pool;
+
+    // Notify the copy-trade service right after the journal write
+    notifyCopyService({
+      id: `sig_${marketId}_${Date.now()}`,
+      marketId: marketId,
+      symbol: market.symbol,
+      asset: info.asset,
+      window: windowLabel(info.intervalSec),
+      side: bullish ? "BUY_YES" : "BUY_NO",
+      price: askPx, // Bot's execution price
+      limitPrice: copierLimitPrice, // Price copiers will use to cross remaining depth
+      pool: onchain.pool,
+      expiryMs: info.expiryMs,
+      dryRun: false,
+      timestamp: Date.now(),
+    });
+
+    // Post to Telegram AFTER the journal write so a signal always shows up in
+    // the dashboard even if the Telegram call fails or isn't configured — then
+    // log a second decision record with the message_id attached, so the last-
+    // write-wins read pattern (see journal.ts) picks it up for settlement edits
+    // without needing a distinct "update" record type.
+    const messageId = await postSignal({
+      marketId: info.marketId!,
+      symbol: market.symbol,
+      asset: info.asset,
+      window: windowLabel(info.intervalSec),
+      signal: bullish ? "UP" : "DOWN",
+      edge: fairFav - askPx,
+      disagreement,
+      momentumUsed: useMomentum,
+      expiryMs: info.expiryMs,
+      dryRun: ctx.config.dryRun,
+      entryPrice: price,
+      size: taken,
+      refPrice: ref?.price ?? null,
+      refKind: ref?.kind ?? null,
+      explorerUrl,
+      stats: computeStats(),
+    }).catch((e) => {
+      console.error(`telegram post failed: ${(e as Error).message}`);
+      return null;
+    });
+
+    if (messageId) {
+      logDecision({
+        market_id: info.marketId!,
+        symbol: market.symbol,
+        asset: info.asset,
+        window: windowLabel(info.intervalSec),
+        side,
+        size: taken,
+        price,
+        dry_run: ctx.config.dryRun,
+        signal: bullish ? "UP" : "DOWN",
+        fair_prob: fairFav,
+        market_mid: marketFair,
+        edge: fairFav - askPx,
+        disagreement,
+        momentum_r: useMomentum ? mom.r : null,
+        momentum_used: useMomentum,
+        reason: why,
+        expiry_ms: info.expiryMs,
+        ref_price: ref?.price ?? null,
+        ref_kind: ref?.kind ?? null,
+        explorer_url: explorerUrl,
+        telegram_message_id: messageId,
+      });
+    }
+  };
+
+  // 10b) Cross-asset confirmation. This signal just cleared every gate
+  // above. If the OTHER asset already has a live, unconsumed qualifying
+  // signal waiting, both trade now: the partner's held `fire()` runs first
+  // (it qualified earlier), then this one's. Otherwise this signal is HELD
+  // — not discarded — so that when the partner confirms later, both sides
+  // actually trade rather than only the second one to arrive.
+  //
+  // A signal-level "confirmed" only proves both assets' SIGNALS lined up —
+  // it says nothing about whether either order actually filled. If this
+  // asset currently has an unresolved unpaired fill (its own order filled
+  // earlier but the partner leg never confirmed — e.g. the partner's IOC
+  // reverted on-chain after both sides passed this same gate), refuse new
+  // entries on this asset until that position resolves. Otherwise the bot
+  // just keeps compounding naked exposure on the same side.
+  if (CROSS_ASSET_CONFIRM_ENABLED) {
+    if (unpairedLegs.has(thisAsset)) {
+      note(cycle, "asset has an unresolved unpaired leg — refusing to compound");
+      return;
+    }
+
+    const confirmNow = Date.now();
+    const other = partnerAsset(thisAsset);
+    const pendingOther = pendingConfirmation.get(other);
+    const otherFresh =
+      pendingOther && confirmNow - pendingOther.since <= CROSS_ASSET_CONFIRM_MS;
+
+    if (!otherFresh) {
+      // No live, unconsumed partner waiting — hold this one and stop.
+      // Overwrites any stale/earlier entry for thisAsset: only the most
+      // recent qualifying signal per asset should be live.
+      pendingConfirmation.set(thisAsset, { since: confirmNow, fire });
+      note(cycle, "waiting for cross-asset confirmation");
+      return;
+    }
+
+    // Partner is live — confirmed. Consume both so neither can be reused to
+    // vouch for a later, unrelated signal, then fire the partner's held
+    // trade (it qualified earlier) followed by this one.
+    pendingConfirmation.delete(other);
+    pendingConfirmation.delete(thisAsset);
+    await pendingOther!.fire();
+    await fire();
+    return;
   }
+
+  // Gate disabled — fire immediately as before.
+  await fire();
 }
 
 async function main() {
