@@ -379,17 +379,12 @@ async function takeOne(
   // 1) Authoritative status. The indexer lags; only this snapshot decides.
   const onchain = await marketOnchain(ctx, market);
   if (!onchain) return;
-  // DreamDEX/Somnia's own market explorer, e.g. https://dev.smk.somnia.host/markets/{pool}
-  // (prd.smk on mainnet) — host derived from ctx.config.indexerUrl so this
-  // automatically matches testnet/mainnet rather than hardcoding one.
-  // onchain.pool is the market's 20-byte contract address, NOT the same as
-  // info.marketId (a 32-byte indexer-side identifier) — confirmed against
-  // settlement.ts's own `address: onchain.pool` usage.
-  const explorerUrl = onchain.pool
-    ? `${ctx.config.indexerUrl.replace(/\/v1\/graphql$/, "")}/markets/${
-        onchain.pool
-      }`
-    : null;
+  // DreamDEX/Somnia's own market explorer - https://dev.smk.somnia.host/markets/{pool}
+  // (prd.smk on mainnet)
+  const marketContract = onchain.marketAddress ?? onchain.marketAddress ?? null;
+  const explorerUrl = marketContract
+  ? `${ctx.config.indexerUrl.replace(/\/v1\/graphql$/, "")}/markets/${marketContract}`
+  : null;
   if (!isTradable(onchain)) {
     position.clear(market.symbol);
     positionExpiry.delete(market.symbol);

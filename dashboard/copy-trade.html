@@ -656,17 +656,18 @@
     <script>
       // ── Config — fill in for your deployment ─────────────────────────
       const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com";
-      const VAULT_ADDRESS = "0xBE24664ebC322aBA45bbA28d05b11B0f9D3E5Ed0";
-      const QUOTE_CURRENCY = "tUSDC";
-      const SOMNIA_TESTNET = {
-        chainIdHex: "0xc488", // 50312
-        chainName: "Somnia Shannon Testnet",
+      const VAULT_ADDRESS = "0x6a5cce928e49c5062acD7aA876335a8041c7adc9";
+      const QUOTE_CURRENCY = "USDso";
+      const SOMNIA_MAINNET = {
+        chainIdHex: "0x13a7", // 5031
+        chainName: "Somnia Mainnet",
         nativeCurrency: {
-          name: "Somnia Test Token",
-          symbol: "STT",
+          name: "Somnia",
+          symbol: "SOMI",
           decimals: 18,
         },
-        rpcUrls: ["https://dream-rpc.somnia.network"],
+        rpcUrls: ["https://api.infra.mainnet.somnia.network"],
+        blockExplorerUrls: ["https://explorer.somnia.network"],
       };
 
       const VAULT_ABI = [
@@ -748,8 +749,8 @@
         const chainId = await window.ethereum.request({
           method: "eth_chainId",
         });
-        if (chainId.toLowerCase() === SOMNIA_TESTNET.chainIdHex) {
-          els.netBadge.textContent = "SOMNIA TESTNET";
+        if (chainId.toLowerCase() === SOMNIA_MAINNET.chainIdHex) {
+          els.netBadge.textContent = "SOMNIA MAINNET";
           els.netBadge.className = "net-badge ok";
           els.netBadge.style.display = "inline-block";
           return true;
@@ -760,7 +761,7 @@
         try {
           await window.ethereum.request({
             method: "wallet_switchEthereumChain",
-            params: [{ chainId: SOMNIA_TESTNET.chainIdHex }],
+            params: [{ chainId: SOMNIA_MAINNET.chainIdHex }],
           });
           return ensureNetwork();
         } catch (switchErr) {
@@ -770,17 +771,18 @@
                 method: "wallet_addEthereumChain",
                 params: [
                   {
-                    chainId: SOMNIA_TESTNET.chainIdHex,
-                    chainName: SOMNIA_TESTNET.chainName,
-                    nativeCurrency: SOMNIA_TESTNET.nativeCurrency,
-                    rpcUrls: SOMNIA_TESTNET.rpcUrls,
+                    chainId: SOMNIA_MAINNET.chainIdHex,
+                    chainName: SOMNIA_MAINNET.chainName,
+                    nativeCurrency: SOMNIA_MAINNET.nativeCurrency,
+                    rpcUrls: SOMNIA_MAINNET.rpcUrls,
+                    blockExplorerUrls: SOMNIA_MAINNET.blockExplorerUrls,
                   },
                 ],
               });
               return ensureNetwork();
             } catch (addErr) {
               setStatus(
-                `couldn't add Somnia Shannon Testnet: ${addErr.message}`,
+                `couldn't add Somnia Mainnet: ${addErr.message}`,
                 "err"
               );
               return false;

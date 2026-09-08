@@ -26,7 +26,12 @@
 // write does not throw (check the receipt), and orders must carry an expiry
 // capped at the market's own.
 
-import { ORDER_TYPE, type BinarySide, type MarketOnchain, type UnifiedMarket } from "@somnia-chain/markets-sdk";
+import {
+  ORDER_TYPE,
+  type BinarySide,
+  type MarketOnchain,
+  type UnifiedMarket,
+} from "@somnia-chain/markets-sdk";
 import { assertTxOk, type EcContext } from "./exchange.js";
 
 /** Which leg of the market an order is on. */
@@ -76,6 +81,125 @@ const SIDES: Record<`${Outcome}-${"buy" | "sell"}`, BinarySide> = {
   "NO-sell": "SELL_NO",
 };
 
+/** Pools we've already approved for max collateral this process lifetime. */
+const approvedPools = new Set<string>();
+
+const ERC20_APPROVE_ABI = [
+  {
+    name: "approve",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;
+
+/**
+ * Binary placeOrder does not auto-approve USDso → pool on mainnet.
+ * Approve once per pool (max) so subsequent buys don't hit ERC20InsufficientAllowance.
+ */
+async function ensureCollateralAllowance(
+  ctx: EcContext,
+  onchain: MarketOnchain,
+  need: bigint,
+): Promise<void> {
+  const me = ctx.exchange.walletAddress;
+  if (!me) return;
+
+  const poolKey = onchain.pool.toLowerCase();
+  if (approvedPools.has(poolKey)) return;
+
+  const publicClient = ctx.exchange.client.getViemClient();
+  const token = onchain.collateral as `0x${string}`;
+  const spender = onchain.pool as `0x${string}`;
+
+  // Current allowance (public client is fine for reads)
+  let allowance = 0n;
+  try {
+    allowance = (await publicClient.readContract({
+      address: token,
+      abi: ERC20_APPROVE_ABI,
+      functionName: "allowance",
+      args: [me as `0x${string}`, spender],
+    })) as bigint;
+  } catch {
+    // treat as zero
+  }
+
+  if (allowance >= need) {
+    approvedPools.add(poolKey);
+    return;
+  }
+
+  const max = 2n ** 256n - 1n;
+  console.log(
+    `[approve] ${token} → pool ${spender} (need ${need}, had ${allowance})`,
+  );
+
+  // Prefer SDK write helpers if present
+  const trader = ctx.exchange.trader as any;
+  const client = ctx.exchange.client as any;
+
+  if (typeof trader.approve === "function") {
+    const res = await trader.approve({ token, spender, amount: max });
+    assertTxOk(res, `approve ${spender}`);
+  } else if (typeof client.writeErc20Approve === "function") {
+    const res = await client.writeErc20Approve({ token, spender, amount: max });
+    assertTxOk(res, `approve ${spender}`);
+  } else if (typeof client.getWalletClient === "function") {
+    // Wallet client path (has account + writeContract)
+    const wallet = client.getWalletClient();
+    const hash = await wallet.writeContract({
+      address: token,
+      abi: ERC20_APPROVE_ABI,
+      functionName: "approve",
+      args: [spender, max],
+      account: me as `0x${string}`,
+      chain: wallet.chain,
+    });
+    await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`[approve] confirmed ${hash}`);
+  } else {
+    // Last resort: use the same transport the trader uses via walletClient on exchange
+    const walletClient =
+      (ctx.exchange as any).walletClient ??
+      (ctx.exchange as any).client?.walletClient;
+    if (!walletClient) {
+      throw new Error(
+        "cannot approve: no trader.approve / writeErc20Approve / walletClient on exchange",
+      );
+    }
+    const { encodeFunctionData } = await import("viem");
+    const data = encodeFunctionData({
+      abi: ERC20_APPROVE_ABI,
+      functionName: "approve",
+      args: [spender, max],
+    });
+    const hash = await walletClient.sendTransaction({
+      to: token,
+      data,
+      account: me as `0x${string}`,
+    });
+    await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`[approve] confirmed ${hash}`);
+  }
+
+  approvedPools.add(poolKey);
+}
+
 /**
  * Snap a human quantity to a whole number of grid steps.
  *
@@ -84,7 +208,12 @@ const SIDES: Record<`${Outcome}-${"buy" | "sell"}`, BinarySide> = {
  * intended one. Multiplying by 10^18 instead — which is what the SDK does — is
  * exactly the bug this module exists to avoid.
  */
-function toSteps(human: number, one: bigint, step: bigint, mode: "round" | "floor"): bigint {
+function toSteps(
+  human: number,
+  one: bigint,
+  step: bigint,
+  mode: "round" | "floor"
+): bigint {
   const stepsPerOne = Number(one / step);
   const n = human * stepsPerOne;
   const steps = mode === "round" ? Math.round(n) : Math.floor(n + 1e-9);
@@ -97,7 +226,10 @@ function toSteps(human: number, one: bigint, step: bigint, mode: "round" | "floo
  * Returns `size: 0` without sending anything when the request rounds below one
  * lot — the same skip a caller would otherwise have to write itself.
  */
-export async function placeLimit(ctx: EcContext, args: PlaceLimitArgs): Promise<PlacedOrder> {
+export async function placeLimit(
+  ctx: EcContext,
+  args: PlaceLimitArgs
+): Promise<PlacedOrder> {
   const { market, onchain, outcome, side, type = "post-only" } = args;
   const one = 10n ** BigInt(ctx.config.decimals);
 
@@ -105,10 +237,17 @@ export async function placeLimit(ctx: EcContext, args: PlaceLimitArgs): Promise<
   const quantity = toSteps(args.size, one, ctx.config.lot, "floor");
   const priceOwn = toSteps(args.price, one, ctx.config.tick, "round");
   if (quantity <= 0n) {
-    return { rested: false, filled: 0, size: 0, price: Number(priceOwn) / Number(one) };
+    return {
+      rested: false,
+      filled: 0,
+      size: 0,
+      price: Number(priceOwn) / Number(one),
+    };
   }
   if (priceOwn <= 0n || priceOwn >= one) {
-    throw new Error(`price ${args.price} is outside (0, 1) after snapping to the tick grid`);
+    throw new Error(
+      `price ${args.price} is outside (0, 1) after snapping to the tick grid`
+    );
   }
 
   // The book is quoted in YES terms whichever leg you are on: a NO order's price
@@ -120,11 +259,23 @@ export async function placeLimit(ctx: EcContext, args: PlaceLimitArgs): Promise<
   const wanted = nowSec + (args.expiresInSec ?? 300);
   const expiresAt = Math.min(wanted, Number(onchain.expiry));
   if (expiresAt <= nowSec) {
-    return { rested: false, filled: 0, size: 0, price: Number(priceOwn) / Number(one) };
+    return {
+      rested: false,
+      filled: 0,
+      size: 0,
+      price: Number(priceOwn) / Number(one),
+    };
   }
 
   await assertFunded(ctx, onchain, outcome, side, priceOwn, quantity);
 
+  // Buys pull collateral from the wallet into the pool. Binary placeOrder does
+  // not auto-approve on mainnet — without this, every buy reverts with
+  // ERC20InsufficientAllowance (allowance stays 0).
+  if (side === "buy") {
+    const need = (priceOwn * quantity) / 10n ** BigInt(ctx.config.decimals);
+    await ensureCollateralAllowance(ctx, onchain, need);
+  }
   const res = await ctx.exchange.trader.placeOrder({
     pool: onchain.pool,
     side: SIDES[`${outcome}-${side}`],
@@ -134,7 +285,11 @@ export async function placeLimit(ctx: EcContext, args: PlaceLimitArgs): Promise<
     yesId: onchain.yesId,
     noId: onchain.noId,
     orderType:
-      type === "post-only" ? ORDER_TYPE.POST_ONLY : type === "ioc" ? ORDER_TYPE.MARKET : ORDER_TYPE.LIMIT,
+      type === "post-only"
+        ? ORDER_TYPE.POST_ONLY
+        : type === "ioc"
+        ? ORDER_TYPE.MARKET
+        : ORDER_TYPE.LIMIT,
     expireTimestampNs: BigInt(expiresAt) * 1_000_000_000n,
   });
 
@@ -143,7 +298,10 @@ export async function placeLimit(ctx: EcContext, args: PlaceLimitArgs): Promise<
   // revert and should stop the caller.
   assertTxOk(res, `${SIDES[`${outcome}-${side}`]} ${market.symbol}`);
 
-  const filledRaw = (res.fills ?? []).reduce((acc, f) => acc + f.quantityFilled, 0n);
+  const filledRaw = (res.fills ?? []).reduce(
+    (acc, f) => acc + f.quantityFilled,
+    0n
+  );
   const rested = res.orderId !== undefined && filledRaw < quantity;
   if (rested) restingOrders.set(String(res.orderId), onchain);
   return {
@@ -169,15 +327,24 @@ export async function sellableSize(
   ctx: EcContext,
   onchain: MarketOnchain,
   outcome: Outcome,
-  want: number,
+  want: number
 ): Promise<number> {
   const me = ctx.exchange.walletAddress;
   if (!me) return 0;
   const id = outcome === "YES" ? onchain.yesId : onchain.noId;
-  const held = await ctx.exchange.client.getOutcomeBalance({ outcomeToken: onchain.outcomeToken, account: me, id: id });
+  const held = await ctx.exchange.client.getOutcomeBalance({
+    outcomeToken: onchain.outcomeToken,
+    account: me,
+    id: id,
+  });
   const one = 10n ** BigInt(ctx.config.decimals);
   const heldHuman = Number(held) / Number(one);
-  const capped = toSteps(Math.min(want, heldHuman), one, ctx.config.lot, "floor");
+  const capped = toSteps(
+    Math.min(want, heldHuman),
+    one,
+    ctx.config.lot,
+    "floor"
+  );
   return Number(capped) / Number(one);
 }
 
@@ -203,7 +370,7 @@ async function assertFunded(
   outcome: Outcome,
   side: "buy" | "sell",
   priceOwn: bigint,
-  quantity: bigint,
+  quantity: bigint
 ): Promise<void> {
   const { client } = ctx.exchange;
   const me = ctx.exchange.walletAddress;
@@ -216,16 +383,22 @@ async function assertFunded(
   // native balance.
   const gas = await client.getViemClient().getBalance({ address: me });
   if (gas === 0n) {
-    throw new Error(`out of gas: ${me} holds 0 native token on ${ctx.config.network}. Fund it to trade.`);
+    throw new Error(
+      `out of gas: ${me} holds 0 native token on ${ctx.config.network}. Fund it to trade.`
+    );
   }
 
   if (side === "sell") {
     const id = outcome === "YES" ? onchain.yesId : onchain.noId;
-    const held = await client.getOutcomeBalance({ outcomeToken: onchain.outcomeToken, account: me, id: id });
+    const held = await client.getOutcomeBalance({
+      outcomeToken: onchain.outcomeToken,
+      account: me,
+      id: id,
+    });
     if (held < quantity) {
       throw new Error(
         `not enough ${outcome} to sell: hold ${held}, need ${quantity} (raw). ` +
-          `Selling needs inventory — mint a complete set first, there is no naked short.`,
+          `Selling needs inventory — mint a complete set first, there is no naked short.`
       );
     }
     return;
@@ -234,12 +407,20 @@ async function assertFunded(
   const need = (priceOwn * quantity) / 10n ** BigInt(ctx.config.decimals);
   const [wallet, vault] = await Promise.all([
     client.getErc20Balance(onchain.collateral, me),
-    client.getVaultBalance({ vault: onchain.pool, owner: me, token: onchain.collateral }).catch(() => 0n),
+    client
+      .getVaultBalance({
+        vault: onchain.pool,
+        owner: me,
+        token: onchain.collateral,
+      })
+      .catch(() => 0n),
   ]);
   if (wallet + vault < need) {
     throw new Error(
-      `not enough collateral: have ${wallet + vault}, need ${need} (raw) for ${outcome} buy. ` +
-        `Fund ${onchain.collateral} → ${me}.`,
+      `not enough collateral: have ${
+        wallet + vault
+      }, need ${need} (raw) for ${outcome} buy. ` +
+        `Fund ${onchain.collateral} → ${me}.`
     );
   }
 }
@@ -270,7 +451,9 @@ export function untrackOrder(orderId: bigint | string): void {
  * the way out. A per-order error is not a failure: an order that filled or
  * expired in the meantime is simply gone.
  */
-export async function cancelTracked(ctx: EcContext): Promise<{ cancelled: number; tracked: number }> {
+export async function cancelTracked(
+  ctx: EcContext
+): Promise<{ cancelled: number; tracked: number }> {
   const tracked = restingOrders.size;
   let cancelled = 0;
   for (const [id, onchain] of [...restingOrders]) {
@@ -291,13 +474,24 @@ export async function cancelTracked(ctx: EcContext): Promise<{ cancelled: number
  * A complete set (one of each) is worth exactly one collateral whatever the
  * outcome, so the risk a bot carries is the IMBALANCE, not the gross holding.
  */
-export async function netPosition(ctx: EcContext, onchain: MarketOnchain): Promise<number> {
+export async function netPosition(
+  ctx: EcContext,
+  onchain: MarketOnchain
+): Promise<number> {
   const me = ctx.exchange.walletAddress;
   if (!me) return 0;
   const one = Number(10n ** BigInt(ctx.config.decimals));
   const [yes, no] = await Promise.all([
-    ctx.exchange.client.getOutcomeBalance({ outcomeToken: onchain.outcomeToken, account: me, id: onchain.yesId }),
-    ctx.exchange.client.getOutcomeBalance({ outcomeToken: onchain.outcomeToken, account: me, id: onchain.noId }),
+    ctx.exchange.client.getOutcomeBalance({
+      outcomeToken: onchain.outcomeToken,
+      account: me,
+      id: onchain.yesId,
+    }),
+    ctx.exchange.client.getOutcomeBalance({
+      outcomeToken: onchain.outcomeToken,
+      account: me,
+      id: onchain.noId,
+    }),
   ]);
   return (Number(yes) - Number(no)) / one;
 }
@@ -325,8 +519,15 @@ export async function cancelVenueOrders(ctx: EcContext): Promise<number> {
 }
 
 /** Cancel one resting order by its on-chain id. */
-export async function cancelById(ctx: EcContext, onchain: MarketOnchain, orderId: bigint | string) {
-  const res = await ctx.exchange.trader.cancelOrder({ pool: onchain.pool, orderId });
+export async function cancelById(
+  ctx: EcContext,
+  onchain: MarketOnchain,
+  orderId: bigint | string
+) {
+  const res = await ctx.exchange.trader.cancelOrder({
+    pool: onchain.pool,
+    orderId,
+  });
   assertTxOk(res, `cancel ${orderId}`);
   return res;
 }
@@ -340,13 +541,19 @@ export async function cancelById(ctx: EcContext, onchain: MarketOnchain, orderId
  * today, where a fixed stop means the bot never trades at all rather than
  * trading carefully.
  */
-export function minLeftSec(intervalSec: number | null | undefined, capSec = 300): number {
+export function minLeftSec(
+  intervalSec: number | null | undefined,
+  capSec = 300
+): number {
   const override = Number(process.env.EC_MIN_LEFT_S);
   if (Number.isFinite(override) && override > 0) return override;
   return headroomSec(intervalSec, capSec);
 }
 
-export function headroomSec(intervalSec: number | null | undefined, capSec = 300): number {
+export function headroomSec(
+  intervalSec: number | null | undefined,
+  capSec = 300
+): number {
   if (!intervalSec || intervalSec <= 0) return capSec;
   return Math.max(30, Math.min(capSec, intervalSec * 0.4));
 }
