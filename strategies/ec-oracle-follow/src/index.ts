@@ -977,12 +977,21 @@ async function takeOne(
     }
 
     // Partner is live — confirmed. Consume both so neither can be reused to
-    // vouch for a later, unrelated signal, then fire the partner's held
-    // trade (it qualified earlier) followed by this one.
+    // vouch for a later, unrelated signal, then fire both trades CONCURRENTLY.
+    // Firing sequentially (await A, then await B) inflates B's staleness
+    // window by A's entire round-trip time (sign + broadcast + confirm) —
+    // measured live at ~4s, long enough for B's fresh-book snapshot to have
+    // moved past its own edge by the time B's own send lands on-chain.
+    // Concurrent firing bounds the gap between the two legs to roughly the
+    // difference in their individual round-trip times instead of the sum.
     pendingConfirmation.delete(other);
     pendingConfirmation.delete(thisAsset);
-    await pendingOther!.fire();
-    await fire();
+    const results = await Promise.allSettled([pendingOther!.fire(), fire()]);
+    for (const r of results) {
+      if (r.status === "rejected") {
+        log(`cross-asset fire failed: ${(r.reason as Error).message}`);
+      }
+    }
     return;
   }
 
