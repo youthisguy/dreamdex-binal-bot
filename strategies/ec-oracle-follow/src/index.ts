@@ -730,35 +730,8 @@ async function takeOne(
     // trusting a stale ask. Cheap to run unconditionally: on the immediate
     // (non-held) path no time has passed, so this almost always just confirms
     // what we already had.
-    const freshBook = await ctx.exchange.fetchOrderBook(fav, 3);
-    const freshTop = freshBook.asks[0];
-    if (!freshTop) {
-      log(`${market.symbol}: held trade dropped — ${fav} book now empty`);
-      return;
-    }
-        const [freshAskPx] = freshTop;
-    if (!opts.skipEdgeCheck && freshAskPx > fairFav - EDGE) {
-      log(
-        `${market.symbol}: held trade dropped — edge gone (ask ${freshAskPx.toFixed(
-          3
-        )}, fair ${fairFav.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(3)})`
-      );
-      return;
-    }
-
-
-    // Cross a touch past the best so we still match if the book shifts, snapped
-    // to the tick grid and the (0,1) bounds.
-    const price = clampProbability(
-      ctx.exchange.priceToPrecision(fav, freshAskPx + 0.002)
-    );
-    assertProbability(price);
-
-    const side = bullish ? "BUY_YES" : "BUY_NO";
-    // Lead with the two inputs the fair value actually rests on — the level the
-    // market settles against and the volatility scaling it — because when this bot
-    // is wrong, it is almost always one of those two that was wrong first.
-    const why =
+        const side = bullish ? "BUY_YES" : "BUY_NO";
+    const whyPrefix =
       `${
         ref
           ? `${ref.kind} ${ref.price.toFixed(2)} vs spot ${mom.spot.toFixed(2)}`
@@ -773,35 +746,77 @@ async function takeOne(
       `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
         3
       )} off market ${marketFair.toFixed(3)}, ` +
-      `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${freshAskPx.toFixed(
-        3
-      )}`;
+      `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}`;
 
-    let taken = size;
+    // How long a no-fill leg keeps retrying, capped so it never runs past
+    // the market's own near-expiry stop.
+    const retryDeadline = Math.min(
+      Date.now() + FILL_RETRY_WINDOW_MS,
+      info.expiryMs !== null
+        ? info.expiryMs - nearExpiryStopMs(info.intervalSec)
+        : Date.now() + FILL_RETRY_WINDOW_MS
+    );
+
+    let taken = 0;
+
     if (ctx.config.dryRun) {
-      log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
+      const price = clampProbability(
+        ctx.exchange.priceToPrecision(fav, freshAskPx + 0.002)
+      );
+      assertProbability(price);
+      taken = size;
+      log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${whyPrefix}, ask ${freshAskPx.toFixed(3)})`);
     } else {
-      // IOC: fill what crosses now, cancel the rest. A resting remainder would sit
-      // there with its escrow locked (docs/event-contracts.md, sharp edge 2), and because nothing
-      // rests there is nothing to cancel on shutdown.
-      // placeLimit snaps the price to the tick grid as integers and checks the
-      // receipt itself; handing the SDK a float price reverts outright on an
-      // 18-decimal venue, and a revert reports zero fill rather than throwing.
-      const order = await placeLimit(ctx, {
-        market,
-        onchain,
-        outcome: bullish ? "YES" : "NO",
-        side: "buy",
-        price,
-        size,
-        type: "ioc",
-      });
-      // IOC cancels whatever didn't cross, so the requested size is an upper
-      // bound, not the position. Count what actually filled.
-      taken = order.filled;
-      log(`${side} ${taken}/${size} ${fav} @ ~${price.toFixed(3)} (${why})`);
-      if (taken <= 0) return; // nothing crossed; leave the cooldown clear to retry
+      while (true) {
+        const book = await ctx.exchange.fetchOrderBook(fav, 3);
+        const top = book.asks[0];
+        if (!top) {
+          log(`${market.symbol}: retry stopped — ${fav} book now empty`);
+          break;
+        }
+        const [askPx] = top;
+
+        if (!opts.skipEdgeCheck && askPx > fairFav - EDGE) {
+          log(
+            `${market.symbol}: retry stopped — edge gone (ask ${askPx.toFixed(3)}, ` +
+              `fair ${fairFav.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(3)})`
+          );
+          break;
+        }
+
+        const price = clampProbability(
+          ctx.exchange.priceToPrecision(fav, askPx + 0.002)
+        );
+        assertProbability(price);
+
+        try {
+          const order = await placeLimit(ctx, {
+            market,
+            onchain,
+            outcome: bullish ? "YES" : "NO",
+            side: "buy",
+            price,
+            size,
+            type: "ioc",
+          });
+          taken = order.filled;
+          log(`${side} ${taken}/${size} ${fav} @ ~${price.toFixed(3)} (${whyPrefix}, ask ${askPx.toFixed(3)})`);
+          if (taken > 0) break;
+        } catch (e) {
+          if (!isNoFillError(e as Error)) throw e; // real problem — don't mask it with a retry
+          log(`${market.symbol}: no fill (${(e as Error).message}), retrying in ${FILL_RETRY_INTERVAL_MS}ms...`);
+        }
+
+        if (Date.now() + FILL_RETRY_INTERVAL_MS >= retryDeadline) {
+          log(`${market.symbol}: retry window exhausted with no fill`);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, FILL_RETRY_INTERVAL_MS));
+      }
+
+      if (taken <= 0) return; // nothing crossed after retries; leave cooldown clear
     }
+
 
     // Reconcile against the partner's actual FILL, not its signal. This
     // fill just landed — check whether the partner asset also has a fill
