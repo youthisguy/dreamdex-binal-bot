@@ -987,7 +987,10 @@ async function takeOne(
     // difference in their individual round-trip times instead of the sum.
     pendingConfirmation.delete(other);
     pendingConfirmation.delete(thisAsset);
-    const results = await Promise.allSettled([pendingOther!.fire(), fire()]);
+    const results = await Promise.allSettled([
+      pendingOther!.fire({ skipEdgeCheck: true }),
+      fire({ skipEdgeCheck: true }),
+    ]);
     for (const r of results) {
       if (r.status === "rejected") {
         log(`cross-asset fire failed: ${(r.reason as Error).message}`);
