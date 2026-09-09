@@ -42,6 +42,7 @@ import {
   activeMarkets,
   marketOnchain,
   isTradable,
+  ensureCollateralAllowance, 
   outcomeSymbols,
   quantize,
   assertProbability,
@@ -415,6 +416,14 @@ async function takeOne(
     note(cycle, "window not in OF_ALLOWED_WINDOWS_MIN");
     return;
   }
+
+    // Warm the allowance for this pool during scanning, decoupled from the
+  // price-sensitive send path in fire(). Idempotent/cached per pool. the point is to absorb the
+  // block-confirmation delay several cycles before a signal ever fires,
+  // instead of it landing between reading the ask and crossing it.
+  ensureCollateralAllowance(ctx, onchain, 10n ** BigInt(ctx.config.decimals)).catch((e: Error) =>
+    log(`${market.symbol}: allowance warmup failed: ${(e as Error).message}`)
+  );
   if (!isAsset(info.asset)) {
     if (!warned.has(info.asset)) {
       warned.add(info.asset);
@@ -707,10 +716,33 @@ async function takeOne(
       return;
     }
 
+    // askPx/favBook were captured when this signal first qualified. Cross-asset
+    // confirmation can hold this closure for up to CROSS_ASSET_CONFIRM_MS before
+    // it runs — long enough for the book to have moved past that snapshot
+    // entirely. Re-fetch and re-check the edge right before sending rather than
+    // trusting a stale ask. Cheap to run unconditionally: on the immediate
+    // (non-held) path no time has passed, so this almost always just confirms
+    // what we already had.
+    const freshBook = await ctx.exchange.fetchOrderBook(fav, 3);
+    const freshTop = freshBook.asks[0];
+    if (!freshTop) {
+      log(`${market.symbol}: held trade dropped — ${fav} book now empty`);
+      return;
+    }
+    const [freshAskPx] = freshTop;
+    if (freshAskPx > fairFav - EDGE) {
+      log(
+        `${market.symbol}: held trade dropped — edge gone (ask ${freshAskPx.toFixed(
+          3
+        )}, fair ${fairFav.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(3)})`
+      );
+      return;
+    }
+
     // Cross a touch past the best so we still match if the book shifts, snapped
     // to the tick grid and the (0,1) bounds.
     const price = clampProbability(
-      ctx.exchange.priceToPrecision(fav, askPx + 0.002)
+      ctx.exchange.priceToPrecision(fav, freshAskPx + 0.002)
     );
     assertProbability(price);
 
@@ -733,7 +765,7 @@ async function takeOne(
       `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
         3
       )} off market ${marketFair.toFixed(3)}, ` +
-      `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${askPx.toFixed(
+      `pUp ${pUp.toFixed(3)}, fair ${fairFav.toFixed(3)}, ask ${freshAskPx.toFixed(
         3
       )}`;
 
@@ -815,7 +847,7 @@ async function takeOne(
       signal: bullish ? "UP" : "DOWN",
       fair_prob: fairFav,
       market_mid: marketFair,
-      edge: fairFav - askPx,
+      edge: fairFav - freshAskPx,
       disagreement,
       momentum_r: useMomentum ? mom.r : null,
       momentum_used: useMomentum,
@@ -847,7 +879,7 @@ async function takeOne(
       asset: info.asset,
       window: windowLabel(info.intervalSec),
       side: bullish ? "BUY_YES" : "BUY_NO",
-      price: askPx, // Bot's execution price
+      price: freshAskPx, // Bot's execution price (re-fetched at send time)
       limitPrice: copierLimitPrice, // Price copiers will use to cross remaining depth
       pool: onchain.pool,
       expiryMs: info.expiryMs,
@@ -866,7 +898,7 @@ async function takeOne(
       asset: info.asset,
       window: windowLabel(info.intervalSec),
       signal: bullish ? "UP" : "DOWN",
-      edge: fairFav - askPx,
+      edge: fairFav - freshAskPx,
       disagreement,
       momentumUsed: useMomentum,
       expiryMs: info.expiryMs,

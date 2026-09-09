@@ -88,7 +88,22 @@ const SIDES: Record<`${Outcome}-${"buy" | "sell"}`, BinarySide> = {
 
 /** Pools we've already approved for max collateral this process lifetime. */
 const approvedPools = new Set<string>();
-
+/**
+ * Serializes every collateral approve through one queue. The wallet is a
+ * single on-chain account, and concurrent writeContract calls each resolve
+ * "the current nonce" independently — warming up several new pools in the
+ * same scan cycle fires several approves back-to-back with no coordination,
+ * and more than one can read the same nonce before either lands, producing
+ * "nonce too low" on all but one. Chaining every approve through this
+ * promise makes them go out strictly one at a time no matter how many
+ * callers ask concurrently.
+ */
+let approveQueue: Promise<void> = Promise.resolve();
+function enqueueApprove(fn: () => Promise<void>): Promise<void> {
+  const run = approveQueue.then(fn, fn);
+  approveQueue = run.catch(() => undefined); // one failure must not wedge later approves
+  return run;
+}
 /**
  * One local signer for the process lifetime, built directly from the same
  * PRIVATE_KEY the exchange itself uses — not reached through exchange/trader/
@@ -113,7 +128,7 @@ function getWalletClient(ctx: EcContext) {
  * Binary placeOrder does not auto-approve USDso → pool on mainnet.
  * Approve once per pool (max) so subsequent buys don't hit ERC20InsufficientAllowance.
  */
-async function ensureCollateralAllowance(
+export async function ensureCollateralAllowance(
   ctx: EcContext,
   onchain: MarketOnchain,
   need: bigint,
@@ -150,21 +165,27 @@ async function ensureCollateralAllowance(
     throw new Error("cannot approve collateral: no PRIVATE_KEY configured (read-only exchange).");
   }
 
-  const max = 2n ** 256n - 1n;
-  console.log(`[approve] ${token} → pool ${spender} (need ${need}, had ${allowance})`);
+  await enqueueApprove(async () => {
+    // Another queued approve for this exact pool may have landed while we
+    // were waiting our turn — don't send a redundant one.
+    if (approvedPools.has(poolKey)) return;
 
-  const hash = await wallet.writeContract({
-    address: token,
-    abi: erc20WriteAbi,
-    functionName: "approve",
-    args: [spender, max],
-    chain: wallet.chain,
-    account: wallet.account,
+    const max = 2n ** 256n - 1n;
+    console.log(`[approve] ${token} → pool ${spender} (need ${need}, had ${allowance})`);
+
+    const hash = await wallet.writeContract({
+      address: token,
+      abi: erc20WriteAbi,
+      functionName: "approve",
+      args: [spender, max],
+      chain: wallet.chain,
+      account: wallet.account,
+    });
+    await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`[approve] confirmed ${hash}`);
+
+    approvedPools.add(poolKey);
   });
-  await publicClient.waitForTransactionReceipt({ hash });
-  console.log(`[approve] confirmed ${hash}`);
-
-  approvedPools.add(poolKey);
 }
 
 /**

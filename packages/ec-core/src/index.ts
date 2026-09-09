@@ -42,6 +42,7 @@ export {
 export { seedInventory } from "./inventory.js";
 export {
   placeLimit,
+  ensureCollateralAllowance,
   cancelTracked,
   cancelVenueOrders,
   netPosition,
@@ -53,7 +54,7 @@ export {
   type Outcome,
   type PlaceLimitArgs,
   type PlacedOrder,
-} from "./orders.js";
+  } from "./orders.js";
 
 export {
   assertProbability,
