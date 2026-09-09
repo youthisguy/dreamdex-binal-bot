@@ -72,6 +72,9 @@ export interface CopySignal {
   expiryMs: number | null;
   dryRun: boolean;
   timestamp: number;
+  outcomeToken: string;  
+  yesId: string;          
+  noId: string;
 }
 
 export function notifyCopyService(signal: CopySignal): void {

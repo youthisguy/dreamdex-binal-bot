@@ -908,20 +908,37 @@ async function takeOne(
     const marketId = info.marketId ?? onchain.pool;
 
     // Notify the copy-trade service right after the journal write
-    notifyCopyService({
-      id: `sig_${marketId}_${Date.now()}`,
-      marketId: marketId,
-      symbol: market.symbol,
-      asset: info.asset,
-      window: windowLabel(info.intervalSec),
-      side: bullish ? "BUY_YES" : "BUY_NO",
-      price: filledAskPx, // Bot's execution price (re-fetched at send time)
-      limitPrice: copierLimitPrice, // Price copiers will use to cross remaining depth
-      pool: onchain.pool,
-      expiryMs: info.expiryMs,
-      dryRun: false,
-      timestamp: Date.now(),
-    });
+    const OUTCOME_TOKEN = "0xB52c5934113Af5c0Bb20eb3C72290C8215f755b9";
+
+    const binaryInfo =
+      market.info.marketType === "BINARY"
+        ? (market.info as { yesTokenId?: string; noTokenId?: string })
+        : null;
+    
+    const yesId = binaryInfo?.yesTokenId != null ? String(binaryInfo.yesTokenId) : "";
+    const noId  = binaryInfo?.noTokenId  != null ? String(binaryInfo.noTokenId)  : "";
+    
+    if (!yesId || !noId) {
+      log(`${market.symbol}: skip copy notify — missing yesTokenId/noTokenId on market.info`);
+    } else {
+      notifyCopyService({
+        id: `sig_${marketId}_${Date.now()}`,
+        marketId: marketId,
+        symbol: market.symbol,
+        asset: info.asset,
+        window: windowLabel(info.intervalSec),
+        side: bullish ? "BUY_YES" : "BUY_NO",
+        price: filledAskPx,
+        limitPrice: copierLimitPrice,
+        pool: onchain.pool,
+        expiryMs: info.expiryMs,
+        dryRun: false,
+        timestamp: Date.now(),
+        outcomeToken: OUTCOME_TOKEN,
+        yesId,
+        noId,
+      });
+    }
 
     // Post to Telegram AFTER the journal write so a signal always shows up in
     // the dashboard even if the Telegram call fails or isn't configured — then
