@@ -729,8 +729,8 @@ async function takeOne(
       log(`${market.symbol}: held trade dropped — ${fav} book now empty`);
       return;
     }
-    const [freshAskPx] = freshTop;
-    if (freshAskPx > fairFav - EDGE) {
+        const [freshAskPx] = freshTop;
+    if (!opts.skipEdgeCheck && freshAskPx > fairFav - EDGE) {
       log(
         `${market.symbol}: held trade dropped — edge gone (ask ${freshAskPx.toFixed(
           3
@@ -738,6 +738,7 @@ async function takeOne(
       );
       return;
     }
+
 
     // Cross a touch past the best so we still match if the book shifts, snapped
     // to the tick grid and the (0,1) bounds.
