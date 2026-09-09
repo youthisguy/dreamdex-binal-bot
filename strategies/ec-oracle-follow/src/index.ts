@@ -97,6 +97,9 @@ const MIN_MARKET_PRICE = Number(process.env.OF_MIN_MARKET_PRICE ?? 0.35);
 const MAX_SHARES = envNum("OF_MAX_SHARES", 777);
 const MAX_EXPOSURE = envNum("OF_MAX_EXPOSURE", 7770);
 const COOLDOWN_MS = envNum("OF_COOLDOWN_MS", 30_000);
+const FILL_RETRY_INTERVAL_MS = envNum("OF_FILL_RETRY_INTERVAL_MS", 3_000);
+const FILL_RETRY_WINDOW_MS = envNum("OF_FILL_RETRY_WINDOW_MS", 60_000);
+
 // Stop taking this long before expiry. The venue can lock between your snapshot
 // and your send, and a late IOC then looks like filled=0 with no error (SDK
 // gotcha #2), so some headroom is wanted.
@@ -380,6 +383,10 @@ function marketInfo(m: UnifiedMarket): {
 // The other EC bots honour this; keeping it uniform so a config that says BTC
 // means BTC everywhere.
 const UNDERLYING = (process.env.EC_UNDERLYING ?? "").toUpperCase();
+function isNoFillError(e: Error): boolean {
+  const msg = e.message ?? "";
+  return /ImmediateOrCancelNoFill|InsufficientLiquidity|FillOrKillNotFillable/i.test(msg);
+}
 
 async function takeOne(
   ctx: EcContext,
