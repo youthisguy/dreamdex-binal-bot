@@ -702,7 +702,7 @@ async function takeOne(
   // invoked either right away (cross-asset confirm disabled, or this
   // signal is the one that completes a pairing) or later, when a partner
   // signal on the other asset confirms it (see the gate below).
-  const fire = async (): Promise<void> => {
+  const fire = async (opts: { skipEdgeCheck?: boolean } = {}): Promise<void> => {
     // Re-check the near-expiry stop at execution time: this closure may run
     // significantly later than when it was captured, if it sat waiting on a
     // cross-asset partner.
