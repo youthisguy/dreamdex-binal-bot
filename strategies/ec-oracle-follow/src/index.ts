@@ -163,7 +163,7 @@ const PARTNER_FILL_GRACE_MS = envNum(
 // either side once a pairing fires.
 interface PendingConfirmation {
   since: number;
-  fire: () => Promise<void>;
+  fire: (opts?: { skipEdgeCheck?: boolean }) => Promise<void>;
 }
 const pendingConfirmation = new Map<Asset, PendingConfirmation>();
 
@@ -758,14 +758,21 @@ async function takeOne(
     );
 
     let taken = 0;
+    let price = 0;
+    let filledAskPx = 0;
 
     if (ctx.config.dryRun) {
-      const price = clampProbability(
-        ctx.exchange.priceToPrecision(fav, freshAskPx + 0.002)
-      );
+      const book = await ctx.exchange.fetchOrderBook(fav, 3);
+      const top = book.asks[0];
+      if (!top) {
+        log(`${market.symbol}: dry-run skipped — ${fav} book empty`);
+        return;
+      }
+      filledAskPx = top[0];
+      price = clampProbability(ctx.exchange.priceToPrecision(fav, filledAskPx + 0.002));
       assertProbability(price);
       taken = size;
-      log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${whyPrefix}, ask ${freshAskPx.toFixed(3)})`);
+      log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${whyPrefix}, ask ${filledAskPx.toFixed(3)})`);
     } else {
       while (true) {
         const book = await ctx.exchange.fetchOrderBook(fav, 3);
@@ -784,10 +791,10 @@ async function takeOne(
           break;
         }
 
-        const price = clampProbability(
+        const attemptPrice = clampProbability(
           ctx.exchange.priceToPrecision(fav, askPx + 0.002)
         );
-        assertProbability(price);
+        assertProbability(attemptPrice);
 
         try {
           const order = await placeLimit(ctx, {
@@ -795,15 +802,19 @@ async function takeOne(
             onchain,
             outcome: bullish ? "YES" : "NO",
             side: "buy",
-            price,
+            price: attemptPrice,
             size,
             type: "ioc",
           });
           taken = order.filled;
-          log(`${side} ${taken}/${size} ${fav} @ ~${price.toFixed(3)} (${whyPrefix}, ask ${askPx.toFixed(3)})`);
-          if (taken > 0) break;
+          log(`${side} ${taken}/${size} ${fav} @ ~${attemptPrice.toFixed(3)} (${whyPrefix}, ask ${askPx.toFixed(3)})`);
+          if (taken > 0) {
+            price = attemptPrice;
+            filledAskPx = askPx;
+            break;
+          }
         } catch (e) {
-          if (!isNoFillError(e as Error)) throw e; // real problem — don't mask it with a retry
+          if (!isNoFillError(e as Error)) throw e;
           log(`${market.symbol}: no fill (${(e as Error).message}), retrying in ${FILL_RETRY_INTERVAL_MS}ms...`);
         }
 
@@ -814,8 +825,10 @@ async function takeOne(
         await new Promise((r) => setTimeout(r, FILL_RETRY_INTERVAL_MS));
       }
 
-      if (taken <= 0) return; // nothing crossed after retries; leave cooldown clear
+      if (taken <= 0) return;
     }
+
+    const why = `${whyPrefix}, ask ${filledAskPx.toFixed(3)}`;
 
 
     // Reconcile against the partner's actual FILL, not its signal. This
@@ -870,7 +883,7 @@ async function takeOne(
       signal: bullish ? "UP" : "DOWN",
       fair_prob: fairFav,
       market_mid: marketFair,
-      edge: fairFav - freshAskPx,
+      edge: fairFav - filledAskPx,
       disagreement,
       momentum_r: useMomentum ? mom.r : null,
       momentum_used: useMomentum,
@@ -889,7 +902,7 @@ async function takeOne(
 
     const copierLimitPrice = Math.min(
       MAX_COPY_PRICE,
-      Number((askPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
+      Number((filledAskPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
     );
 
     const marketId = info.marketId ?? onchain.pool;
@@ -902,7 +915,7 @@ async function takeOne(
       asset: info.asset,
       window: windowLabel(info.intervalSec),
       side: bullish ? "BUY_YES" : "BUY_NO",
-      price: freshAskPx, // Bot's execution price (re-fetched at send time)
+      price: filledAskPx, // Bot's execution price (re-fetched at send time)
       limitPrice: copierLimitPrice, // Price copiers will use to cross remaining depth
       pool: onchain.pool,
       expiryMs: info.expiryMs,
@@ -921,7 +934,7 @@ async function takeOne(
       asset: info.asset,
       window: windowLabel(info.intervalSec),
       signal: bullish ? "UP" : "DOWN",
-      edge: fairFav - freshAskPx,
+      edge: fairFav - filledAskPx,
       disagreement,
       momentumUsed: useMomentum,
       expiryMs: info.expiryMs,
@@ -950,7 +963,7 @@ async function takeOne(
         signal: bullish ? "UP" : "DOWN",
         fair_prob: fairFav,
         market_mid: marketFair,
-        edge: fairFav - askPx,
+        edge: fairFav - filledAskPx,
         disagreement,
         momentum_r: useMomentum ? mom.r : null,
         momentum_used: useMomentum,
