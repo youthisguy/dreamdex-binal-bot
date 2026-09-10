@@ -86,7 +86,6 @@ export interface CopySettlement {
   outcome: "WIN" | "LOSS" | "VOID";
   payoutPerShare: number;
   dryRun: boolean;
-  /** Optional — helps vault redeem side */
   winningSide?: "BUY_YES" | "BUY_NO";
 }
 

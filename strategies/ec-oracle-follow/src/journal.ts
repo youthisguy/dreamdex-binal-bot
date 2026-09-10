@@ -20,7 +20,11 @@ import { appendFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import type { EcContext } from "@dreamdex-bot-kit/ec-core";
 import { estimatePayout, settlementFeeBps } from "@dreamdex-bot-kit/ec-core";
-import { postSettlementReply, type SignalPost, type Stats } from "./telegram.js";
+import {
+  postSettlementReply,
+  type SignalPost,
+  type Stats,
+} from "./telegram.js";
 import { withTimeout } from "./timeout.js";
 import { scheduleCheckpoint } from "./checkpoint.js";
 import { notifyCopySettlement } from "./copy-signal.js";
@@ -37,7 +41,8 @@ function ensureDir(): void {
 
 function appendRecord(record: Record<string, unknown>): void {
   ensureDir();
-  const line = JSON.stringify({ timestamp: new Date().toISOString(), ...record }) + "\n";
+  const line =
+    JSON.stringify({ timestamp: new Date().toISOString(), ...record }) + "\n";
   appendFileSync(JOURNAL_PATH, line);
 }
 
@@ -140,7 +145,10 @@ function pendingMarketIds(): PendingEntry[] {
   const settled = new Set<string>();
 
   for (const rec of readAllRecords()) {
-    if (rec.type === "decision" && (rec.action === "TRADE_UP" || rec.action === "TRADE_DOWN")) {
+    if (
+      rec.type === "decision" &&
+      (rec.action === "TRADE_UP" || rec.action === "TRADE_DOWN")
+    ) {
       decisions.set(rec.market_id, {
         marketId: rec.market_id,
         side: rec.side,
@@ -178,7 +186,10 @@ export function computeStats(): Stats {
   const settlements = new Map<string, any>();
 
   for (const rec of readAllRecords()) {
-    if (rec.type === "decision" && (rec.action === "TRADE_UP" || rec.action === "TRADE_DOWN")) {
+    if (
+      rec.type === "decision" &&
+      (rec.action === "TRADE_UP" || rec.action === "TRADE_DOWN")
+    ) {
       decisions.set(rec.market_id, rec);
     } else if (rec.type === "settlement") {
       settlements.set(rec.market_id, rec);
@@ -196,7 +207,11 @@ export function computeStats(): Stats {
     if (s.outcome === "WIN") wins++;
   }
 
-  return { winRate: settledCount ? wins / settledCount : null, totalPnl, settledCount };
+  return {
+    winRate: settledCount ? wins / settledCount : null,
+    totalPnl,
+    settledCount,
+  };
 }
 
 /**
@@ -213,7 +228,7 @@ export interface SettlementFailure {
 }
 
 export async function backfillSettlements(
-  ctx: EcContext,
+  ctx: EcContext
 ): Promise<{ settled: number; failed: SettlementFailure[] }> {
   const pending = pendingMarketIds();
   let settledCount = 0;
@@ -224,7 +239,7 @@ export async function backfillSettlements(
       const onchain = await withTimeout(
         ctx.exchange.client.getMarketOnchain(p.marketId as `0x${string}`),
         10_000,
-        `getMarketOnchain(${p.marketId})`,
+        `getMarketOnchain(${p.marketId})`
       );
       if (!onchain || !(onchain.isResolved || onchain.isVoided)) continue;
 
@@ -241,26 +256,50 @@ export async function backfillSettlements(
         outcome = "VOID";
         pnl = (0.5 - p.price) * p.size;
       } else {
-        const feeBps = await settlementFeeBps(ctx, { info: { marketType: "BINARY", marketId: p.marketId } } as any, onchain);
-        const payoutRaw = estimatePayout({ onchain, outcome: boughtOutcome as 0 | 1, amount: sizeRaw, feeBps });
+        const feeBps = await settlementFeeBps(
+          ctx,
+          { info: { marketType: "BINARY", marketId: p.marketId } } as any,
+          onchain
+        );
+        const payoutRaw = estimatePayout({
+          onchain,
+          outcome: boughtOutcome as 0 | 1,
+          amount: sizeRaw,
+          feeBps,
+        });
         const payout = Number(payoutRaw) / 10 ** onchain.decimals;
         const won = onchain.winningOutcome === boughtOutcome;
         outcome = won ? "WIN" : "LOSS";
         pnl = payout - p.price * p.size;
       }
 
-      logSettlement({ market_id: p.marketId, outcome, pnl, settled_at: new Date().toISOString() });
+      logSettlement({
+        market_id: p.marketId,
+        outcome,
+        pnl,
+        settled_at: new Date().toISOString(),
+      });
       settledCount++;
 
       // payoutPerShare lets the copy-service scale this exact outcome to
       // whatever size each copying user actually holds, without needing its
       // own ec-core access to recompute onchain/estimatePayout itself. VOID
       // pays 0.5/share on both legs, same as the bot's own pnl math above.
+      const winningSide =
+        outcome === "VOID" || onchain.winningOutcome == null
+          ? undefined
+          : onchain.winningOutcome === 0
+          ? ("BUY_YES" as const)
+          : onchain.winningOutcome === 1
+          ? ("BUY_NO" as const)
+          : undefined;
+
       notifyCopySettlement({
         marketId: p.marketId,
         outcome,
         payoutPerShare: outcome === "VOID" ? 0.5 : pnl / p.size + p.price,
         dryRun: p.dryRun,
+        winningSide,
       });
 
       if (p.telegramMessageId) {
@@ -280,10 +319,18 @@ export async function backfillSettlements(
           refPrice: p.refPrice,
           refKind: p.refKind,
           explorerUrl: p.explorerUrl,
-          stats: computeStats(),  
+          stats: computeStats(),
         };
-        await postSettlementReply({ messageId: p.telegramMessageId, outcome, pnl, stats: original.stats, original }).catch(
-          (e) => console.error(`telegram settlement reply failed: ${(e as Error).message}`),
+        await postSettlementReply({
+          messageId: p.telegramMessageId,
+          outcome,
+          pnl,
+          stats: original.stats,
+          original,
+        }).catch((e) =>
+          console.error(
+            `telegram settlement reply failed: ${(e as Error).message}`
+          )
         );
       }
     } catch (e) {
@@ -291,8 +338,16 @@ export async function backfillSettlements(
       // but it must not vanish either. Loud + reported, so a stuck market
       // is visible in the log and to the caller instead of just quietly
       // never settling.
-      console.error(`backfillSettlements: ${p.marketId} (${p.symbol}) failed: ${(e as Error).message}`);
-      failed.push({ marketId: p.marketId, symbol: p.symbol, error: (e as Error).message });
+      console.error(
+        `backfillSettlements: ${p.marketId} (${p.symbol}) failed: ${
+          (e as Error).message
+        }`
+      );
+      failed.push({
+        marketId: p.marketId,
+        symbol: p.symbol,
+        error: (e as Error).message,
+      });
       continue;
     }
   }
