@@ -163,8 +163,10 @@ const PARTNER_FILL_GRACE_MS = envNum(
 // either side once a pairing fires.
 interface PendingConfirmation {
   since: number;
+  direction: "UP" | "DOWN";
   fire: (opts?: { skipEdgeCheck?: boolean }) => Promise<void>;
 }
+
 const pendingConfirmation = new Map<Asset, PendingConfirmation>();
 
 // Which window lengths this bot is allowed to trade, in minutes. Comma-
@@ -1017,14 +1019,36 @@ async function takeOne(
     const confirmNow = Date.now();
     const other = partnerAsset(thisAsset);
     const pendingOther = pendingConfirmation.get(other);
+    const thisDirection: "UP" | "DOWN" = bullish ? "UP" : "DOWN";
     const otherFresh =
-      pendingOther && confirmNow - pendingOther.since <= CROSS_ASSET_CONFIRM_MS;
+      pendingOther &&
+      confirmNow - pendingOther.since <= CROSS_ASSET_CONFIRM_MS &&
+      pendingOther.direction === thisDirection;
+
+    if (pendingOther && !otherFresh) {
+      // Partner exists but is either stale or pointing the other way —
+      // a direction mismatch is not "no partner", it's a real disagreement,
+      // worth its own skip reason rather than being lumped into the generic wait.
+      const staleness = confirmNow - pendingOther.since > CROSS_ASSET_CONFIRM_MS;
+      note(
+        cycle,
+        staleness
+          ? "waiting for cross-asset confirmation"
+          : "cross-asset signals disagree on direction"
+      );
+      pendingConfirmation.set(thisAsset, { since: confirmNow, direction: thisDirection, fire });
+      return;
+    }
 
     if (!otherFresh) {
       // No live, unconsumed partner waiting — hold this one and stop.
       // Overwrites any stale/earlier entry for thisAsset: only the most
       // recent qualifying signal per asset should be live.
-      pendingConfirmation.set(thisAsset, { since: confirmNow, fire });
+      pendingConfirmation.set(thisAsset, {
+        since: confirmNow,
+        direction: bullish ? "UP" : "DOWN",
+        fire,
+      });
       note(cycle, "waiting for cross-asset confirmation");
       return;
     }
