@@ -175,21 +175,6 @@
         padding: 6px 10px;
         background: var(--surface-2);
       }
-      .net-badge {
-        font-size: 10px;
-        text-transform: uppercase;
-        padding: 2px 6px;
-        border: 1px solid;
-        letter-spacing: 0.03em;
-      }
-      .net-badge.ok {
-        color: var(--pos);
-        border-color: var(--pos);
-      }
-      .net-badge.bad {
-        color: var(--neg);
-        border-color: var(--neg);
-      }
 
       .grid {
         display: grid;
@@ -199,6 +184,60 @@
       @media (max-width: 900px) {
         .grid {
           grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .field-row {
+          flex-direction: column;
+        }
+        .field-row > .btn {
+          align-self: stretch !important;
+          width: 100%;
+        }
+        .quick-btns {
+          gap: 6px;
+        }
+        .quick-btn {
+          padding: 8px 0;
+          font-size: 11px;
+        }
+        input[type="text"],
+        input[type="number"] {
+          font-size: 16px;
+          padding: 9px 10px;
+        }
+        header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+          padding: 10px;
+        }
+        .brand {
+          width: 100%;
+          justify-content: space-between;
+        }
+        h1 {
+          font-size: 12px;
+        }
+        .back-link {
+          font-size: 10px;
+        }
+        .wallet-box {
+          width: 100%;
+          justify-content: space-between;
+          gap: 6px;
+        }
+        .wallet-addr {
+          font-size: 10px;
+          padding: 6px 8px;
+        }
+        #connectBtn {
+          flex: 1;
+        }
+        .wallet-box #walletAddr {
+          flex: 1;
+          text-align: center;
         }
       }
 
@@ -330,6 +369,38 @@
       input:disabled {
         opacity: 0.4;
       }
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        appearance: none;
+        margin: 0;
+      }
+      input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      .quick-btns {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+      }
+      .quick-btn {
+        flex: 1;
+        padding: 4px 0;
+        font-size: 10px;
+        text-align: center;
+      }
+
+      .bal-hint {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: none;
+        letter-spacing: normal;
+      }
+      .bal-hint .val {
+        color: var(--text);
+      }
 
       .toggle-row {
         display: flex;
@@ -440,7 +511,6 @@
           <a class="back-link" href="/index.html">DASHBOARD</a>
         </div>
         <div class="wallet-box">
-          <span id="netBadge" class="net-badge" style="display: none"></span>
           <span
             id="walletAddr"
             class="wallet-addr"
@@ -477,8 +547,11 @@
             <div class="field-row">
               <div class="field-col">
                 <label
-                  >Deposit Amount (<span id="labelDepositCurrency">USDso</span
-                  >)</label
+                  >Deposit Amount (<span id="labelDepositCurrency">USDso</span>)
+                  <span class="bal-hint"
+                    >- Bal:
+                    <span id="walletBalDisplay" class="val">–</span></span
+                  ></label
                 >
                 <input
                   type="number"
@@ -488,6 +561,40 @@
                   step="0.01"
                   disabled
                 />
+                <div class="quick-btns">
+                  <button
+                    class="btn quick-btn"
+                    data-kind="deposit"
+                    data-pct="25"
+                    disabled
+                  >
+                    25%
+                  </button>
+                  <button
+                    class="btn quick-btn"
+                    data-kind="deposit"
+                    data-pct="50"
+                    disabled
+                  >
+                    50%
+                  </button>
+                  <button
+                    class="btn quick-btn"
+                    data-kind="deposit"
+                    data-pct="75"
+                    disabled
+                  >
+                    75%
+                  </button>
+                  <button
+                    class="btn quick-btn"
+                    data-kind="deposit"
+                    data-pct="100"
+                    disabled
+                  >
+                    100%
+                  </button>
+                </div>
               </div>
               <button
                 id="depositBtn"
@@ -503,8 +610,8 @@
               <div class="field-col">
                 <label
                   >Withdraw Amount (<span id="labelWithdrawCurrency">USDso</span
-                  >)</label
-                >
+                  >)
+                </label>
                 <input
                   type="number"
                   id="withdrawAmt"
@@ -513,6 +620,40 @@
                   step="0.01"
                   disabled
                 />
+                <div class="quick-btns">
+                  <button
+                    class="btn quick-btn"
+                    data-kind="withdraw"
+                    data-pct="25"
+                    disabled
+                  >
+                    25%
+                  </button>
+                  <button
+                    class="btn quick-btn"
+                    data-kind="withdraw"
+                    data-pct="50"
+                    disabled
+                  >
+                    50%
+                  </button>
+                  <button
+                    class="btn quick-btn"
+                    data-kind="withdraw"
+                    data-pct="75"
+                    disabled
+                  >
+                    75%
+                  </button>
+                  <button
+                    class="btn quick-btn"
+                    data-kind="withdraw"
+                    data-pct="100"
+                    disabled
+                  >
+                    100%
+                  </button>
+                </div>
               </div>
               <button
                 id="withdrawBtn"
@@ -657,6 +798,7 @@
       // ── Config — fill in for your deployment ─────────────────────────
       const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com";
       const VAULT_ADDRESS = "0x921772bf13175E5E39672154bDe3C521d859eFCA";
+      const USDSO_TOKEN_ADDRESS = "0x00000022dA000002656c64D9eA6011ea952D008A";
       const QUOTE_CURRENCY = "USDso";
       const SOMNIA_MAINNET = {
         chainIdHex: "0x13a7", // 5031
@@ -692,6 +834,9 @@
         vault,
         token,
         tokenDecimals = 18;
+      let walletToken,
+        walletTokenDecimals = 18,
+        walletTokenBalance = 0;
       let accountState = {
         balance: 0,
         lockedInTrades: 0,
@@ -702,7 +847,6 @@
       const els = {
         connectBtn: document.getElementById("connectBtn"),
         walletAddr: document.getElementById("walletAddr"),
-        netBadge: document.getElementById("netBadge"),
         depositAmt: document.getElementById("depositAmt"),
         depositBtn: document.getElementById("depositBtn"),
         withdrawAmt: document.getElementById("withdrawAmt"),
@@ -719,6 +863,7 @@
         myTradesRows: document.getElementById("myTradesRows"),
         leaderboardRows: document.getElementById("leaderboardRows"),
         activeCopiers: document.getElementById("activeCopiers"),
+        walletBalDisplay: document.getElementById("walletBalDisplay"),
       };
       document.getElementById("labelDepositCurrency").textContent =
         QUOTE_CURRENCY;
@@ -744,20 +889,14 @@
         return a.slice(0, 6) + "…" + a.slice(-4);
       }
 
-      // ── Network handling ──────────────────────────────────────────────
+      // ── Network handling (silent — no UI badge, just switches/adds chain) ──
       async function ensureNetwork() {
         const chainId = await window.ethereum.request({
           method: "eth_chainId",
         });
         if (chainId.toLowerCase() === SOMNIA_MAINNET.chainIdHex) {
-          els.netBadge.textContent = "SOMNIA MAINNET";
-          els.netBadge.className = "net-badge ok";
-          els.netBadge.style.display = "inline-block";
           return true;
         }
-        els.netBadge.textContent = "WRONG NETWORK";
-        els.netBadge.className = "net-badge bad";
-        els.netBadge.style.display = "inline-block";
         try {
           await window.ethereum.request({
             method: "wallet_switchEthereumChain",
@@ -819,9 +958,21 @@
           token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
           tokenDecimals = await token.decimals();
 
+          // Separate read-only handle on the USDso token for wallet-balance lookups
+          walletToken = new ethers.Contract(
+            USDSO_TOKEN_ADDRESS,
+            ERC20_ABI,
+            provider
+          );
+          try {
+            walletTokenDecimals = await walletToken.decimals();
+          } catch {
+            walletTokenDecimals = tokenDecimals;
+          }
+
           els.walletAddr.textContent = shortAddr(address);
           els.walletAddr.style.display = "inline-block";
-          els.connectBtn.textContent = "CONNECTED";
+          els.connectBtn.style.display = "none";
           [
             els.depositAmt,
             els.depositBtn,
@@ -830,6 +981,9 @@
             els.tradeSizeAmt,
             els.tradeSizeBtn,
           ].forEach((el) => (el.disabled = false));
+          document
+            .querySelectorAll(".quick-btn")
+            .forEach((btn) => (btn.disabled = false));
 
           // Let the backend know this wallet exists — read-only registration,
           // never signs or submits anything on the user's behalf.
@@ -840,6 +994,7 @@
           }).catch(() => {});
 
           await refreshAccount();
+          await refreshWalletBalance();
           await refreshMyTrades();
           setStatus("wallet connected", "ok");
         } catch (e) {
@@ -864,6 +1019,7 @@
         };
         els.statBalance.textContent = fmt(accountState.balance, 2);
         els.statLocked.textContent = fmt(accountState.lockedInTrades, 2);
+
         els.copyToggleBtn.disabled = accountState.tradeSize <= 0;
         els.copyToggleBtn.textContent = accountState.copyEnabled
           ? "DISABLE"
@@ -895,6 +1051,21 @@
         }
       }
 
+      // Fetch the connected wallet's own USDso balance (not the vault's idle balance)
+      async function refreshWalletBalance() {
+        if (!walletToken || !address) return;
+        try {
+          const bal = await walletToken.balanceOf(address);
+          walletTokenBalance = Number(
+            ethers.formatUnits(bal, walletTokenDecimals)
+          );
+          els.walletBalDisplay.textContent = fmt(walletTokenBalance, 2);
+        } catch {
+          walletTokenBalance = 0;
+          els.walletBalDisplay.textContent = "–";
+        }
+      }
+
       async function ensureAllowance(amountRaw) {
         const allowance = await token.allowance(address, VAULT_ADDRESS);
         if (allowance < amountRaw) {
@@ -907,6 +1078,15 @@
       els.depositBtn.addEventListener("click", async () => {
         const amt = parseFloat(els.depositAmt.value);
         if (!(amt > 0)) return setStatus("enter a deposit amount", "err");
+        if (amt > walletTokenBalance) {
+          return setStatus(
+            `amount exceeds your wallet balance (${fmt(
+              walletTokenBalance,
+              2
+            )} ${QUOTE_CURRENCY})`,
+            "err"
+          );
+        }
         try {
           els.depositBtn.disabled = true;
           const amountRaw = ethers.parseUnits(amt.toString(), tokenDecimals);
@@ -916,6 +1096,7 @@
           await tx.wait();
           els.depositAmt.value = "";
           await refreshAccount();
+          await refreshWalletBalance();
           setStatus(`deposited ${amt} ${QUOTE_CURRENCY}`, "ok");
         } catch (e) {
           setStatus(`deposit failed: ${e.shortMessage ?? e.message}`, "err");
@@ -927,6 +1108,15 @@
       els.withdrawBtn.addEventListener("click", async () => {
         const amt = parseFloat(els.withdrawAmt.value);
         if (!(amt > 0)) return setStatus("enter a withdraw amount", "err");
+        if (amt > accountState.balance) {
+          return setStatus(
+            `amount exceeds your idle balance (${fmt(
+              accountState.balance,
+              2
+            )} ${QUOTE_CURRENCY})`,
+            "err"
+          );
+        }
         try {
           els.withdrawBtn.disabled = true;
           const amountRaw = ethers.parseUnits(amt.toString(), tokenDecimals);
@@ -987,6 +1177,29 @@
         } finally {
           els.copyToggleBtn.disabled = accountState.tradeSize <= 0;
         }
+      });
+
+      // ── Quick percentage buttons for deposit/withdraw ───────────────
+      document.querySelectorAll(".quick-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const kind = btn.dataset.kind;
+          const pct = parseFloat(btn.dataset.pct) / 100;
+          if (kind === "deposit") {
+            if (!(walletTokenBalance > 0)) {
+              setStatus("wallet balance unavailable or zero", "err");
+              return;
+            }
+            const amt = walletTokenBalance * pct;
+            els.depositAmt.value = amt > 0 ? amt.toFixed(6) : "";
+          } else {
+            if (!(accountState.balance > 0)) {
+              setStatus("idle balance is zero", "err");
+              return;
+            }
+            const amt = accountState.balance * pct;
+            els.withdrawAmt.value = amt > 0 ? amt.toFixed(6) : "";
+          }
+        });
       });
 
       // ── Read-only data from the copy-service ────────────────────────
@@ -1070,6 +1283,7 @@
         refreshLeaderboard();
         if (address) {
           refreshAccount();
+          refreshWalletBalance();
           refreshMyTrades();
         }
       }, 5000);

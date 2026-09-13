@@ -189,10 +189,83 @@ function windowAllowed(intervalSec: number | null): boolean {
   return ALLOWED_WINDOW_MIN.includes(mins);
 }
 
+// Wall-clock trading schedule, independent of anything market-related. Unlike
+// OF_ALLOWED_WINDOWS_MIN (which windows/expiries are tradable), this is when
+// the BOT ITSELF is allowed to scan and fire at all — a full pause of new
+// entries, not a per-market filter.
+//
+// Two independent pieces, both in UTC to avoid DST/local-timezone drift on a
+// server that isn't necessarily in your timezone:
+//   1. A single CONTINUOUS weekly window, e.g. "Monday 12:00 -> Friday 08:00" —
+//      this is NOT the same as picking a set of days and a same-clock-time
+//      range on each (the old model): the start day/time and end day/time can
+//      differ, and the window runs through every hour in between, including
+//      overnight. Modeled as minute-of-week so Mon 23:50 -> Tue 00:10 just
+//      works without special-casing midnight.
+//   2. An optional DAILY pause carved out of that window every day it's
+//      active (e.g. a 08:30-09:30 settlement pause) — checked independently
+//      of the weekly window, so it applies inside it correctly regardless of
+//      where the weekly window's own boundaries fall.
+//
+// Disabled by default — always-on unless explicitly turned on.
+const TRADING_HOURS_ENABLED =
+  (process.env.OF_TRADING_HOURS_ENABLED ?? "false") === "true";
+
+// "DOW-HH:MM", ISO weekday 1=Mon..7=Sun. e.g. "1-12:00" = Monday noon.
+function parseDayTime(s: string, fallback: string): { dow: number; min: number } {
+  const [dowStr, hhmm] = (s || fallback).split("-");
+  const dow = Number(dowStr);
+  const [h, m] = (hhmm ?? "00:00").split(":").map(Number);
+  return {
+    dow: Number.isFinite(dow) && dow >= 1 && dow <= 7 ? dow : 1,
+    min: (h || 0) * 60 + (m || 0),
+  };
+}
+const WEEKLY_START = parseDayTime(process.env.OF_TRADING_WEEK_START ?? "", "1-00:00");
+const WEEKLY_END = parseDayTime(process.env.OF_TRADING_WEEK_END ?? "", "7-23:59");
+
+function minuteOfWeek(dow: number, min: number): number {
+  return (dow - 1) * 1440 + min; // 0 = Monday 00:00
+}
+const WEEK_START_MOW = minuteOfWeek(WEEKLY_START.dow, WEEKLY_START.min);
+const WEEK_END_MOW = minuteOfWeek(WEEKLY_END.dow, WEEKLY_END.min);
+
+function parseHHMM(s: string): number | null {
+  if (!s) return null;
+  const [h, m] = s.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+// Optional daily carve-out, e.g. "08:30" / "09:30". Both must be set to apply.
+const DAILY_PAUSE_START_MIN = parseHHMM(process.env.OF_TRADING_DAILY_PAUSE_START_UTC ?? "");
+const DAILY_PAUSE_END_MIN = parseHHMM(process.env.OF_TRADING_DAILY_PAUSE_END_UTC ?? "");
+const DAILY_PAUSE_ENABLED = DAILY_PAUSE_START_MIN !== null && DAILY_PAUSE_END_MIN !== null;
+
+function withinTradingWindow(now: Date): boolean {
+  if (!TRADING_HOURS_ENABLED) return true;
+
+  const isoWeekday = ((now.getUTCDay() + 6) % 7) + 1; // JS 0=Sun -> ISO 1=Mon..7=Sun
+  const dayMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const mow = minuteOfWeek(isoWeekday, dayMin);
+
+  const inWeeklyWindow =
+    WEEK_START_MOW <= WEEK_END_MOW
+      ? mow >= WEEK_START_MOW && mow < WEEK_END_MOW
+      : mow >= WEEK_START_MOW || mow < WEEK_END_MOW; // wraps past end of week (Sun->Mon)
+  if (!inWeeklyWindow) return false;
+
+  if (DAILY_PAUSE_ENABLED) {
+    const inPause =
+      DAILY_PAUSE_START_MIN! <= DAILY_PAUSE_END_MIN!
+        ? dayMin >= DAILY_PAUSE_START_MIN! && dayMin < DAILY_PAUSE_END_MIN!
+        : dayMin >= DAILY_PAUSE_START_MIN! || dayMin < DAILY_PAUSE_END_MIN!;
+    if (inPause) return false;
+  }
+
+  return true;
+}
+
 // Backtested/validated: EMA(3,12) momentum vs a flat market, walk-forward
-// validated (56.8% test win rate, p=0.00033). NOT backtested: the strike
-// model's moneyness/disagreement logic on its own — that's DreamDEX's
-// original placeholder-grade model, same category they flagged as unproven.
+// validated (56.8% test win rate, p=0.00033).
 // Default true so real funds only ride the validated signal; set to "false"
 // to let the (unvalidated) strike-only trades through again.
 const REQUIRE_MOMENTUM =
@@ -1055,10 +1128,6 @@ async function takeOne(
 
     // Partner is live — confirmed. Consume both so neither can be reused to
     // vouch for a later, unrelated signal, then fire both trades CONCURRENTLY.
-    // Firing sequentially (await A, then await B) inflates B's staleness
-    // window by A's entire round-trip time (sign + broadcast + confirm) —
-    // measured live at ~4s, long enough for B's fresh-book snapshot to have
-    // moved past its own edge by the time B's own send lands on-chain.
     // Concurrent firing bounds the gap between the two legs to roughly the
     // difference in their individual round-trip times instead of the sum.
     pendingConfirmation.delete(other);
@@ -1127,7 +1196,14 @@ async function main() {
         ALLOWED_WINDOW_MIN.length
           ? ALLOWED_WINDOW_MIN.join(",") + "min"
           : "ALL (unfiltered!)"
-      }`
+      } ` +
+      `tradingHours=${
+  TRADING_HOURS_ENABLED
+    ? `${WEEKLY_START.dow}-${String(Math.floor(WEEKLY_START.min/60)).padStart(2,"0")}:${String(WEEKLY_START.min%60).padStart(2,"0")} -> ` +
+      `${WEEKLY_END.dow}-${String(Math.floor(WEEKLY_END.min/60)).padStart(2,"0")}:${String(WEEKLY_END.min%60).padStart(2,"0")} UTC` +
+      (DAILY_PAUSE_ENABLED ? ` (daily pause ${process.env.OF_TRADING_DAILY_PAUSE_START_UTC}-${process.env.OF_TRADING_DAILY_PAUSE_END_UTC})` : "")
+    : "off (24/7)"
+}`
   );
 
   let stop = false;
@@ -1148,27 +1224,40 @@ async function main() {
       sweepExpiredPositions(Date.now());
       // Independent pass over unpairedLegs: alert once a naked leg has sat
       // unresolved past PARTNER_FILL_GRACE_MS. Runs on the same heartbeat
-      // cadence as the expiry sweep above.
+      // cadence as the expiry sweep above. Kept OUTSIDE the trading-window
+      // gate below on purpose: an existing naked leg still needs its alert
+      // even while the bot is paused from opening anything new.
       sweepUnpairedLegs(Date.now());
-      const markets = await withTimeout(
-        activeMarkets(ctx),
-        20_000,
-        "activeMarkets"
-      );
-      for (const m of markets) {
-        if (stop) break;
-        try {
-          // Per-market, not just per-cycle: one market's stalled RPC/indexer
-          // call must not freeze every other tradable market behind it for
-          // the rest of this cycle (or, since the loop is sequential, forever
-          // — see timeout.ts for why this can't be fixed inside the SDK itself).
-          await withTimeout(
-            takeOne(ctx, spot, refs, m, cycle),
-            20_000,
-            `takeOne(${m.symbol})`
-          );
-        } catch (e) {
-          log(`${m.symbol} error: ${(e as Error).message}`);
+
+      // Wall-clock pause. Everything above this (maybeClaim, sweeps) is
+      // cleanup for positions already taken, not new risk, so it keeps
+      // running on schedule even while paused — only scanning/new entries
+      // stop. Skipping activeMarkets() entirely (rather than fetching and
+      // then discarding every market below) also means a paused bot makes
+      // zero RPC/indexer calls for the scan itself, not just zero trades.
+      if (!withinTradingWindow(new Date())) {
+        note(cycle, "outside trading window (OF_TRADING_HOURS_ENABLED)");
+      } else {
+        const markets = await withTimeout(
+          activeMarkets(ctx),
+          20_000,
+          "activeMarkets"
+        );
+        for (const m of markets) {
+          if (stop) break;
+          try {
+            // Per-market, not just per-cycle: one market's stalled RPC/indexer
+            // call must not freeze every other tradable market behind it for
+            // the rest of this cycle (or, since the loop is sequential, forever
+            // — see timeout.ts for why this can't be fixed inside the SDK itself).
+            await withTimeout(
+              takeOne(ctx, spot, refs, m, cycle),
+              20_000,
+              `takeOne(${m.symbol})`
+            );
+          } catch (e) {
+            log(`${m.symbol} error: ${(e as Error).message}`);
+          }
         }
       }
     } catch (e) {
