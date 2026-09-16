@@ -17,11 +17,15 @@ Every signal is logged, posted to the Binal Bot [Telegram channel](https://t.me/
 ---
 
 ## The signal
-
+ 
 DreamDEX's own reference implementation for Event Contract trading documents its forecasting model as a placeholder. Binal Bot fills that gap with a real one: an EMA(3)/EMA(12) momentum crossover, validated through a full research pipeline (180 days of BTC/ETH price history), a 36-combination grid search with Bonferroni-corrected significance testing, and a chronological walk-forward split that never let the model see its own test data. The result held up out-of-sample: a **56.8% win rate on fully unseen data, statistically significant at p=0.00033**.
-
+ 
+![Backtest grid search / walk-forward PnL](./data/cumulative_pnl.png)
+ 
+Full methodology, grid search results, and raw backtest data: [research repository](https://github.com/youthisguy/dreamdex-agent.git).
+ 
 That signal now runs live, gated by risk controls tuned against real production behavior:
-
+ 
 1. **Window filter:** restricts trading to the validated 15-minute horizon (`OF_ALLOWED_WINDOWS_MIN`)
 2. **Momentum-required gate:** a trade only fires when the validated EMA signal actually contributed (`OF_REQUIRE_MOMENTUM`)
 3. **Entry-price ceiling:** refuses entries priced above a configurable threshold (`OF_MAX_ENTRY_PRICE`), keeping the bot inside the odds regime its win rate was actually proven  at
@@ -35,8 +39,9 @@ Every trade is written to a structured, append-only journal the moment it happen
 The same data feeds a public Telegram channel. Every signal posts as a stats card message — direction, edge, entry price, stake size, time remaining, and the bot's running track record, with a one-tap link straight into the DreamDEX market. When that market settles, the result posts as a reply to the original call, so the outcome is permanently and visibly tied to the reasoning that produced it. 
 
 ## The persistence layer
+ 
+Because the bot runs on infrastructure with ephemeral disk, trade history is checkpointed to GitHub automatically — every decision and every settlement commits and pushes in the background, and a fresh deployment restores full history before the bot ever takes its first action. A redeploy, a crash, a platform migration: the track record survives all of it, verifiable in the same repository the code lives in: [`strategies/ec-oracle-follow/logs/decisions.jsonl`](./strategies/ec-oracle-follow/logs/decisions.jsonl).
 
-Because the bot runs on infrastructure with ephemeral disk, trade history is checkpointed to GitHub automatically — every decision and every settlement commits and pushes in the background, and a fresh deployment restores full history before the bot ever takes its first action. A redeploy, a crash, a platform migration: the track record survives all of it, verifiable in the same repository the code lives in.
 
 ## Copy trading
 
@@ -57,7 +62,27 @@ The agent never holds user funds. It only notifies the copy service:
 
 Both require a shared secret header (`x-webhook-secret`). Full contract, API, and deploy detail: **[Binal_copy_serve](https://github.com/youthisguy/Binal_copy_serve)**.
 
+---
 
+## Testnet → Mainnet migration
+ 
+- **Sep 1, 09:35 – Sep 4, 16:45:** Testnet only. Trades 1–10 were posted with the token labeled `USDC` (a display bug — actual balance was Somnia Shannon testnet tUSDC from the faucet). From trade 11 onward the label was corrected to `tUSDC`. Position size was a flat 200 units per trade.
+- **Sep 4 16:45 → Sep 8 07:08:** ~3.5 day gap. The testnet environment was intermittently down and running with high latency over this period, blocking reliable execution. Rather than let that stall the demo, we migrated to mainnet to keep the product moving.
+- **Sep 8, 07:08 onward:** Mainnet. Token is `USDso` (native Somnia mainnet USD stable), the trade counter reset to 1, and position size dropped to a flat 15 units per trade — real capital, sized conservatively.
+Full trade-by-trade history (every signal and settlement, testnet and mainnet) is in [`data/trade-history.json`](./data/trade-history.json).
+
+**Why mainnet:** Testnet was unreliable in the final days of development. It kept going down and had known network-wide latency issues. So we migrated to mainnet to demo the product properly.
+
+## Deployed contracts
+ 
+`CopyVault` — the non-custodial, per-user vault the copy service operates against (deposit/withdraw always user-controlled; operator can only open/settle positions for opted-in wallets, capped at each user's own trade size):
+ 
+| Network | CopyVault address |
+|---|---|
+| **Mainnet** | `0x921772bf13175E5E39672154bDe3C521d859eFCA` |
+| **Testnet** (Somnia Shannon) | `0xBE24664ebC322aBA45bbA28d05b11B0f9D3E5Ed0` |
+ 
+---
 
 ## Architecture
  
@@ -79,7 +104,7 @@ CopyVault (per-user balances)
 
 
 **1. Main bot:** runs the trading loop and serves the live dashboard.
-**2. Copy-trade service:** a fully standalone Node service. Talks only to the bot only via two webhooks (push, not poll), and to the blockchain directly.
+**2. Copy-trade service:** a fully standalone Node service. Talks only to the bot only via two webhooks, and to the blockchain directly.
 
 ### Main bot components
 
