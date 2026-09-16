@@ -22,7 +22,7 @@ DreamDEX's own reference implementation for Event Contract trading documents its
  
 ![Backtest grid search / walk-forward PnL](./data/cumulative_pnl.png)
  
-Full methodology, grid search results, and raw backtest data: [research repository](https://github.com/youthisguy/dreamdex-agent.git).
+Full methodology, grid search results, and raw backtest data: [research repository](https://github.com/youthisguy/dreamdex-agent-backtest.git).
  
 That signal now runs live, gated by risk controls tuned against real production behavior:
  

@@ -264,6 +264,10 @@ function withinTradingWindow(now: Date): boolean {
   return true;
 }
 
+// Temporary risk lever: pause new bearish (BUY_NO) entries entirely while
+// leaving bullish (BUY_YES) trading untouched. this only blocks NEW entries.
+const DISABLE_DOWN = (process.env.OF_DISABLE_DOWN ?? "false") === "true";
+
 // Backtested/validated: EMA(3,12) momentum vs a flat market, walk-forward
 // validated (56.8% test win rate, p=0.00033).
 // Default true so real funds only ride the validated signal; set to "false"
@@ -628,6 +632,10 @@ async function takeOne(
     return;
   }
   const bullish = tilt > 0;
+  if (!bullish && DISABLE_DOWN) {
+    note(cycle, "DOWN trades disabled (OF_DISABLE_DOWN)");
+    return;
+  }
   const fav = bullish ? yes : no;
 
   // Never buy the leg opposite one we already hold. That doesn't reverse the
