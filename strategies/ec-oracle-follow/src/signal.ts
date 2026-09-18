@@ -497,9 +497,27 @@ function binanceIntervalFor(windowMs: number): string {
  * the gate above still treats a single-venue outage as "reduced data,"
  * not "no data."
  */
-export function combinedVolumeReader(): VolumeReader {
+export interface VolumeReading {
+  volume: number;
+  /** Which venues actually contributed. Missing a venue means the reading
+   *  is a partial substitute, not the full combined figure — callers should
+   *  think twice before treating it as equivalent to a normal sample. */
+  sources: ("binance" | "coinbase")[];
+}
+
+// Its own type, not `VolumeReader` — that interface (top of file) is the
+// single-source shape `binanceVolumeReader`/`coinbaseVolumeReader` return
+// (Promise<number | null>). Reusing the name here for a different return
+// shape is what merged into two incompatible overloads last time.
+export interface CombinedVolumeReader {
+  getVolume(asset: Asset, windowMs: number): Promise<VolumeReading | null>;
+}
+
+export function combinedVolumeReader(): CombinedVolumeReader {
   const binance = binanceVolumeReader();
   const coinbase = coinbaseVolumeReader();
+  const warnedDown = new Set<string>(); // per-asset, per-venue — throttles the outage log to once per state change
+
   return {
     async getVolume(asset, windowMs) {
       const [b, c] = await Promise.allSettled([
@@ -510,19 +528,31 @@ export function combinedVolumeReader(): VolumeReader {
       const bv = b.status === "fulfilled" ? b.value : null;
       const cv = c.status === "fulfilled" ? c.value : null;
 
+      const bKey = `binance:${asset}`;
       if (b.status === "rejected") {
-        console.error(
-          `binance volume ${asset}: ${(b.reason as Error)?.message ?? b.reason}`
-        );
+        if (!warnedDown.has(bKey)) {
+          warnedDown.add(bKey);
+          console.error(`binance volume ${asset} down: ${(b.reason as Error)?.message ?? b.reason} — falling back to coinbase-only`);
+        }
+      } else {
+        warnedDown.delete(bKey);
       }
+
+      const cKey = `coinbase:${asset}`;
       if (c.status === "rejected") {
-        console.error(
-          `coinbase volume ${asset}: ${(c.reason as Error)?.message ?? c.reason}`
-        );
+        if (!warnedDown.has(cKey)) {
+          warnedDown.add(cKey);
+          console.error(`coinbase volume ${asset} down: ${(c.reason as Error)?.message ?? c.reason} — falling back to binance-only`);
+        }
+      } else {
+        warnedDown.delete(cKey);
       }
 
       if (bv === null && cv === null) return null;
-      return (bv ?? 0) + (cv ?? 0);
+      const sources: VolumeReading["sources"] = [];
+      if (bv !== null) sources.push("binance");
+      if (cv !== null) sources.push("coinbase");
+      return { volume: (bv ?? 0) + (cv ?? 0), sources };
     },
   };
 }

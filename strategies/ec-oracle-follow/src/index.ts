@@ -62,7 +62,8 @@ import {
   type Asset,
   type ReferenceReader,
   type SpotReader,
-  type VolumeReader,
+  type CombinedVolumeReader,
+  VolumeReading,
 } from "./signal.js";
 import { VolumeHistory } from "./volume-history.js";
 import { Positions } from "./position.js";
@@ -367,7 +368,7 @@ const history = new SpotHistory(
 // used regardless of SPOT_SOURCE/NETWORK. The gate itself fails open if a
 // read errors or is still warming up (see takeOne()).
 const volHistory = new VolumeHistory(VOLUME_WINDOW_MS);
-const volumeReader: VolumeReader = combinedVolumeReader();
+const volumeReader: CombinedVolumeReader = combinedVolumeReader();
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
 const position = new Positions();
@@ -510,7 +511,8 @@ async function takeOne(
   spot: SpotReader,
   refs: ReferenceReader,
   market: UnifiedMarket,
-  cycle: Cycle
+  cycle: Cycle,
+  volumeCache: Map<Asset, VolumeReading | null>
 ): Promise<void> {
   if (UNDERLYING && !market.symbol.toUpperCase().includes(UNDERLYING)) return;
   // 1) Authoritative status. The indexer lags; only this snapshot decides.
@@ -630,27 +632,49 @@ async function takeOne(
   // the third state the journal wants, distinct from true/false.
   let volumeConfirmed: boolean | null = null;
   let volumeRatio: number | null = null;
-  if (REQUIRE_VOLUME_CONFIRM && useMomentum) {
-    volumeConfirmed = true; // fail OPEN if reader unavailable/warming up
-    try {
-      const vol = await volumeReader.getVolume(info.asset, VOLUME_WINDOW_MS);
+  if (REQUIRE_VOLUME_CONFIRM) {
+    let vol: VolumeReading | null;
+    if (volumeCache.has(thisAsset)) {
+      // Already fetched this asset this cycle (another market, same asset) —
+      // reuse it rather than firing a duplicate Binance/Coinbase call and
+      // pushing a near-duplicate timestamp into the same asset's ring.
+      vol = volumeCache.get(thisAsset)!;
+    } else {
+      try {
+        vol = await volumeReader.getVolume(info.asset, VOLUME_WINDOW_MS);
+      } catch (e) {
+        if (!warned.has(`vol:${info.asset}`)) {
+          warned.add(`vol:${info.asset}`);
+          log(`volume reader error for ${info.asset}: ${(e as Error).message} — failing open`);
+        }
+        vol = null;
+      }
+      volumeCache.set(thisAsset, vol);
+    }
+
+    if (vol !== null) {
+      warned.delete(`vol:${info.asset}`);
+      // Only feed the baseline when BOTH venues answered — a Binance or
+      // Coinbase outage produces a genuinely smaller number, and mixing
+      // that into the ring quietly drags the baseline down for as long as
+      // the outage lasts, then produces a false spike in the ratio the
+      // moment the venue recovers.
+      if (vol.sources.length === 2) {
+        volHistory.record(info.asset, vol.volume, now);
+      }
+    } else if (!warned.has(`vol:${info.asset}`)) {
+      warned.add(`vol:${info.asset}`);
+      log(`volume reader has no data for ${info.asset} — volume confirmation failing open`);
+    }
+
+    if (useMomentum) {
+      volumeConfirmed = true; // fail OPEN if reader unavailable/warming up
       if (vol !== null) {
-        warned.delete(`vol:${info.asset}`);
-        volHistory.record(info.asset, vol, now);
         const baseline = volHistory.baseline(info.asset);
         if (baseline !== null) {
-          volumeRatio = vol / baseline;
+          volumeRatio = vol.volume / baseline;
           volumeConfirmed = volumeRatio >= VOLUME_RATIO_MIN;
         }
-        // baseline === null => still warming up => fail open, same as SpotHistory
-      } else if (!warned.has(`vol:${info.asset}`)) {
-        warned.add(`vol:${info.asset}`);
-        log(`volume reader has no data for ${info.asset} — volume confirmation failing open`);
-      }
-    } catch (e) {
-      if (!warned.has(`vol:${info.asset}`)) {
-        warned.add(`vol:${info.asset}`);
-        log(`volume reader error for ${info.asset}: ${(e as Error).message} — failing open`);
       }
     }
   }
@@ -1408,6 +1432,7 @@ async function main() {
           20_000,
           "activeMarkets"
         );
+        const volumeCache = new Map<Asset, VolumeReading | null>();
         for (const m of markets) {
           if (stop) break;
           try {
@@ -1416,7 +1441,7 @@ async function main() {
             // the rest of this cycle (or, since the loop is sequential, forever
             // — see timeout.ts for why this can't be fixed inside the SDK itself).
             await withTimeout(
-              takeOne(ctx, spot, refs, m, cycle),
+              takeOne(ctx, spot, refs, m, cycle, volumeCache),
               20_000,
               `takeOne(${m.symbol})`
             );
