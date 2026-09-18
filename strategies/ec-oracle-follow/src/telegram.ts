@@ -69,6 +69,8 @@ export interface SignalPost {
   edge: number;
   disagreement: number;
   momentumUsed: boolean;
+  volumeConfirmed?: boolean | null;
+  volumeRatio?: number | null;
   expiryMs: number | null;
   dryRun: boolean;
   stats: Stats;

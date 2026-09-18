@@ -42,7 +42,7 @@ import {
   activeMarkets,
   marketOnchain,
   isTradable,
-  ensureCollateralAllowance, 
+  ensureCollateralAllowance,
   outcomeSymbols,
   quantize,
   assertProbability,
@@ -53,6 +53,7 @@ import {
 import {
   SpotHistory,
   coinbaseSpotReader,
+  combinedVolumeReader,
   estimateUp,
   marketBoundUp,
   marketImpliedUp,
@@ -61,7 +62,9 @@ import {
   type Asset,
   type ReferenceReader,
   type SpotReader,
+  type VolumeReader,
 } from "./signal.js";
+import { VolumeHistory } from "./volume-history.js";
 import { Positions } from "./position.js";
 import {
   logDecision,
@@ -212,7 +215,10 @@ const TRADING_HOURS_ENABLED =
   (process.env.OF_TRADING_HOURS_ENABLED ?? "false") === "true";
 
 // "DOW-HH:MM", ISO weekday 1=Mon..7=Sun. e.g. "1-12:00" = Monday noon.
-function parseDayTime(s: string, fallback: string): { dow: number; min: number } {
+function parseDayTime(
+  s: string,
+  fallback: string
+): { dow: number; min: number } {
   const [dowStr, hhmm] = (s || fallback).split("-");
   const dow = Number(dowStr);
   const [h, m] = (hhmm ?? "00:00").split(":").map(Number);
@@ -221,8 +227,14 @@ function parseDayTime(s: string, fallback: string): { dow: number; min: number }
     min: (h || 0) * 60 + (m || 0),
   };
 }
-const WEEKLY_START = parseDayTime(process.env.OF_TRADING_WEEK_START ?? "", "1-00:00");
-const WEEKLY_END = parseDayTime(process.env.OF_TRADING_WEEK_END ?? "", "7-23:59");
+const WEEKLY_START = parseDayTime(
+  process.env.OF_TRADING_WEEK_START ?? "",
+  "1-00:00"
+);
+const WEEKLY_END = parseDayTime(
+  process.env.OF_TRADING_WEEK_END ?? "",
+  "7-23:59"
+);
 
 function minuteOfWeek(dow: number, min: number): number {
   return (dow - 1) * 1440 + min; // 0 = Monday 00:00
@@ -236,9 +248,14 @@ function parseHHMM(s: string): number | null {
   return (h || 0) * 60 + (m || 0);
 }
 // Optional daily carve-out, e.g. "08:30" / "09:30". Both must be set to apply.
-const DAILY_PAUSE_START_MIN = parseHHMM(process.env.OF_TRADING_DAILY_PAUSE_START_UTC ?? "");
-const DAILY_PAUSE_END_MIN = parseHHMM(process.env.OF_TRADING_DAILY_PAUSE_END_UTC ?? "");
-const DAILY_PAUSE_ENABLED = DAILY_PAUSE_START_MIN !== null && DAILY_PAUSE_END_MIN !== null;
+const DAILY_PAUSE_START_MIN = parseHHMM(
+  process.env.OF_TRADING_DAILY_PAUSE_START_UTC ?? ""
+);
+const DAILY_PAUSE_END_MIN = parseHHMM(
+  process.env.OF_TRADING_DAILY_PAUSE_END_UTC ?? ""
+);
+const DAILY_PAUSE_ENABLED =
+  DAILY_PAUSE_START_MIN !== null && DAILY_PAUSE_END_MIN !== null;
 
 function withinTradingWindow(now: Date): boolean {
   if (!TRADING_HOURS_ENABLED) return true;
@@ -274,6 +291,18 @@ const DISABLE_DOWN = (process.env.OF_DISABLE_DOWN ?? "false") === "true";
 // to let the (unvalidated) strike-only trades through again.
 const REQUIRE_MOMENTUM =
   (process.env.OF_REQUIRE_MOMENTUM ?? "true") !== "false";
+
+// Require momentum to be backed by above-baseline volume before it counts.
+// Same "measure, don't assume" philosophy as MIN_VOL — a stalled/thin feed
+// should not silently pass as confirmed. Default OFF until validated live,
+// same posture REQUIRE_MOMENTUM shipped with originally.
+const REQUIRE_VOLUME_CONFIRM =
+  (process.env.OF_REQUIRE_VOLUME_CONFIRM ?? "false") === "true";
+const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);
+// Independently configurable from VOL_WINDOW_MS: volatility (price movement)
+// and volume (size traded) are different failure modes and don't need the
+// same lookback to be a meaningful baseline.
+const VOLUME_WINDOW_MS = envNum("OF_VOLUME_WINDOW_MS", 600_000);
 
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
@@ -331,6 +360,14 @@ const history = new SpotHistory(
   EMA_FAST_SPAN,
   EMA_SLOW_SPAN
 );
+// Rolling volume baseline for the volume-confirmation gate. Combines
+// Binance (the deepest spot volume of the readily available public feeds,
+// so it anchors the reading) with Coinbase's volume added on top rather
+// than used only as a fallback — no SDK-volume fallback, so this reader is
+// used regardless of SPOT_SOURCE/NETWORK. The gate itself fails open if a
+// read errors or is still warming up (see takeOne()).
+const volHistory = new VolumeHistory(VOLUME_WINDOW_MS);
+const volumeReader: VolumeReader = combinedVolumeReader();
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
 const position = new Positions();
@@ -413,7 +450,6 @@ function sweepUnpairedLegs(now: number): void {
   }
 }
 
- 
 /** What one cycle saw, so a quiet bot can still show its work. */
 interface Cycle {
   scanned: number;
@@ -464,7 +500,9 @@ function marketInfo(m: UnifiedMarket): {
 const UNDERLYING = (process.env.EC_UNDERLYING ?? "").toUpperCase();
 function isNoFillError(e: Error): boolean {
   const msg = e.message ?? "";
-  return /ImmediateOrCancelNoFill|InsufficientLiquidity|FillOrKillNotFillable/i.test(msg);
+  return /ImmediateOrCancelNoFill|InsufficientLiquidity|FillOrKillNotFillable/i.test(
+    msg
+  );
 }
 
 async function takeOne(
@@ -482,8 +520,11 @@ async function takeOne(
   // (prd.smk on mainnet)
   const marketContract = onchain.marketAddress ?? onchain.marketAddress ?? null;
   const explorerUrl = marketContract
-  ? `${ctx.config.indexerUrl.replace(/\/v1\/graphql$/, "")}/markets/${marketContract}`
-  : null;
+    ? `${ctx.config.indexerUrl.replace(
+        /\/v1\/graphql$/,
+        ""
+      )}/markets/${marketContract}`
+    : null;
   if (!isTradable(onchain)) {
     position.clear(market.symbol);
     positionExpiry.delete(market.symbol);
@@ -503,11 +544,15 @@ async function takeOne(
     return;
   }
 
-    // Warm the allowance for this pool during scanning, decoupled from the
+  // Warm the allowance for this pool during scanning, decoupled from the
   // price-sensitive send path in fire(). Idempotent/cached per pool. the point is to absorb the
   // block-confirmation delay several cycles before a signal ever fires,
   // instead of it landing between reading the ask and crossing it.
-  ensureCollateralAllowance(ctx, onchain, 10n ** BigInt(ctx.config.decimals)).catch((e: Error) =>
+  ensureCollateralAllowance(
+    ctx,
+    onchain,
+    10n ** BigInt(ctx.config.decimals)
+  ).catch((e: Error) =>
     log(`${market.symbol}: allowance warmup failed: ${(e as Error).message}`)
   );
   if (!isAsset(info.asset)) {
@@ -573,6 +618,49 @@ async function takeOne(
   // Below the threshold the return is feed noise, not a view.
   const useMomentum = horizonOk && Math.abs(mom.r) >= THRESHOLD;
 
+  // 5b) Volume confirmation. A price return that clears THRESHOLD but isn't
+  // backed by above-baseline volume is more likely a thin-book wick than a
+  // real move — exactly the shape that reverses inside a short window. This
+  // mutes the momentum TERM (same treatment as the horizon check above), it
+  // does not veto the market outright, because the reference-price path can
+  // still price the market honestly without momentum.
+  //
+  // volumeConfirmed stays null when the gate didn't run at all (disabled, or
+  // useMomentum was already false so there was nothing to confirm) — that's
+  // the third state the journal wants, distinct from true/false.
+  let volumeConfirmed: boolean | null = null;
+  let volumeRatio: number | null = null;
+  if (REQUIRE_VOLUME_CONFIRM && useMomentum) {
+    volumeConfirmed = true; // fail OPEN if reader unavailable/warming up
+    try {
+      const vol = await volumeReader.getVolume(info.asset, VOLUME_WINDOW_MS);
+      if (vol !== null) {
+        warned.delete(`vol:${info.asset}`);
+        volHistory.record(info.asset, vol, now);
+        const baseline = volHistory.baseline(info.asset);
+        if (baseline !== null) {
+          volumeRatio = vol / baseline;
+          volumeConfirmed = volumeRatio >= VOLUME_RATIO_MIN;
+        }
+        // baseline === null => still warming up => fail open, same as SpotHistory
+      } else if (!warned.has(`vol:${info.asset}`)) {
+        warned.add(`vol:${info.asset}`);
+        log(`volume reader has no data for ${info.asset} — volume confirmation failing open`);
+      }
+    } catch (e) {
+      if (!warned.has(`vol:${info.asset}`)) {
+        warned.add(`vol:${info.asset}`);
+        log(`volume reader error for ${info.asset}: ${(e as Error).message} — failing open`);
+      }
+    }
+  }
+  // Not a fresh boolean gate on top of useMomentum — this is what "useMomentum"
+  // actually gets to mean downstream. useMomentum itself is left unchanged
+  // everywhere else (horizon math, the "why" log's "muted" branch, etc.): it
+  // still means "the return cleared THRESHOLD," a distinct, useful fact from
+  // "and it was volume-confirmed."
+  const useMomentumConfirmed = useMomentum && (volumeConfirmed ?? true);
+
   if (!ref && !useMomentum) {
     note(
       cycle,
@@ -613,7 +701,7 @@ async function takeOne(
 
   const { pUp, tilt } = estimateUp({
     spot: mom.spot,
-    r: useMomentum ? mom.r : 0,
+    r: useMomentumConfirmed ? mom.r : 0,
     strike: ref?.price ?? null,
     timeToExpiryMs: ttl,
     windowMs: WINDOW_MS,
@@ -708,8 +796,13 @@ async function takeOne(
     return;
   }
 
-  if (REQUIRE_MOMENTUM && !useMomentum) {
-    note(cycle, "no momentum contribution (OF_REQUIRE_MOMENTUM)");
+  if (REQUIRE_MOMENTUM && !useMomentumConfirmed) {
+    note(
+      cycle,
+      volumeConfirmed === false
+        ? "momentum unconfirmed by volume (OF_REQUIRE_VOLUME_CONFIRM)"
+        : "no momentum contribution (OF_REQUIRE_MOMENTUM)"
+    );
     return;
   }
 
@@ -792,7 +885,9 @@ async function takeOne(
   // invoked either right away (cross-asset confirm disabled, or this
   // signal is the one that completes a pairing) or later, when a partner
   // signal on the other asset confirms it (see the gate below).
-  const fire = async (opts: { skipEdgeCheck?: boolean } = {}): Promise<void> => {
+  const fire = async (
+    opts: { skipEdgeCheck?: boolean } = {}
+  ): Promise<void> => {
     // Re-check the near-expiry stop at execution time: this closure may run
     // significantly later than when it was captured, if it sat waiting on a
     // cross-asset partner.
@@ -813,7 +908,7 @@ async function takeOne(
     // trusting a stale ask. Cheap to run unconditionally: on the immediate
     // (non-held) path no time has passed, so this almost always just confirms
     // what we already had.
-        const side = bullish ? "BUY_YES" : "BUY_NO";
+    const side = bullish ? "BUY_YES" : "BUY_NO";
     const whyPrefix =
       `${
         ref
@@ -825,6 +920,13 @@ async function takeOne(
       }, ` +
       `r ${
         useMomentum ? `${mom.r >= 0 ? "+" : ""}${mom.r.toFixed(4)}` : "muted"
+      }, ` +
+      `volConfirm ${
+        volumeConfirmed === null
+          ? "n/a"
+          : `${volumeConfirmed}${
+              volumeRatio !== null ? ` (${volumeRatio.toFixed(2)}x)` : ""
+            }`
       }, ` +
       `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
         3
@@ -852,10 +954,16 @@ async function takeOne(
         return;
       }
       filledAskPx = top[0];
-      price = clampProbability(ctx.exchange.priceToPrecision(fav, filledAskPx + 0.002));
+      price = clampProbability(
+        ctx.exchange.priceToPrecision(fav, filledAskPx + 0.002)
+      );
       assertProbability(price);
       taken = size;
-      log(`DRY ${side} ${size} ${fav} @ ~${price.toFixed(3)} (${whyPrefix}, ask ${filledAskPx.toFixed(3)})`);
+      log(
+        `DRY ${side} ${size} ${fav} @ ~${price.toFixed(
+          3
+        )} (${whyPrefix}, ask ${filledAskPx.toFixed(3)})`
+      );
     } else {
       while (true) {
         const book = await ctx.exchange.fetchOrderBook(fav, 3);
@@ -868,8 +976,12 @@ async function takeOne(
 
         if (!opts.skipEdgeCheck && askPx > fairFav - EDGE) {
           log(
-            `${market.symbol}: retry stopped — edge gone (ask ${askPx.toFixed(3)}, ` +
-              `fair ${fairFav.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(3)})`
+            `${market.symbol}: retry stopped — edge gone (ask ${askPx.toFixed(
+              3
+            )}, ` +
+              `fair ${fairFav.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(
+                3
+              )})`
           );
           break;
         }
@@ -890,7 +1002,11 @@ async function takeOne(
             type: "ioc",
           });
           taken = order.filled;
-          log(`${side} ${taken}/${size} ${fav} @ ~${attemptPrice.toFixed(3)} (${whyPrefix}, ask ${askPx.toFixed(3)})`);
+          log(
+            `${side} ${taken}/${size} ${fav} @ ~${attemptPrice.toFixed(
+              3
+            )} (${whyPrefix}, ask ${askPx.toFixed(3)})`
+          );
           if (taken > 0) {
             price = attemptPrice;
             filledAskPx = askPx;
@@ -898,7 +1014,11 @@ async function takeOne(
           }
         } catch (e) {
           if (!isNoFillError(e as Error)) throw e;
-          log(`${market.symbol}: no fill (${(e as Error).message}), retrying in ${FILL_RETRY_INTERVAL_MS}ms...`);
+          log(
+            `${market.symbol}: no fill (${
+              (e as Error).message
+            }), retrying in ${FILL_RETRY_INTERVAL_MS}ms...`
+          );
         }
 
         if (Date.now() + FILL_RETRY_INTERVAL_MS >= retryDeadline) {
@@ -913,7 +1033,6 @@ async function takeOne(
 
     const why = `${whyPrefix}, ask ${filledAskPx.toFixed(3)}`;
 
-
     // Reconcile against the partner's actual FILL, not its signal. This
     // fill just landed — check whether the partner asset also has a fill
     // recorded within the confirm window. If so, both legs are genuinely
@@ -925,7 +1044,8 @@ async function takeOne(
     if (CROSS_ASSET_CONFIRM_ENABLED) {
       const other = partnerAsset(thisAsset);
       const partnerFilledRecently =
-        (lastConfirmedFill.get(other) ?? 0) >= Date.now() - CROSS_ASSET_CONFIRM_MS;
+        (lastConfirmedFill.get(other) ?? 0) >=
+        Date.now() - CROSS_ASSET_CONFIRM_MS;
       lastConfirmedFill.set(thisAsset, Date.now());
       if (partnerFilledRecently) {
         unpairedLegs.delete(thisAsset);
@@ -952,7 +1072,8 @@ async function takeOne(
     position.add(market.symbol, leg, taken);
     lastTake.set(market.symbol, Date.now());
     enteredMarkets.add(market.symbol);
-    if (info.expiryMs !== null) positionExpiry.set(market.symbol, info.expiryMs);
+    if (info.expiryMs !== null)
+      positionExpiry.set(market.symbol, info.expiryMs);
 
     logDecision({
       market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
@@ -970,6 +1091,8 @@ async function takeOne(
       disagreement,
       momentum_r: useMomentum ? mom.r : null,
       momentum_used: useMomentum,
+      volume_confirmed: volumeConfirmed,
+      volume_ratio: volumeRatio,
       reason: why,
       expiry_ms: info.expiryMs,
       ref_price: ref?.price ?? null,
@@ -997,12 +1120,23 @@ async function takeOne(
       market.info.marketType === "BINARY"
         ? (market.info as { yesTokenId?: string; noTokenId?: string })
         : null;
-    
-    const yesId = binaryInfo?.yesTokenId != null ? String(binaryInfo.yesTokenId) : "";
-    const noId  = binaryInfo?.noTokenId  != null ? String(binaryInfo.noTokenId)  : "";
-    
-    if (!yesId || !noId) {
-      log(`${market.symbol}: skip copy notify — missing yesTokenId/noTokenId on market.info`);
+
+    const yesId =
+      binaryInfo?.yesTokenId != null ? String(binaryInfo.yesTokenId) : "";
+    const noId =
+      binaryInfo?.noTokenId != null ? String(binaryInfo.noTokenId) : "";
+
+    // Dry-run never fires the copy service: there's no real fill behind it,
+    // so copiers must not be signaled to trade off a paper position. This is
+    // a hard skip (the call isn't made at all), not just a dryRun:true flag
+    // in the payload — the copy service should never even see a dry-run
+    // signal.
+    if (ctx.config.dryRun) {
+      log(`${market.symbol}: skip copy notify — dry run`);
+    } else if (!yesId || !noId) {
+      log(
+        `${market.symbol}: skip copy notify — missing yesTokenId/noTokenId on market.info`
+      );
     } else {
       notifyCopyService({
         id: `sig_${marketId}_${Date.now()}`,
@@ -1015,7 +1149,7 @@ async function takeOne(
         limitPrice: copierLimitPrice,
         pool: onchain.pool,
         expiryMs: info.expiryMs,
-        dryRun: false,
+        dryRun: ctx.config.dryRun,
         timestamp: Date.now(),
         outcomeToken: OUTCOME_TOKEN,
         yesId,
@@ -1037,6 +1171,8 @@ async function takeOne(
       edge: fairFav - filledAskPx,
       disagreement,
       momentumUsed: useMomentum,
+      volumeConfirmed,
+      volumeRatio,
       expiryMs: info.expiryMs,
       dryRun: ctx.config.dryRun,
       entryPrice: price,
@@ -1067,6 +1203,8 @@ async function takeOne(
         disagreement,
         momentum_r: useMomentum ? mom.r : null,
         momentum_used: useMomentum,
+        volume_confirmed: volumeConfirmed,
+        volume_ratio: volumeRatio,
         reason: why,
         expiry_ms: info.expiryMs,
         ref_price: ref?.price ?? null,
@@ -1093,7 +1231,10 @@ async function takeOne(
   // just keeps compounding naked exposure on the same side.
   if (CROSS_ASSET_CONFIRM_ENABLED) {
     if (unpairedLegs.has(thisAsset)) {
-      note(cycle, "asset has an unresolved unpaired leg — refusing to compound");
+      note(
+        cycle,
+        "asset has an unresolved unpaired leg — refusing to compound"
+      );
       return;
     }
 
@@ -1110,14 +1251,19 @@ async function takeOne(
       // Partner exists but is either stale or pointing the other way —
       // a direction mismatch is not "no partner", it's a real disagreement,
       // worth its own skip reason rather than being lumped into the generic wait.
-      const staleness = confirmNow - pendingOther.since > CROSS_ASSET_CONFIRM_MS;
+      const staleness =
+        confirmNow - pendingOther.since > CROSS_ASSET_CONFIRM_MS;
       note(
         cycle,
         staleness
           ? "waiting for cross-asset confirmation"
           : "cross-asset signals disagree on direction"
       );
-      pendingConfirmation.set(thisAsset, { since: confirmNow, direction: thisDirection, fire });
+      pendingConfirmation.set(thisAsset, {
+        since: confirmNow,
+        direction: thisDirection,
+        fire,
+      });
       return;
     }
 
@@ -1179,7 +1325,6 @@ async function main() {
     );
   }
 
-
   const refs = referenceReader(ctx);
 
   log(
@@ -1206,12 +1351,24 @@ async function main() {
           : "ALL (unfiltered!)"
       } ` +
       `tradingHours=${
-  TRADING_HOURS_ENABLED
-    ? `${WEEKLY_START.dow}-${String(Math.floor(WEEKLY_START.min/60)).padStart(2,"0")}:${String(WEEKLY_START.min%60).padStart(2,"0")} -> ` +
-      `${WEEKLY_END.dow}-${String(Math.floor(WEEKLY_END.min/60)).padStart(2,"0")}:${String(WEEKLY_END.min%60).padStart(2,"0")} UTC` +
-      (DAILY_PAUSE_ENABLED ? ` (daily pause ${process.env.OF_TRADING_DAILY_PAUSE_START_UTC}-${process.env.OF_TRADING_DAILY_PAUSE_END_UTC})` : "")
-    : "off (24/7)"
-}`
+        TRADING_HOURS_ENABLED
+          ? `${WEEKLY_START.dow}-${String(
+              Math.floor(WEEKLY_START.min / 60)
+            ).padStart(2, "0")}:${String(WEEKLY_START.min % 60).padStart(
+              2,
+              "0"
+            )} -> ` +
+            `${WEEKLY_END.dow}-${String(
+              Math.floor(WEEKLY_END.min / 60)
+            ).padStart(2, "0")}:${String(WEEKLY_END.min % 60).padStart(
+              2,
+              "0"
+            )} UTC` +
+            (DAILY_PAUSE_ENABLED
+              ? ` (daily pause ${process.env.OF_TRADING_DAILY_PAUSE_START_UTC}-${process.env.OF_TRADING_DAILY_PAUSE_END_UTC})`
+              : "")
+          : "off (24/7)"
+      }`
   );
 
   let stop = false;

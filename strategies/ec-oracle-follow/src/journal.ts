@@ -62,6 +62,11 @@ export interface DecisionRecord {
   disagreement: number;
   momentum_r: number | null;
   momentum_used: boolean;
+  // Distinguishes "no momentum," "momentum but volume-unconfirmed," and
+  // "momentum confirmed" — null when the gate didn't run (REQUIRE_VOLUME_CONFIRM
+  // off, or useMomentum was already false so there was nothing to confirm).
+  volume_confirmed: boolean | null;
+  volume_ratio: number | null;
   reason: string;
   expiry_ms: number | null;
   ref_price: number | null; // the strike, or the window's own opening price
@@ -180,6 +185,15 @@ function pendingMarketIds(): PendingEntry[] {
  * Win rate + total PnL over settled (WIN/LOSS only — VOID is excluded, same
  * convention the dashboard uses) trades. One source of truth for both the
  * dashboard and the Telegram "track record" line, so the two never drift.
+ *
+ * Dry-run decisions are excluded from this aggregate on purpose: a paper
+ * trade never risked anything, so it must not move the public win-rate/PnL
+ * numbers shown on Telegram and the dashboard. It's still written to the
+ * journal in full (logDecision/logSettlement don't filter anything) — this
+ * function is the one place that draws the line, so dry-run activity stays
+ * fully visible in logs/decisions.jsonl for manual review (e.g. grepping
+ * `"dry_run":true` records, or `jq 'select(.dry_run)'`) without ever
+ * counting toward the track record.
  */
 export function computeStats(): Stats {
   const decisions = new Map<string, any>();
@@ -199,7 +213,8 @@ export function computeStats(): Stats {
   let wins = 0,
     settledCount = 0,
     totalPnl = 0;
-  for (const [marketId] of decisions) {
+  for (const [marketId, decision] of decisions) {
+    if (decision.dry_run) continue; // paper trade — never counts toward the track record
     const s = settlements.get(marketId);
     if (!s || (s.outcome !== "WIN" && s.outcome !== "LOSS")) continue;
     settledCount++;
@@ -294,13 +309,19 @@ export async function backfillSettlements(
           ? ("BUY_NO" as const)
           : undefined;
 
-      notifyCopySettlement({
-        marketId: p.marketId,
-        outcome,
-        payoutPerShare: outcome === "VOID" ? 0.5 : pnl / p.size + p.price,
-        dryRun: p.dryRun,
-        winningSide,
-      });
+      // Mirrors the dry-run skip on the signal side (index.ts): a dry-run
+      // trade never notified the copy service of an open position, so there
+      // is nothing for it to settle — don't fire this call at all rather
+      // than sending a settlement for a signal it never received.
+      if (!p.dryRun) {
+        notifyCopySettlement({
+          marketId: p.marketId,
+          outcome,
+          payoutPerShare: outcome === "VOID" ? 0.5 : pnl / p.size + p.price,
+          dryRun: p.dryRun,
+          winningSide,
+        });
+      }
 
       if (p.telegramMessageId) {
         const original: SignalPost = {

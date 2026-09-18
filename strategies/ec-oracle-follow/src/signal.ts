@@ -32,6 +32,11 @@ export interface SpotReader {
   getSpot(asset: Asset): Promise<Spot | null>;
 }
 
+export interface VolumeReader {
+  /** Most recent traded volume for `asset` over the last `windowMs`. */
+  getVolume(asset: Asset, windowMs: number): Promise<number | null>;
+}
+
 /**
  * The default reader: the SDK's price-feed indexer, which serves the on-chain
  * EMA oracle's spot + mark per asset. `m.info.asset` ("BTC"/"ETH") is already
@@ -49,6 +54,7 @@ export function sdkSpotReader(ctx: EcContext): SpotReader {
     },
   };
 }
+
 
 /**
  * Fallback reader: any public REST ticker. Kept as a seam for running against a
@@ -388,6 +394,137 @@ export function coinbaseSpotReader(): SpotReader {
       return price;
     },
   });
+}
+
+/**
+ * REST reader that pulls the most recent candle's traded volume for
+ * BTC/ETH from Coinbase Exchange's public candles endpoint. Mainnet-only
+ * source today, mirroring coinbaseSpotReader()'s SPOT_SOURCE=binance wiring.
+ */
+export function coinbaseVolumeReader(): VolumeReader {
+  return {
+    async getVolume(asset, windowMs) {
+      const symbol = asset === "BTC" ? "BTC-USD" : "ETH-USD";
+      const granularity = coinbaseGranularityFor(windowMs);
+      const res = await fetch(
+        `https://api.exchange.coinbase.com/products/${symbol}/candles?granularity=${granularity}`
+      );
+      if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
+      // Rows are [time, low, high, open, close, volume], most recent first.
+      const rows = (await res.json()) as number[][];
+      const latest = rows?.[0];
+      if (!latest) return null;
+      const volume = latest[5];
+      if (volume === undefined || !(volume >= 0)) return null;
+      return volume;
+    },
+  };
+}
+
+const COINBASE_GRANULARITIES_SEC = [60, 300, 900, 3600, 21600, 86400];
+function coinbaseGranularityFor(windowMs: number): number {
+  const targetSec = windowMs / 1000;
+  return COINBASE_GRANULARITIES_SEC.reduce((best, g) =>
+    Math.abs(g - targetSec) < Math.abs(best - targetSec) ? g : best
+  );
+}
+
+/**
+ * REST reader that pulls the most recent kline's traded BASE-asset volume
+ * for BTC/ETH from Binance's public klines endpoint. Binance carries the
+ * deepest spot volume of the readily available public feeds, so this is
+ * the primary/anchor source for the confirmation gate (see
+ * combinedVolumeReader() below).
+ */
+export function binanceVolumeReader(): VolumeReader {
+  return {
+    async getVolume(asset, windowMs) {
+      const symbol = asset === "BTC" ? "BTCUSDT" : "ETHUSDT";
+      const interval = binanceIntervalFor(windowMs);
+      const res = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=1`
+      );
+      if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
+      // Rows are [openTime, open, high, low, close, volume, closeTime, ...],
+      // oldest first — with limit=1 there's exactly one, the latest kline.
+      const rows = (await res.json()) as unknown[][];
+      const latest = rows?.[rows.length - 1];
+      const volume = latest ? Number(latest[5]) : NaN;
+      if (!(volume >= 0)) return null;
+      return volume;
+    },
+  };
+}
+
+const BINANCE_INTERVALS_SEC: Record<string, number> = {
+  "1m": 60,
+  "3m": 180,
+  "5m": 300,
+  "15m": 900,
+  "30m": 1800,
+  "1h": 3600,
+  "2h": 7200,
+  "4h": 14400,
+  "6h": 21600,
+  "8h": 28800,
+  "12h": 43200,
+  "1d": 86400,
+};
+function binanceIntervalFor(windowMs: number): string {
+  const targetSec = windowMs / 1000;
+  let best = "1m";
+  let bestErr = Infinity;
+  for (const [interval, sec] of Object.entries(BINANCE_INTERVALS_SEC)) {
+    const err = Math.abs(sec - targetSec);
+    if (err < bestErr) {
+      bestErr = err;
+      best = interval;
+    }
+  }
+  return best;
+}
+
+/**
+ * Combines Binance and Coinbase's most-recent-candle volume into one
+ * reading, rather than treating one as a fallback for the other. Both
+ * venues' flow genuinely contributes to how much size actually traded in
+ * the underlying, and Binance carries the larger share of it — so it
+ * anchors the number while Coinbase's volume is added on top when
+ * available, giving a fuller read than either alone.
+ *
+ * Fails open per-source: either venue erroring or being unreachable
+ * doesn't block the other — only returns null if BOTH come back empty, so
+ * the gate above still treats a single-venue outage as "reduced data,"
+ * not "no data."
+ */
+export function combinedVolumeReader(): VolumeReader {
+  const binance = binanceVolumeReader();
+  const coinbase = coinbaseVolumeReader();
+  return {
+    async getVolume(asset, windowMs) {
+      const [b, c] = await Promise.allSettled([
+        binance.getVolume(asset, windowMs),
+        coinbase.getVolume(asset, windowMs),
+      ]);
+
+      const bv = b.status === "fulfilled" ? b.value : null;
+      const cv = c.status === "fulfilled" ? c.value : null;
+
+      if (b.status === "rejected") {
+        console.error(
+          `binance volume ${asset}: ${(b.reason as Error)?.message ?? b.reason}`
+        );
+      }
+      if (c.status === "rejected") {
+        console.error(
+          `coinbase volume ${asset}: ${(c.reason as Error)?.message ?? c.reason}`
+        );
+      }
+
+      if (bv === null && cv === null) return null;
+      return (bv ?? 0) + (cv ?? 0);
+    },
+  };
 }
 
 /**
