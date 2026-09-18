@@ -295,8 +295,7 @@ const REQUIRE_MOMENTUM =
 
 // Require momentum to be backed by above-baseline volume before it counts.
 // Same "measure, don't assume" philosophy as MIN_VOL — a stalled/thin feed
-// should not silently pass as confirmed. Default OFF until validated live,
-// same posture REQUIRE_MOMENTUM shipped with originally.
+// should not silently pass as confirmed. Default OFF.
 const REQUIRE_VOLUME_CONFIRM =
   (process.env.OF_REQUIRE_VOLUME_CONFIRM ?? "false") === "true";
 const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);

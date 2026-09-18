@@ -412,7 +412,7 @@ export function coinbaseVolumeReader(): VolumeReader {
       if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
       // Rows are [time, low, high, open, close, volume], most recent first.
       const rows = (await res.json()) as number[][];
-      const latest = rows?.[0];
+      const latest = rows?.[1];
       if (!latest) return null;
       const volume = latest[5];
       if (volume === undefined || !(volume >= 0)) return null;
@@ -448,7 +448,7 @@ export function binanceVolumeReader(): VolumeReader {
       // Rows are [openTime, open, high, low, close, volume, closeTime, ...],
       // oldest first — with limit=1 there's exactly one, the latest kline.
       const rows = (await res.json()) as unknown[][];
-      const latest = rows?.[rows.length - 1];
+      const latest = rows?.[0];  
       const volume = latest ? Number(latest[5]) : NaN;
       if (!(volume >= 0)) return null;
       return volume;
