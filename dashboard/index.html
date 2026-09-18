@@ -10,6 +10,10 @@
       rel="stylesheet"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="9fda0d02-bb30-4ed0-8f88-b71a71d7a184"></script>
     <style>
       :root {
@@ -465,6 +469,13 @@
       #pnlChart {
         max-height: 160px;
         width: 100%;
+        touch-action: none !important;
+        cursor: grab;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #pnlChart:active {
+        cursor: grabbing;
       }
     </style>
   </head>
@@ -518,7 +529,10 @@
           </div>
 
           <div class="card">
-            <div class="card-header"><h2>CUMULATIVE PNL (STL)</h2></div>
+            <div class="card-header">
+              <h2>CUMULATIVE PNL (STL)</h2>
+              <!-- <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">[PINCH/SCROLL: ZOOM | DRAG: PAN]</span> -->
+            </div>
             <div class="card-body" style="padding: 12px 12px 0 12px">
               <canvas id="pnlChart"></canvas>
             </div>
@@ -594,9 +608,14 @@
     </div>
 
     <script>
+      // The script tag already registers the zoom plugin globally.
+      // Auto-register Hammer if loaded:
+      if (typeof window !== "undefined" && window.Hammer && Chart.Zoom) {
+        Chart.register(Chart.Zoom);
+      }
       let chart;
-      let allRecords = [];
       let activeFilter = "all";
+      let allRecords = []; // Ensure allRecords is globally initialized
 
       const DREAMDEX_MARKET_BASE = "https://app.dreamdex.io/event-contracts";
       const ASSET_PAIR = { BTC: "WBTC:USDso", ETH: "WETH:USDso" };
@@ -790,59 +809,111 @@
           (a, b) => new Date(a.settled_at) - new Date(b.settled_at)
         );
         let cumulative = 0;
-        const pnlSeries = chronoSettled.map((r) => {
+        const pnlData = chronoSettled.map((r) => {
           cumulative += r.pnl;
-          return cumulative;
+          return {
+            x: new Date(r.settled_at).getTime(),
+            y: cumulative,
+          };
         });
-        const labels = chronoSettled.map((r) =>
-          new Date(r.settled_at).toLocaleTimeString("en-GB")
-        );
+
+        // Fallback dummy point if no settled trades exist yet to avoid Chart scale crash
+        const safePnlData = pnlData.length > 0 ? pnlData : [{ x: Date.now(), y: 0 }];
 
         const isPositiveTrend =
-          (pnlSeries.length > 0 ? pnlSeries[pnlSeries.length - 1] : 0) >= 0;
+          (safePnlData.length > 0 ? safePnlData[safePnlData.length - 1].y : 0) >= 0;
         const trendColor = isPositiveTrend ? "#00ff00" : "#ff3333";
 
         const ctx = document.getElementById("pnlChart").getContext("2d");
 
-        if (chart) chart.destroy();
-        chart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels,
-            datasets: [
-              {
-                data: pnlSeries,
-                borderColor: trendColor,
-                borderWidth: 1.5,
-                backgroundColor: "transparent",
-                stepped: true, // Creates terminal-like step progression rather than smooth lines
-                fill: false,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                pointHoverBackgroundColor: trendColor,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              x: { display: false },
-              y: {
-                position: "right", // Standard for financial terminals
-                grid: { color: "#222222", drawTicks: false },
-                border: { display: false },
-                ticks: {
-                  color: "#777777",
-                  font: { family: "IBM Plex Mono", size: 10 },
+        if (chart) {
+          // Update existing chart dataset without tearing down viewport state
+          chart.data.datasets[0].data = pnlData;
+          chart.data.datasets[0].borderColor = trendColor;
+          chart.data.datasets[0].pointHoverBackgroundColor = trendColor;
+          chart.update("none"); // "none" disables layout animations so view stays pinned
+        } else {
+          // Initial creation
+          chart = new Chart(ctx, {
+            type: "line",
+            data: {
+              datasets: [
+                {
+                  data: pnlData,
+                  borderColor: trendColor,
+                  borderWidth: 1.5,
+                  backgroundColor: "transparent",
+                  stepped: true,
+                  fill: false,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                  pointHoverBackgroundColor: trendColor,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false,
+              plugins: {
+              legend: { display: false },
+              zoom: {
+                limits: {
+                  x: { min: "original", max: "original" },
+                },
+                pan: {
+                  enabled: true,
+                  mode: "x",
+                  modifierKey: null,
+                },
+                zoom: {
+                  wheel: {
+                    enabled: true,
+                  },
+                  pinch: {
+                    enabled: true,
+                  },
+                  drag: {
+                    enabled: false,
+                  },
+                  mode: "x",
+                  scaleMode: "x",
                 },
               },
             },
-            interaction: { intersect: false, mode: "index" },
-          },
-        });
+              scales: {
+                x: {
+                  type: "time",
+                  time: {
+                    tooltipFormat: "yyyy-MM-dd HH:mm:ss",
+                    displayFormats: {
+                      hour: "HH:mm",
+                      day: "MMM dd",
+                    },
+                  },
+                  grid: { color: "#141414", drawTicks: false },
+                  border: { display: false },
+                  ticks: {
+                    color: "#555555",
+                    font: { family: "IBM Plex Mono", size: 9 },
+                    maxRotation: 0,
+                    autoSkip: true,
+                  },
+                },
+                y: {
+                  position: "right",
+                  grid: { color: "#222222", drawTicks: false },
+                  border: { display: false },
+                  ticks: {
+                    color: "#777777",
+                    font: { family: "IBM Plex Mono", size: 10 },
+                  },
+                },
+              },
+              interaction: { intersect: false, mode: "nearest" },
+            },
+          });
+        }
       }
 
       document.getElementById("filterBar").addEventListener("click", (e) => {
@@ -872,7 +943,6 @@
       }
 
       (async () => {
-        if (location.protocol === "file:") return;
         await fetchAndRender();
         pollTimer = setInterval(fetchAndRender, POLL_MS);
       })();
