@@ -299,10 +299,19 @@ const REQUIRE_MOMENTUM =
 const REQUIRE_VOLUME_CONFIRM =
   (process.env.OF_REQUIRE_VOLUME_CONFIRM ?? "false") === "true";
 const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);
-// Independently configurable from VOL_WINDOW_MS: volatility (price movement)
-// and volume (size traded) are different failure modes and don't need the
-// same lookback to be a meaningful baseline.
-const VOLUME_WINDOW_MS = envNum("OF_VOLUME_WINDOW_MS", 600_000);
+// The candle size read from Binance/Coinbase. 900_000 = 15 min matches
+// DreamDEX's own :00/:15/:30/:45 market grid exactly (both exchanges
+// bucket candles from the Unix epoch, and 900s divides a day evenly), so
+// "this candle's volume" lines up with "this market's window" rather than
+// an arbitrary rolling slice out of phase with what we're trading.
+const VOLUME_CANDLE_MS = envNum("OF_VOLUME_CANDLE_MS", 900_000);
+// How much history VolumeHistory keeps to compute the baseline. Must span
+// several DISTINCT closed candles (not just one) or baseline() ends up
+// averaging copies of the current candle against itself and the ratio
+// sits at ~1.0 forever. Independently configurable from VOL_WINDOW_MS:
+// volatility (price movement) and volume (size traded) are different
+// failure modes and don't need the same lookback to be meaningful.
+const VOLUME_BASELINE_RETENTION_MS = envNum("OF_VOLUME_WINDOW_MS", 3_600_000);
 
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
@@ -366,7 +375,7 @@ const history = new SpotHistory(
 // than used only as a fallback — no SDK-volume fallback, so this reader is
 // used regardless of SPOT_SOURCE/NETWORK. The gate itself fails open if a
 // read errors or is still warming up (see takeOne()).
-const volHistory = new VolumeHistory(VOLUME_WINDOW_MS);
+const volHistory = new VolumeHistory(VOLUME_BASELINE_RETENTION_MS);
 const volumeReader: CombinedVolumeReader = combinedVolumeReader();
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
@@ -640,7 +649,7 @@ async function takeOne(
       vol = volumeCache.get(thisAsset)!;
     } else {
       try {
-        vol = await volumeReader.getVolume(info.asset, VOLUME_WINDOW_MS);
+        vol = await volumeReader.getVolume(info.asset, VOLUME_CANDLE_MS);
       } catch (e) {
         if (!warned.has(`vol:${info.asset}`)) {
           warned.add(`vol:${info.asset}`);

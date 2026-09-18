@@ -55,7 +55,6 @@ export function sdkSpotReader(ctx: EcContext): SpotReader {
   };
 }
 
-
 /**
  * Fallback reader: any public REST ticker. Kept as a seam for running against a
  * network with no price-feed endpoint bundled (mainnet today), and as the
@@ -113,7 +112,7 @@ export class SpotHistory {
     retainMs = windowMs * 2,
     /** EMA spans for the crossover signal, in SAMPLES not time. */
     emaFastSpan = 3,
-    emaSlowSpan = 12,
+    emaSlowSpan = 12
   ) {
     this.retainMs = Math.max(retainMs, windowMs * 2);
     this.fastAlpha = 2 / (emaFastSpan + 1);
@@ -135,8 +134,18 @@ export class SpotHistory {
     // rolling window is what caused the original near-zero-signal bug there.
     const prevFast = this.emaFast.get(asset);
     const prevSlow = this.emaSlow.get(asset);
-    this.emaFast.set(asset, prevFast === undefined ? s.price : prevFast + this.fastAlpha * (s.price - prevFast));
-    this.emaSlow.set(asset, prevSlow === undefined ? s.price : prevSlow + this.slowAlpha * (s.price - prevSlow));
+    this.emaFast.set(
+      asset,
+      prevFast === undefined
+        ? s.price
+        : prevFast + this.fastAlpha * (s.price - prevFast)
+    );
+    this.emaSlow.set(
+      asset,
+      prevSlow === undefined
+        ? s.price
+        : prevSlow + this.slowAlpha * (s.price - prevSlow)
+    );
     this.emaSampleCount.set(asset, (this.emaSampleCount.get(asset) ?? 0) + 1);
   }
 
@@ -149,7 +158,11 @@ export class SpotHistory {
    * sample (same staleness rule as `momentum()`), so a stalled feed reads as
    * "no data" rather than "zero momentum" here too.
    */
-  emaMomentum(asset: string, now: number, cap = 0.05): { spot: number; r: number } | null {
+  emaMomentum(
+    asset: string,
+    now: number,
+    cap = 0.05
+  ): { spot: number; r: number } | null {
     const arr = this.samples.get(asset);
     if (!arr || arr.length === 0) return null;
     const latest = arr[arr.length - 1]!;
@@ -161,7 +174,8 @@ export class SpotHistory {
 
     const fast = this.emaFast.get(asset);
     const slow = this.emaSlow.get(asset);
-    if (fast === undefined || slow === undefined || !(latest.price > 0)) return null;
+    if (fast === undefined || slow === undefined || !(latest.price > 0))
+      return null;
 
     const diffNorm = (fast - slow) / latest.price;
     const r = Math.sign(diffNorm) * Math.min(Math.abs(diffNorm), cap);
@@ -239,7 +253,8 @@ export class SpotHistory {
   }
 }
 
-const clamp = (p: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, p));
+const clamp = (p: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, p));
 
 /** sqrt(2/π) — the tanh coefficient whose slope at zero matches the Gaussian's. */
 const NORMAL_CDF_K = Math.sqrt(2 / Math.PI);
@@ -313,7 +328,8 @@ export function estimateUp(i: ModelInput): Estimate {
   const PMIN = 0.05;
   const PMAX = 0.95;
 
-  const strikeAware = i.model === "strike" && i.strike !== null && i.timeToExpiryMs !== null;
+  const strikeAware =
+    i.model === "strike" && i.strike !== null && i.timeToExpiryMs !== null;
   if (!strikeAware) {
     const anchor = clamp(i.anchorUp, PMIN, PMAX);
     const raw = i.sensitivity * i.r;
@@ -358,7 +374,10 @@ export function estimateUp(i: ModelInput): Estimate {
  * still be sanity-checked against *something* on a book too thin to have a mid,
  * instead of the bot either refusing to trade or trading unchecked.
  */
-export function marketBoundUp(book: { bids: [number, number][]; asks: [number, number][] }): number | null {
+export function marketBoundUp(book: {
+  bids: [number, number][];
+  asks: [number, number][];
+}): number | null {
   const p = book.asks[0]?.[0] ?? book.bids[0]?.[0];
   return p !== undefined && p > 0 && p < 1 ? p : null;
 }
@@ -371,7 +390,10 @@ export function marketBoundUp(book: { bids: [number, number][]; asks: [number, n
  * do about that depends on the model: momentum mode needs a mid and refuses if
  * there is none; strike mode with a resolved reference can use `marketBoundUp`.
  */
-export function marketImpliedUp(book: { bids: [number, number][]; asks: [number, number][] }): number | null {
+export function marketImpliedUp(book: {
+  bids: [number, number][];
+  asks: [number, number][];
+}): number | null {
   const bid = book.bids[0]?.[0];
   const ask = book.asks[0]?.[0];
   if (bid === undefined || ask === undefined) return null;
@@ -442,13 +464,15 @@ export function binanceVolumeReader(): VolumeReader {
       const symbol = asset === "BTC" ? "BTCUSDT" : "ETHUSDT";
       const interval = binanceIntervalFor(windowMs);
       const res = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=1`
+        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=2`
       );
       if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
       // Rows are [openTime, open, high, low, close, volume, closeTime, ...],
-      // oldest first — with limit=1 there's exactly one, the latest kline.
+      // oldest first. With limit=2, rows[1] is the still-forming candle and
+      // rows[0] is the last fully CLOSED one — that's the one we want, so
+      // the reading doesn't depend on where in the candle's life we poll.
       const rows = (await res.json()) as unknown[][];
-      const latest = rows?.[0];  
+      const latest = rows?.[0];
       const volume = latest ? Number(latest[5]) : NaN;
       if (!(volume >= 0)) return null;
       return volume;
@@ -532,7 +556,11 @@ export function combinedVolumeReader(): CombinedVolumeReader {
       if (b.status === "rejected") {
         if (!warnedDown.has(bKey)) {
           warnedDown.add(bKey);
-          console.error(`binance volume ${asset} down: ${(b.reason as Error)?.message ?? b.reason} — falling back to coinbase-only`);
+          console.error(
+            `binance volume ${asset} down: ${
+              (b.reason as Error)?.message ?? b.reason
+            } — falling back to coinbase-only`
+          );
         }
       } else {
         warnedDown.delete(bKey);
@@ -542,7 +570,11 @@ export function combinedVolumeReader(): CombinedVolumeReader {
       if (c.status === "rejected") {
         if (!warnedDown.has(cKey)) {
           warnedDown.add(cKey);
-          console.error(`coinbase volume ${asset} down: ${(c.reason as Error)?.message ?? c.reason} — falling back to binance-only`);
+          console.error(
+            `coinbase volume ${asset} down: ${
+              (c.reason as Error)?.message ?? c.reason
+            } — falling back to binance-only`
+          );
         }
       } else {
         warnedDown.delete(cKey);
@@ -567,7 +599,10 @@ export function combinedVolumeReader(): CombinedVolumeReader {
  * these are short-dated windows struck around the money, so the right scale is
  * never ambiguous by more than a factor of ten.
  */
-export function scaleStrike(rawStrike: string | undefined, spot: number): number | null {
+export function scaleStrike(
+  rawStrike: string | undefined,
+  spot: number
+): number | null {
   if (!rawStrike || !(spot > 0)) return null;
   const raw = Number(rawStrike);
   if (!Number.isFinite(raw) || raw <= 0) return null;
@@ -614,7 +649,10 @@ export interface Reference {
  * a market whose reference question hasn't been answered yet will get one.
  */
 export interface ReferenceReader {
-  referenceFor(m: { marketId?: string; strike?: string }, spot: number): Promise<Reference | null>;
+  referenceFor(
+    m: { marketId?: string; strike?: string },
+    spot: number
+  ): Promise<Reference | null>;
 }
 
 export function referenceReader(ctx: EcContext): ReferenceReader {
