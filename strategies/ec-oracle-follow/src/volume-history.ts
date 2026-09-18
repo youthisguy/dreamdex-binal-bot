@@ -14,12 +14,26 @@
 
 export class VolumeHistory {
     private readonly samples = new Map<string, { v: number; at: number }[]>();
+    // Last candleTime actually recorded per asset. Lets record() dedupe
+    // repeated polls against a still-current candle — a fast poll loop
+    // against a slow-moving candle should count that candle once, not
+    // once per poll.
+    private readonly lastCandleTime = new Map<string, number>();
   
     constructor(private readonly retainMs: number) {}
   
-    /** Record an observation, dropping anything past the retention horizon. */
-    record(asset: string, volume: number, atMs: number): void {
+    /**
+     * Record an observation, dropping anything past the retention horizon.
+     * `candleTime` is the closed candle's own open time (ms); if it matches
+     * the last one already recorded for this asset, this is a no-op —
+     * nothing new has closed since the last record, so there's nothing new
+     * to add to the baseline.
+     */
+    record(asset: string, volume: number, atMs: number, candleTime: number): void {
       if (!(volume >= 0)) return;
+      if (this.lastCandleTime.get(asset) === candleTime) return; // same candle, already counted
+      this.lastCandleTime.set(asset, candleTime);
+  
       const arr = this.samples.get(asset) ?? [];
       arr.push({ v: volume, at: atMs });
       const cutoff = atMs - this.retainMs;

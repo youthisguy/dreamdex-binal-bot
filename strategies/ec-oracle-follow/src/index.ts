@@ -660,21 +660,8 @@ async function takeOne(
       volumeCache.set(thisAsset, vol);
     }
 
-    if (vol !== null) {
-      warned.delete(`vol:${info.asset}`);
-      // Only feed the baseline when BOTH venues answered — a Binance or
-      // Coinbase outage produces a genuinely smaller number, and mixing
-      // that into the ring quietly drags the baseline down for as long as
-      // the outage lasts, then produces a false spike in the ratio the
-      // moment the venue recovers.
-      if (vol.sources.length === 2) {
-        volHistory.record(info.asset, vol.volume, now);
-      }
-    } else if (!warned.has(`vol:${info.asset}`)) {
-      warned.add(`vol:${info.asset}`);
-      log(`volume reader has no data for ${info.asset} — volume confirmation failing open`);
-    }
-
+    // Read the baseline BEFORE this cycle's reading goes into history, so
+    // the ratio is "this candle vs. everything strictly before it"
     if (useMomentum) {
       volumeConfirmed = true; // fail OPEN if reader unavailable/warming up
       if (vol !== null) {
@@ -684,6 +671,23 @@ async function takeOne(
           volumeConfirmed = volumeRatio >= VOLUME_RATIO_MIN;
         }
       }
+    }
+
+    if (vol !== null) {
+      warned.delete(`vol:${info.asset}`);
+      // Only feed the baseline when BOTH venues answered — a Binance or
+      // Coinbase outage produces a genuinely smaller number, and mixing
+      // that into the ring quietly drags the baseline down for as long as
+      // the outage lasts, then produces a false spike in the ratio the
+      // moment the venue recovers.
+      if (vol.sources.length === 2) {
+        // candleTime dedupes inside record() — repeated polls against the
+        // same still-current candle no longer add duplicate samples.
+        volHistory.record(info.asset, vol.volume, now, vol.candleTime);
+      }
+    } else if (!warned.has(`vol:${info.asset}`)) {
+      warned.add(`vol:${info.asset}`);
+      log(`volume reader has no data for ${info.asset} — volume confirmation failing open`);
     }
   }
   // Not a fresh boolean gate on top of useMomentum — this is what "useMomentum"

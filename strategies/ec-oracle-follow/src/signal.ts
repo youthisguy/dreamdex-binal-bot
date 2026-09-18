@@ -33,8 +33,10 @@ export interface SpotReader {
 }
 
 export interface VolumeReader {
-  /** Most recent traded volume for `asset` over the last `windowMs`. */
-  getVolume(asset: Asset, windowMs: number): Promise<number | null>;
+  /** Most recent traded volume for `asset` over the last `windowMs`, plus
+   *  the CLOSED candle's own open time (ms) — carried through so callers
+   *  can dedupe repeated polls against the same candle */
+  getVolume(asset: Asset, windowMs: number): Promise<{ volume: number; candleTime: number } | null>;
 }
 
 /**
@@ -432,13 +434,21 @@ export function coinbaseVolumeReader(): VolumeReader {
         `https://api.exchange.coinbase.com/products/${symbol}/candles?granularity=${granularity}`
       );
       if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
-      // Rows are [time, low, high, open, close, volume], most recent first.
+      // Rows are [time, low, high, open, close, volume], most recent first —
+      // rows[0] is the still-forming candle, rows[1] is the last CLOSED one.
       const rows = (await res.json()) as number[][];
       const latest = rows?.[1];
       if (!latest) return null;
+
       const volume = latest[5];
       if (volume === undefined || !(volume >= 0)) return null;
-      return volume;
+
+      const openTimeSec = latest[0];
+      if (openTimeSec === undefined) return null;
+
+      // Coinbase's `time` is the candle's OPEN time in SECONDS — convert to
+      // ms so it's directly comparable to Binance's openTime.
+      return { volume, candleTime: openTimeSec * 1000 };
     },
   };
 }
@@ -468,14 +478,15 @@ export function binanceVolumeReader(): VolumeReader {
       );
       if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
       // Rows are [openTime, open, high, low, close, volume, closeTime, ...],
-      // oldest first. With limit=2, rows[1] is the still-forming candle and
-      // rows[0] is the last fully CLOSED one — that's the one we want, so
-      // the reading doesn't depend on where in the candle's life we poll.
+      // oldest first. With limit=2, rows[1] is still forming and rows[0] is
+      // the last fully CLOSED kline — that's the one we want.
       const rows = (await res.json()) as unknown[][];
       const latest = rows?.[0];
-      const volume = latest ? Number(latest[5]) : NaN;
+      if (!latest) return null;
+      const volume = Number(latest[5]);
       if (!(volume >= 0)) return null;
-      return volume;
+      // openTime is already in ms.
+      return { volume, candleTime: Number(latest[0]) };
     },
   };
 }
@@ -527,6 +538,11 @@ export interface VolumeReading {
    *  is a partial substitute, not the full combined figure — callers should
    *  think twice before treating it as equivalent to a normal sample. */
   sources: ("binance" | "coinbase")[];
+  /** Open time (ms) of the closed candle this reading came from — used to
+   *  dedupe repeated polls against the same candle. Prefers Binance's
+   *  timestamp (it's the anchor source); falls back to Coinbase's if
+   *  Binance was unavailable this cycle. */
+  candleTime: number;
 }
 
 // Its own type, not `VolumeReader` — that interface (top of file) is the
@@ -584,7 +600,9 @@ export function combinedVolumeReader(): CombinedVolumeReader {
       const sources: VolumeReading["sources"] = [];
       if (bv !== null) sources.push("binance");
       if (cv !== null) sources.push("coinbase");
-      return { volume: (bv ?? 0) + (cv ?? 0), sources };
+      // Binance is the anchor source — prefer its candle time when present.
+      const candleTime = bv?.candleTime ?? cv?.candleTime ?? 0;
+      return { volume: (bv?.volume ?? 0) + (cv?.volume ?? 0), sources, candleTime };
     },
   };
 }
