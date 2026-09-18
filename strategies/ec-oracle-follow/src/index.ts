@@ -1377,10 +1377,19 @@ async function main() {
           ? `${(CROSS_ASSET_CONFIRM_MS / 60_000).toFixed(1)}min`
           : "off"
       } ` +
-      `allowedWindows=${
+            `allowedWindows=${
         ALLOWED_WINDOW_MIN.length
           ? ALLOWED_WINDOW_MIN.join(",") + "min"
           : "ALL (unfiltered!)"
+      } ` +
+      `volumeConfirm=${
+        REQUIRE_VOLUME_CONFIRM
+          ? `on (binance+coinbase, candle=${(
+              VOLUME_CANDLE_MS / 60_000
+            ).toFixed(0)}min, baseline=${(
+              VOLUME_BASELINE_RETENTION_MS / 60_000
+            ).toFixed(0)}min, ratioMin=${VOLUME_RATIO_MIN})`
+          : "off"
       } ` +
       `tradingHours=${
         TRADING_HOURS_ENABLED
