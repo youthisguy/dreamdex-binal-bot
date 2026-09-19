@@ -4,7 +4,7 @@
 
  Every decision (trade or skip) is logged in it's journal with full reasoning. Every result is posted publicly and linked back to the call that produced it. And anyone can follow the bot's exact trades with their own funds, non-custodially.
 
-[Agent Dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) | [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) | [Copy-service repo](https://github.com/youthisguy/Binal_copy_serve) | [Telegram](https://t.me/binal_bot_signals)
+[Agent Dashboard](https://dreamdex-binal-bot-5by9.onrender.com) | [Copy Trade](https://dreamdex-binal-bot-5by9.onrender.com/copy-trade.html) | [Copy-service repo](https://github.com/youthisguy/Binal_copy_serve) | [Telegram](https://t.me/binal_bot_signals)
 
 ---
 
@@ -12,7 +12,7 @@
 
 Binal Bot is an automated signal bot trading binary Up/Down event contracts on [DreamDEX](https://docs.dreamdex.io) (Somnia). It watches short-window markets, computes a fair probability against the market's own price, and takes a directional position (`BUY_YES`/`BUY_NO`) whenever its edge clears a threshold, never outside the odds regime its edge was proven in.
 
-Every signal is logged, posted to the Binal Bot [Telegram channel](https://t.me/binal_bot_signals) as a stat-card image, and shown on the [agent dashboard](https://dreamdex-binal-bot-ftt9.onrender.com) in real time. On top of that, a copy-trade system lets any wallet holder mirror Binal's signals automatically with their own funds, sized to their own risk tolerance.
+Every signal is logged, posted to the Binal Bot [Telegram channel](https://t.me/binal_bot_signals) as a stat-card image, and shown on the [agent dashboard](https://dreamdex-binal-bot-5by9.onrender.com) in real time. On top of that, a copy-trade system lets any wallet holder mirror Binal's signals automatically with their own funds, sized to their own risk tolerance.
 
 ---
 
@@ -45,7 +45,7 @@ Because the bot runs on infrastructure with ephemeral disk, trade history is che
 
 ## Copy trading
 
-Binal's signals aren't just observable, they're actionable. Users interact with **`CopyVault`** (a non-custodial, per-user contract) through the [Copy Trade](https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html) page:
+Binal's signals aren't just observable, they're actionable. Users interact with **`CopyVault`** (a non-custodial, per-user contract) through the [Copy Trade](https://dreamdex-binal-bot-5by9.onrender.comcopy-trade.html) page:
 
 1. Connect wallet → approve + **deposit**
 2. **Set trade size** (a hard per-position cap)

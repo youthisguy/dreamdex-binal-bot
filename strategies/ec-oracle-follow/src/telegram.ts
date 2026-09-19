@@ -22,10 +22,10 @@ const BOT_NAME = "Binal Bot";
 const botToken = () => process.env.TELEGRAM_BOT_TOKEN;
 const chatId = () => process.env.TELEGRAM_CHAT_ID;
 const dashboardUrl = () =>
-  process.env.DASHBOARD_URL ?? "https://dreamdex-binal-bot-ftt9.onrender.com";
+  process.env.DASHBOARD_URL ?? "https://dreamdex-binal-bot-5by9.onrender.com";
 const copyBinalUrl = () =>
   process.env.COPY_BINAL_URL ??
-  "https://dreamdex-binal-bot-ftt9.onrender.com/copy-trade.html";
+  "https://dreamdex-binal-bot-5by9.onrender.comcopy-trade.html";
 const dreamdexMarketBase = () =>
   process.env.DREAMDEX_MARKET_URL ?? "https://app.dreamdex.io/event-contracts";
 const apiBase = () => {
@@ -68,6 +68,7 @@ export interface SignalPost {
   signal: "UP" | "DOWN";
   edge: number;
   disagreement: number;
+  deltaRatio?: number | null;
   momentumUsed: boolean;
   volumeConfirmed?: boolean | null;
   volumeRatio?: number | null;
@@ -79,8 +80,7 @@ export interface SignalPost {
    *  currency is size * entryPrice, since price IS the probability/payout share. */
   size: number;
   /** The level this market settles against: a fixed strike, or the window's
-   *  own opening price for an up/down market (most of what we trade — see
-   *  signal.ts's Reference type). Null when unreadable. */
+   *  own opening price for an up/down market. Null when unreadable. */
   refPrice: number | null;
   refKind: "strike" | "opening" | null;
   explorerUrl: string | null;
