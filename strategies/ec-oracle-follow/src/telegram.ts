@@ -68,6 +68,7 @@ export interface SignalPost {
   signal: "UP" | "DOWN";
   edge: number;
   disagreement: number;
+  deltaRatio?: number | null;
   momentumUsed: boolean;
   volumeConfirmed?: boolean | null;
   volumeRatio?: number | null;
@@ -79,8 +80,7 @@ export interface SignalPost {
    *  currency is size * entryPrice, since price IS the probability/payout share. */
   size: number;
   /** The level this market settles against: a fixed strike, or the window's
-   *  own opening price for an up/down market (most of what we trade — see
-   *  signal.ts's Reference type). Null when unreadable. */
+   *  own opening price for an up/down market. Null when unreadable. */
   refPrice: number | null;
   refKind: "strike" | "opening" | null;
   explorerUrl: string | null;

@@ -296,6 +296,14 @@ const REQUIRE_MOMENTUM =
 const REQUIRE_VOLUME_CONFIRM =
   (process.env.OF_REQUIRE_VOLUME_CONFIRM ?? "false") === "true";
 const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);
+// Order-flow delta confirmation (net taker buy - sell, Binance-only — see
+// volume-pace.ts). Total volume answers "did activity happen"; this answers
+// "was it pushing the direction the signal is calling." Independent gate,
+// same fail-open philosophy: unavailable/insufficient data => treated as
+// confirmed, never as a reason to block a trade by itself.
+const REQUIRE_DELTA_CONFIRM =
+  (process.env.OF_REQUIRE_DELTA_CONFIRM ?? "false") === "true";
+const DELTA_RATIO_MIN = Number(process.env.OF_DELTA_RATIO_MIN ?? 1.3);
 // Bucket size for the volume pace curve. 900_000 = 15 min matches DreamDEX's
 // own :00/:15/:30/:45 market grid exactly. Must be a whole number of minutes.
 const VOLUME_CANDLE_MS = envNum("OF_VOLUME_CANDLE_MS", 900_000);
@@ -639,6 +647,8 @@ async function takeOne(
   let volumeConfirmed: boolean | null = null;
   let volumeRatio: number | null = null;
   let paceEarly = false;
+  let deltaRatioOut: number | null = null;
+  let deltaBlocked = false;
   if (REQUIRE_VOLUME_CONFIRM && useMomentum) {
     const reading = paceCache.get(thisAsset) ?? null;
     volumeConfirmed = true; // fail OPEN if no reading / baseline still warming
@@ -657,6 +667,26 @@ async function takeOne(
       } else if (reading.state === "ok" && reading.ratio !== null) {
         volumeRatio = reading.ratio;
         volumeConfirmed = volumeRatio >= VOLUME_RATIO_MIN;
+
+        // Delta confirmation runs only once total volume already passed —
+        // it's a stricter follow-up check, not an alternative path. A move
+        // can be volume-confirmed but delta-unconfirmed (two-sided churn:
+        // heavy buying AND selling, netting near zero) — that's exactly the
+        // pattern this is meant to catch that a raw volume ratio can't.
+        if (volumeConfirmed && REQUIRE_DELTA_CONFIRM) {
+          if (!reading.deltaAvailable || reading.deltaRatio === null) {
+            // Binance down, or delta baseline still warming — fail open,
+            // same treatment as an unavailable volume reading.
+          } else {
+            const bullishSignal = mom.r > 0;
+            const deltaAgrees = bullishSignal
+              ? reading.deltaRatio > 0
+              : reading.deltaRatio < 0;
+            deltaRatioOut = reading.deltaRatio;
+            volumeConfirmed = deltaAgrees && Math.abs(reading.deltaRatio) >= DELTA_RATIO_MIN;
+            deltaBlocked = !volumeConfirmed;
+          }
+        }
       }
       // state === "warming": stays true (fail open)
     }
@@ -808,6 +838,8 @@ async function takeOne(
       cycle,
       paceEarly
         ? "volume pace: too early in window"
+        : deltaBlocked
+        ? "momentum unconfirmed by order-flow delta (OF_REQUIRE_DELTA_CONFIRM)"
         : volumeConfirmed === false
         ? "momentum unconfirmed by volume (OF_REQUIRE_VOLUME_CONFIRM)"
         : "no momentum contribution (OF_REQUIRE_MOMENTUM)"
@@ -935,7 +967,7 @@ async function takeOne(
           ? "n/a"
           : `${volumeConfirmed}${
               volumeRatio !== null ? ` (${volumeRatio.toFixed(2)}x)` : ""
-            }`
+            }${deltaRatioOut !== null ? `, delta ${deltaRatioOut.toFixed(2)}x` : ""}`
       }, ` +
       `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
         3
@@ -1102,6 +1134,7 @@ async function takeOne(
       momentum_used: useMomentum,
       volume_confirmed: volumeConfirmed,
       volume_ratio: volumeRatio,
+      delta_ratio: deltaRatioOut,
       reason: why,
       expiry_ms: info.expiryMs,
       ref_price: ref?.price ?? null,
@@ -1182,6 +1215,7 @@ async function takeOne(
       momentumUsed: useMomentum,
       volumeConfirmed,
       volumeRatio,
+      deltaRatio: deltaRatioOut,
       expiryMs: info.expiryMs,
       dryRun: ctx.config.dryRun,
       entryPrice: price,
@@ -1391,7 +1425,7 @@ async function main() {
         REQUIRE_VOLUME_CONFIRM
           ? `on (binance+coinbase 1m pace, bucket=${(
               VOLUME_CANDLE_MS / 60_000
-            ).toFixed(0)}min, baseline=${PACE_BASELINE_BUCKETS} buckets, minElapsed=${PACE_MIN_ELAPSED_MIN}min, ratioMin=${VOLUME_RATIO_MIN})`
+            ).toFixed(0)}min, baseline=${PACE_BASELINE_BUCKETS} buckets, minElapsed=${PACE_MIN_ELAPSED_MIN}min, ratioMin=${VOLUME_RATIO_MIN}, deltaConfirm=${REQUIRE_DELTA_CONFIRM ? `on (ratioMin=${DELTA_RATIO_MIN})` : "off"})`
           : "off"
       } ` +
       `tradingHours=${

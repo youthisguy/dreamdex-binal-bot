@@ -4,7 +4,7 @@
  *
  * This is taken WHILE the window forms:
  *
- *   1. Pull 1-minute bars from Binance + Coinbase 
+ *   1. Pull 1-minute bars from Binance + Coinbase
  *   2. Aggregate them into our own buckets aligned to the epoch (15m buckets
  *      line up with DreamDEX's :00/:15/:30/:45 market grid).
  *   3. For the forming bucket, take cumulative volume over its first k CLOSED
@@ -30,6 +30,10 @@ export interface Bar {
   o: number;
   c: number;
   v: number; // base-asset volume
+  /** Taker BUY base-asset volume (Binance only — Coinbase's public candles
+   *  endpoint has no buy/sell split). sellV = v - buyV. Undefined on bars
+   *  from a venue that can't provide it. */
+  buyV?: number;
 }
 
 export interface PaceConfig {
@@ -69,11 +73,34 @@ export interface PaceReading {
   changeWindow: number | null; // fraction, e.g. 0.0012 = +0.12%
   change1h: number | null;
   /** Closed buckets used for the baseline, oldest -> newest; mins = per-minute volume. */
-  rows: { start: number; mins: number[] }[];
+  rows: { start: number; mins: number[]; deltaMins: number[] }[];
   /** Per-minute volume of the forming bucket's k closed minutes. */
   forming: number[];
   /** Volume in minutes not yet counted (settling + in-progress). Display only. */
   partial: number;
+
+  // --- Order-flow delta (net taker buy − sell), Binance-only ---------------
+  // Total volume confirms activity happened; delta confirms it happened in
+  // the direction the signal is calling. Binance-only because Coinbase's
+  // public candles endpoint carries no buy/sell split — when Binance is
+  // down, deltaAvailable is false and every delta field below is null/empty,
+  // which the gate treats as "fail open," identical to volume's own warming
+  // state.
+  /** True when Binance contributed to this read (the only source for delta). */
+  deltaAvailable: boolean;
+  /** Signed net taker delta (buy − sell) over the forming bucket's first k
+   *  closed minutes. Positive = net buying. 0 (not meaningful) when
+   *  deltaAvailable is false. */
+  cumDelta: number;
+  /** Median |delta| at minute k across the last N closed Binance buckets —
+   *  a magnitude baseline. Not sign-matched: it answers "how strong does
+   *  delta usually get by now," not "which way did it usually go." */
+  deltaBaselineAbs: number | null;
+  /** cumDelta / deltaBaselineAbs, signed. Compare its SIGN to the trade
+   *  direction and its magnitude to a threshold — both checks matter. */
+  deltaRatio: number | null;
+  /** Per-minute signed delta of the forming bucket's k closed minutes. */
+  formingDelta: number[];
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +149,27 @@ export function computePace(
   const at = (start: number, i: number): number =>
     vol.get(start + i * MINUTE_MS) ?? 0;
 
+  // Binance-only volume + delta maps. Kept separate from the combined `vol`
+  // map above on purpose: mixing a venue that has a buy/sell split with one
+  // that doesn't would make delta's denominator inconsistent with its
+  // numerator. Delta is scoped to whatever Binance alone saw.
+  const binanceVenue = venues.find((v) => v.name === "binance") ?? null;
+  const deltaAvailable = binanceVenue !== null;
+  const bVol = new Map<number, number>();
+  const bDelta = new Map<number, number>();
+  if (binanceVenue) {
+    for (const b of binanceVenue.bars) {
+      bVol.set(b.t, b.v);
+      // buyV is guaranteed finite by binanceBars()'s filter when present;
+      // treat a genuinely missing value as "can't compute delta for this
+      // minute" (0) rather than silently assuming it's all sell volume.
+      const buy = b.buyV ?? b.v / 2;
+      bDelta.set(b.t, 2 * buy - b.v); // buy - sell = buy - (v - buy)
+    }
+  }
+  const bDeltaAt = (start: number, i: number): number => bDelta.get(start + i * MINUTE_MS) ?? 0;
+  const binanceCoverStart = binanceVenue ? binanceVenue.bars[0]!.t : Infinity;
+
   const bucketStart = Math.floor(now / cfg.bucketMs) * cfg.bucketMs;
   const curMin = Math.floor((now - bucketStart) / MINUTE_MS); // minute in progress
   const k = Math.max(
@@ -137,13 +185,37 @@ export function computePace(
   let partial = 0;
   for (let i = k; i <= curMin; i++) partial += at(bucketStart, i);
 
+  const formingDelta = deltaAvailable
+    ? Array.from({ length: k }, (_, i) => bDeltaAt(bucketStart, i))
+    : [];
+  const cumDelta = sum(formingDelta);
+
   const rows: PaceReading["rows"] = [];
   for (let j = cfg.baselineBuckets; j >= 1; j--) {
     const start = bucketStart - j * cfg.bucketMs;
     if (start < coverStart) continue;
     const mins = Array.from({ length: bucketMin }, (_, i) => at(start, i));
     if (sum(mins) <= 0) continue; // a bucket with no data at all is a gap, not a quiet bucket
-    rows.push({ start, mins });
+    const deltaMins =
+      deltaAvailable && start >= binanceCoverStart
+        ? Array.from({ length: bucketMin }, (_, i) => bDeltaAt(start, i))
+        : [];
+    rows.push({ start, mins, deltaMins });
+  }
+
+  // Delta baseline: median |delta| at minute k across rows that actually
+  // have Binance-covered delta data. Deliberately NOT the same `rows` gate
+  // used for the volume baseline — a bucket can be in-range for combined
+  // volume (Coinbase covered it) but out-of-range for Binance-only delta,
+  // so this is its own count against cfg.minBaselineBuckets.
+  let deltaBaselineAbs: number | null = null;
+  let deltaRatio: number | null = null;
+  if (deltaAvailable) {
+    const deltaRows = rows.filter((r) => r.deltaMins.length > 0);
+    if (deltaRows.length >= cfg.minBaselineBuckets && k > 0) {
+      deltaBaselineAbs = median(deltaRows.map((r) => Math.abs(sum(r.deltaMins.slice(0, k)))));
+      if (deltaBaselineAbs > 0) deltaRatio = cumDelta / deltaBaselineAbs;
+    }
   }
 
   let baselineCum: number | null = null;
@@ -188,6 +260,11 @@ export function computePace(
     rows,
     forming,
     partial,
+    deltaAvailable,
+    cumDelta,
+    deltaBaselineAbs,
+    deltaRatio,
+    formingDelta,
   };
 }
 
@@ -214,14 +291,17 @@ async function binanceBars(asset: Asset, limit: number): Promise<Bar[]> {
   const rows = (await fetchJson(
     `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=${limit}`
   )) as unknown[][];
+  // Row layout: [openTime, open, high, low, close, volume, closeTime,
+  // quoteVolume, trades, takerBuyBaseVolume, takerBuyQuoteVolume, ignore].
   return rows
     .map((r) => ({
       t: Number(r[0]),
       o: Number(r[1]),
       c: Number(r[4]),
       v: Number(r[5]),
+      buyV: Number(r[9]),
     }))
-    .filter((b) => Number.isFinite(b.t) && b.v >= 0 && b.c > 0);
+    .filter((b) => Number.isFinite(b.t) && b.v >= 0 && b.c > 0 && Number.isFinite(b.buyV));
 }
 
 async function coinbaseBars(asset: Asset, sinceMs: number): Promise<Bar[]> {
@@ -233,7 +313,9 @@ async function coinbaseBars(asset: Asset, sinceMs: number): Promise<Bar[]> {
   )) as number[][];
   return rows
     .map((r) => ({ t: r[0]! * 1000, o: r[3]!, c: r[4]!, v: r[5]! }))
-    .filter((b) => Number.isFinite(b.t) && b.t >= sinceMs && b.v >= 0 && b.c > 0)
+    .filter(
+      (b) => Number.isFinite(b.t) && b.t >= sinceMs && b.v >= 0 && b.c > 0
+    )
     .sort((a, b) => a.t - b.t);
 }
 
@@ -243,7 +325,9 @@ export interface PaceReader {
 
 export function paceReader(cfgIn: PaceConfig): PaceReader {
   if (cfgIn.bucketMs % MINUTE_MS !== 0 || cfgIn.bucketMs < MINUTE_MS) {
-    throw new Error(`volume-pace: bucketMs must be a whole number of minutes, got ${cfgIn.bucketMs}`);
+    throw new Error(
+      `volume-pace: bucketMs must be a whole number of minutes, got ${cfgIn.bucketMs}`
+    );
   }
   const bucketMin = cfgIn.bucketMs / MINUTE_MS;
   // Coinbase returns at most 300 one-minute bars, so cap the baseline to fit.
@@ -256,12 +340,18 @@ export function paceReader(cfgIn: PaceConfig): PaceReader {
   const limit = (cfg.baselineBuckets + 2) * bucketMin;
   const warnedDown = new Set<string>();
 
-  const track = (key: string, r: PromiseSettledResult<unknown>, name: string) => {
+  const track = (
+    key: string,
+    r: PromiseSettledResult<unknown>,
+    name: string
+  ) => {
     if (r.status === "rejected") {
       if (!warnedDown.has(key)) {
         warnedDown.add(key);
         console.error(
-          `${name} 1m bars down: ${(r.reason as Error)?.message ?? r.reason} — pace continues on the other venue`
+          `${name} 1m bars down: ${
+            (r.reason as Error)?.message ?? r.reason
+          } — pace continues on the other venue`
         );
       }
     } else {
@@ -271,7 +361,8 @@ export function paceReader(cfgIn: PaceConfig): PaceReader {
 
   return {
     async getPace(asset, now) {
-      const sinceMs = Math.floor(now / MINUTE_MS) * MINUTE_MS - (limit - 1) * MINUTE_MS;
+      const sinceMs =
+        Math.floor(now / MINUTE_MS) * MINUTE_MS - (limit - 1) * MINUTE_MS;
       const [b, c] = await Promise.allSettled([
         binanceBars(asset, limit),
         coinbaseBars(asset, sinceMs),
@@ -324,9 +415,18 @@ export function writePulse(
         baseline_cum: r.baselineCum === null ? null : r3(r.baselineCum),
         ratio: r.ratio === null ? null : r3(r.ratio),
         sources: r.sources,
-        rows: r.rows.map((x) => ({ start: x.start, mins: x.mins.map(r3) })),
+        rows: r.rows.map((x) => ({
+          start: x.start,
+          mins: x.mins.map(r3),
+          delta_mins: x.deltaMins.map(r3),
+        })),
         forming: r.forming.map(r3),
         partial: r3(r.partial),
+        delta_available: r.deltaAvailable,
+        cum_delta: r3(r.cumDelta),
+        delta_baseline_abs: r.deltaBaselineAbs === null ? null : r3(r.deltaBaselineAbs),
+        delta_ratio: r.deltaRatio === null ? null : r3(r.deltaRatio),
+        forming_delta: r.formingDelta.map(r3),
       };
     }
     const payload = {

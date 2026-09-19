@@ -62,9 +62,9 @@ export interface DecisionRecord {
   disagreement: number;
   momentum_r: number | null;
   momentum_used: boolean;
+  delta_ratio?: number | null;
   // Distinguishes "no momentum," "momentum but volume-unconfirmed," and
-  // "momentum confirmed" — null when the gate didn't run (REQUIRE_VOLUME_CONFIRM
-  // off, or useMomentum was already false so there was nothing to confirm).
+  // "momentum confirmed" 
   volume_confirmed: boolean | null;
   volume_ratio: number | null;
   reason: string;
