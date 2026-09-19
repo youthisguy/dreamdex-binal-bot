@@ -477,6 +477,33 @@
       #pnlChart:active {
         cursor: grabbing;
       }
+          /* ---- Market pulse (bottom-left) ---- */
+      .pulse-card { flex: 1 1 auto; }
+      .pulse-card .card-body { gap: 10px; overflow-y: auto; }
+      .pulse-meta { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+      .tk-row { display: grid; grid-template-columns: 34px 1fr 62px 62px 58px; gap: 6px; align-items: baseline; padding: 4px 6px; border-left: 2px solid transparent; font-size: 11px; cursor: pointer; }
+      .tk-row.tk-head { cursor: default; color: var(--text-muted); font-size: 10px; text-transform: uppercase; padding-top: 0; }
+      .tk-row:not(.tk-head):hover { background: #111; }
+      .tk-row.sel { border-left-color: var(--accent); background: var(--surface-2); }
+      .tk-row .sym { color: var(--text-bright); font-weight: 600; }
+      .tk-row .num-col { text-align: right; }
+      .hm { display: flex; flex-direction: column; gap: 1px; }
+      .hm-row { display: grid; gap: 1px; align-items: center; }
+      .hm-lab { font-size: 9px; color: var(--text-muted); }
+      .hm-now .hm-lab { color: var(--accent); font-weight: 600; }
+      .hc { display: block; height: 9px; background: #141414; }
+      .hc-empty { background: transparent; outline: 1px dashed #222; outline-offset: -1px; }
+      .hc-live { background: var(--accent-bg); outline: 1px solid var(--accent); outline-offset: -1px; animation: pulseBlink 1s steps(2, start) infinite; }
+      @keyframes pulseBlink { 50% { opacity: 0.3; } }
+      .rv { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+      .rv-bar { position: relative; flex: 1; height: 6px; background: var(--surface-2); border: 1px solid var(--border); }
+      .rv-fill { height: 100%; background: var(--text-muted); }
+      .rv-fill.hit { background: var(--pos); }
+      .rv-tick, .rv-gate { position: absolute; top: -3px; bottom: -3px; width: 1px; }
+      .rv-tick { background: var(--border-bright); }
+      .rv-gate { background: var(--accent); }
+      .rv-status { min-width: 74px; text-align: right; color: var(--text-bright); font-weight: 600; }
+      .pulse-note { font-size: 9px; color: var(--text-muted); text-transform: uppercase; line-height: 1.5; }
     </style>
   </head>
   <body>
@@ -544,6 +571,17 @@
               <div class="sitout-list" id="sitoutList">
                 <div class="empty-state">AWAITING DATA...</div>
               </div>
+            </div>
+          </div>
+
+          <div class="card pulse-card">
+            <div class="card-header">
+              <h2>MARKET PULSE</h2>
+              <span class="pulse-meta" id="pulseMeta">AWAITING DATA...</span>
+            </div>
+            <div class="card-body">
+              <div id="pulseTickers"></div>
+              <div id="pulseHeat"></div>
             </div>
           </div>
         </div>
@@ -946,6 +984,179 @@
         await fetchAndRender();
         pollTimer = setInterval(fetchAndRender, POLL_MS);
       })();
+
+      // ---- MARKET PULSE: BTC/ETH price + live volume-pace map ----
+      // Reads volume-pulse.json, written by the bot every cycle (volume-pace.ts).
+      let pulse = null;
+      let pulseErr = null;
+      let pulseAsset = "BTC";
+
+      const fmtPx = (v) =>
+        v == null
+          ? "–"
+          : v.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            });
+      const fmtChg = (v) =>
+        v == null ? "–" : (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
+      const fmtVol = (v) =>
+        v == null ? "–" : v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(1);
+      const chgClass = (v) => (v == null ? "" : v > 0 ? "pos" : v < 0 ? "neg" : "");
+
+      function medianOf(a) {
+        if (!a.length) return 0;
+        const s = [...a].sort((x, y) => x - y);
+        const m = Math.floor(s.length / 2);
+        return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+      }
+
+      // n = this minute's volume / the median for the same minute of past windows.
+      // <0.5x is dark; 3x+ is fully lit.
+      function heatBg(n) {
+        if (!(n > 0.5)) return "#141414";
+        const t = Math.min(1, (n - 0.5) / 2.5);
+        return `rgba(0,255,255,${(0.1 + 0.85 * t).toFixed(2)})`;
+      }
+
+      function renderPulse() {
+        const tk = document.getElementById("pulseTickers");
+        const hm = document.getElementById("pulseHeat");
+        const meta = document.getElementById("pulseMeta");
+
+        if (!pulse) {
+          meta.textContent = pulseErr ? "OFFLINE" : "AWAITING DATA...";
+          meta.className = "pulse-meta" + (pulseErr ? " neg" : "");
+          tk.innerHTML = "";
+          hm.innerHTML = `<div class="empty-state">${
+            pulseErr
+              ? "PULSE FEED OFFLINE (" + pulseErr + ") — CHECK /volume-pulse.json"
+              : "AWAITING DATA..."
+          }</div>`;
+          return;
+        }
+
+        const ageS = Math.max(
+          0,
+          Math.round((Date.now() - new Date(pulse.updated_at).getTime()) / 1000)
+        );
+        const stale = ageS > 30;
+        meta.textContent = (stale ? "STALE " : "LIVE ") + ageS + "s";
+        meta.className = "pulse-meta" + (stale ? " neg" : "");
+
+        const names = ["BTC", "ETH"].filter((a) => pulse.assets && pulse.assets[a]);
+        if (!names.length) {
+          tk.innerHTML = "";
+          hm.innerHTML = '<div class="empty-state">NO VOLUME DATA FROM BOT</div>';
+          return;
+        }
+        if (!names.includes(pulseAsset)) pulseAsset = names[0];
+        const gate = pulse.ratio_min;
+
+        tk.innerHTML =
+          `<div class="tk-row tk-head"><span>SYM</span><span class="num-col">PRICE</span><span class="num-col">WIN</span><span class="num-col">1H</span><span class="num-col">RVOL</span></div>` +
+          names
+            .map((a) => {
+              const d = pulse.assets[a];
+              const rv =
+                d.ratio != null
+                  ? d.ratio.toFixed(2) + "x"
+                  : d.state === "too_early"
+                  ? "EARLY"
+                  : "–";
+              const rvCls = d.ratio != null && d.ratio >= gate ? "pos" : "";
+              return `<div class="tk-row${a === pulseAsset ? " sel" : ""}" data-asset="${a}">
+                <span class="sym">${a}</span>
+                <span class="num-col">${fmtPx(d.price)}</span>
+                <span class="num-col ${chgClass(d.change_window)}">${fmtChg(d.change_window)}</span>
+                <span class="num-col ${chgClass(d.change_1h)}">${fmtChg(d.change_1h)}</span>
+                <span class="num-col ${rvCls}">${rv}</span>
+              </div>`;
+            })
+            .join("");
+
+        // Heatmap: one row per prior window (oldest at top), the live window last.
+        const d = pulse.assets[pulseAsset];
+        const B = pulse.bucket_min;
+        const k = d.elapsed_min;
+        const med = Array.from({ length: B }, (_, i) =>
+          medianOf(d.rows.map((r) => r.mins[i] || 0))
+        );
+        const cell = (v, i) => {
+          const n = med[i] > 0 ? v / med[i] : v > 0 ? 3 : 0;
+          return `<i class="hc" style="background:${heatBg(n)}" title="min ${i + 1}: ${fmtVol(v)} (${n.toFixed(2)}x typical)"></i>`;
+        };
+        const lab = (ms) =>
+          new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        const grid = `style="grid-template-columns:34px repeat(${B},1fr)"`;
+
+        let rowsHtml = d.rows
+          .map(
+            (r) =>
+              `<div class="hm-row" ${grid}><span class="hm-lab">${lab(r.start)}</span>${r.mins
+                .map((v, i) => cell(v, i))
+                .join("")}</div>`
+          )
+          .join("");
+        const nowCells = Array.from({ length: B }, (_, i) =>
+          i < k
+            ? cell(d.forming[i] || 0, i)
+            : i === k
+            ? '<i class="hc hc-live" title="minute in progress"></i>'
+            : '<i class="hc hc-empty"></i>'
+        ).join("");
+        rowsHtml += `<div class="hm-row hm-now" ${grid}><span class="hm-lab">NOW</span>${nowCells}</div>`;
+
+        // Pace readout: the exact number the bot's volume gate compares to ratio_min.
+        const ratio = d.ratio;
+        const hit = ratio != null && ratio >= gate;
+        const status =
+          d.state === "warming"
+            ? "WARMING"
+            : d.state === "too_early"
+            ? "EARLY"
+            : pulse.gate_enabled
+            ? hit
+              ? "CONFIRMED"
+              : "BELOW GATE"
+            : hit
+            ? "WOULD PASS"
+            : "WOULD SKIP";
+        const fillPct = ratio == null ? 0 : Math.min(ratio / 3, 1) * 100;
+
+        hm.innerHTML =
+          `<div class="hm">${rowsHtml}</div>` +
+          `<div class="rv"><span>PACE ${k}M</span>
+             <div class="rv-bar">
+               <div class="rv-fill${hit ? " hit" : ""}" style="width:${fillPct.toFixed(1)}%"></div>
+               <span class="rv-tick" style="left:${(100 / 3).toFixed(1)}%"></span>
+               <span class="rv-gate" style="left:${(Math.min(gate / 3, 1) * 100).toFixed(1)}%"></span>
+             </div>
+             <span class="rv-status ${hit ? "pos" : ""}">${status}</span></div>` +
+          `<div class="pulse-note" title="Rows = prior windows. Brighter = more volume than typical for that minute. Cyan tick = gate. Baseline = median of ${d.rows.length} windows (${d.sources.join(" + ")}).">${fmtVol(d.cum)} vs ${fmtVol(d.baseline_cum)} typical @ ${k}m · gate ≥${gate.toFixed(2)}x${d.sources.length < 2 ? ` · <span class="neg">${d.sources.join("+")} only</span>` : ""}</div>`;
+      }
+
+      async function fetchPulse() {
+        try {
+          const res = await fetch("/volume-pulse.json", { cache: "no-store" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          pulse = await res.json();
+          pulseErr = null;
+        } catch (e) {
+          pulseErr = String((e && e.message) || e);
+        }
+        renderPulse();
+      }
+
+      document.getElementById("pulseTickers").addEventListener("click", (e) => {
+        const row = e.target.closest(".tk-row[data-asset]");
+        if (!row) return;
+        pulseAsset = row.dataset.asset;
+        renderPulse();
+      });
+
+      fetchPulse();
+      setInterval(fetchPulse, POLL_MS);
     </script>
     
   </body>

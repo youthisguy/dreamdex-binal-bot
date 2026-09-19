@@ -53,7 +53,6 @@ import {
 import {
   SpotHistory,
   coinbaseSpotReader,
-  combinedVolumeReader,
   estimateUp,
   marketBoundUp,
   marketImpliedUp,
@@ -62,10 +61,8 @@ import {
   type Asset,
   type ReferenceReader,
   type SpotReader,
-  type CombinedVolumeReader,
-  VolumeReading,
 } from "./signal.js";
-import { VolumeHistory } from "./volume-history.js";
+import { paceReader, writePulse, type PaceReading } from "./volume-pace.js";
 import { Positions } from "./position.js";
 import {
   logDecision,
@@ -299,19 +296,21 @@ const REQUIRE_MOMENTUM =
 const REQUIRE_VOLUME_CONFIRM =
   (process.env.OF_REQUIRE_VOLUME_CONFIRM ?? "false") === "true";
 const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);
-// The candle size read from Binance/Coinbase. 900_000 = 15 min matches
-// DreamDEX's own :00/:15/:30/:45 market grid exactly (both exchanges
-// bucket candles from the Unix epoch, and 900s divides a day evenly), so
-// "this candle's volume" lines up with "this market's window" rather than
-// an arbitrary rolling slice out of phase with what we're trading.
+// Bucket size for the volume pace curve. 900_000 = 15 min matches DreamDEX's
+// own :00/:15/:30/:45 market grid exactly. Must be a whole number of minutes.
 const VOLUME_CANDLE_MS = envNum("OF_VOLUME_CANDLE_MS", 900_000);
-// How much history VolumeHistory keeps to compute the baseline. Must span
-// several DISTINCT closed candles (not just one) or baseline() ends up
-// averaging copies of the current candle against itself and the ratio
-// sits at ~1.0 forever. Independently configurable from VOL_WINDOW_MS:
-// volatility (price movement) and volume (size traded) are different
-// failure modes and don't need the same lookback to be meaningful.
-const VOLUME_BASELINE_RETENTION_MS = envNum("OF_VOLUME_WINDOW_MS", 3_600_000);
+// Empirical pace curve (see volume-pace.ts): the forming bucket's cumulative
+// volume after k closed minutes vs the MEDIAN cumulative volume after the same
+// k minutes across the last N closed buckets.
+const PACE_BASELINE_BUCKETS = envNum("OF_PACE_BASELINE_BUCKETS", 8);
+const PACE_MIN_BASELINE_BUCKETS = envNum("OF_PACE_MIN_BASELINE_BUCKETS", 4);
+// Don't judge pace before this many CLOSED minutes of the window have elapsed.
+const PACE_MIN_ELAPSED_MIN = envNum("OF_PACE_MIN_ELAPSED_MIN", 2);
+// A minute only counts as closed this long after it ends (lets the last bar finalize).
+const PACE_SETTLE_MS = envNum("OF_PACE_SETTLE_MS", 2_000);
+// Snapshot the dashboard polls. Relative to cwd (next to index.html), and
+// deliberately NOT under logs/, which checkpoint.sh commits to GitHub.
+const PULSE_PATH = process.env.PULSE_PATH ?? "volume-pulse.json";
 
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
@@ -369,14 +368,16 @@ const history = new SpotHistory(
   EMA_FAST_SPAN,
   EMA_SLOW_SPAN
 );
-// Rolling volume baseline for the volume-confirmation gate. Combines
-// Binance (the deepest spot volume of the readily available public feeds,
-// so it anchors the reading) with Coinbase's volume added on top rather
-// than used only as a fallback — no SDK-volume fallback, so this reader is
-// used regardless of SPOT_SOURCE/NETWORK. The gate itself fails open if a
-// read errors or is still warming up (see takeOne()).
-const volHistory = new VolumeHistory(VOLUME_BASELINE_RETENTION_MS);
-const volumeReader: CombinedVolumeReader = combinedVolumeReader();
+// Empirical volume pace for the volume gate AND the dashboard's MARKET PULSE
+// card: 1-minute bars from Binance + Coinbase (summed), aggregated into our own
+// buckets. The gate fails open if a read errors or history is too short.
+const pace = paceReader({
+  bucketMs: VOLUME_CANDLE_MS,
+  baselineBuckets: PACE_BASELINE_BUCKETS,
+  minBaselineBuckets: PACE_MIN_BASELINE_BUCKETS,
+  minElapsedMin: PACE_MIN_ELAPSED_MIN,
+  settleMs: PACE_SETTLE_MS,
+});
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
 const position = new Positions();
@@ -520,7 +521,7 @@ async function takeOne(
   refs: ReferenceReader,
   market: UnifiedMarket,
   cycle: Cycle,
-  volumeCache: Map<Asset, VolumeReading | null>
+  paceCache: Map<Asset, PaceReading | null>
 ): Promise<void> {
   if (UNDERLYING && !market.symbol.toUpperCase().includes(UNDERLYING)) return;
   // 1) Authoritative status. The indexer lags; only this snapshot decides.
@@ -628,66 +629,36 @@ async function takeOne(
   // Below the threshold the return is feed noise, not a view.
   const useMomentum = horizonOk && Math.abs(mom.r) >= THRESHOLD;
 
-  // 5b) Volume confirmation. A price return that clears THRESHOLD but isn't
-  // backed by above-baseline volume is more likely a thin-book wick than a
-  // real move — exactly the shape that reverses inside a short window. This
-  // mutes the momentum TERM (same treatment as the horizon check above), it
-  // does not veto the market outright, because the reference-price path can
-  // still price the market honestly without momentum.
+  // 5b) Volume confirmation — empirical pace curve. Cumulative volume over the
+  // first k closed minutes of THIS window vs the median cumulative volume over
+  // the same first k minutes of the last N closed windows (volume-pace.ts).
+  // No waiting for the candle to close, no assumption volume is evenly spread.
+  // Mutes the momentum TERM when unconfirmed; does not veto the market.
   //
-  // volumeConfirmed stays null when the gate didn't run at all (disabled, or
-  // useMomentum was already false so there was nothing to confirm) — that's
-  // the third state the journal wants, distinct from true/false.
+  // volumeConfirmed stays null when the gate didn't run at all.
   let volumeConfirmed: boolean | null = null;
   let volumeRatio: number | null = null;
-  if (REQUIRE_VOLUME_CONFIRM) {
-    let vol: VolumeReading | null;
-    if (volumeCache.has(thisAsset)) {
-      // Already fetched this asset this cycle (another market, same asset) —
-      // reuse it rather than firing a duplicate Binance/Coinbase call and
-      // pushing a near-duplicate timestamp into the same asset's ring.
-      vol = volumeCache.get(thisAsset)!;
+  let paceEarly = false;
+  if (REQUIRE_VOLUME_CONFIRM && useMomentum) {
+    const reading = paceCache.get(thisAsset) ?? null;
+    volumeConfirmed = true; // fail OPEN if no reading / baseline still warming
+    if (reading === null) {
+      if (!warned.has(`vol:${info.asset}`)) {
+        warned.add(`vol:${info.asset}`);
+        log(`volume pace has no data for ${info.asset} — volume confirmation failing open`);
+      }
     } else {
-      try {
-        vol = await volumeReader.getVolume(info.asset, VOLUME_CANDLE_MS);
-      } catch (e) {
-        if (!warned.has(`vol:${info.asset}`)) {
-          warned.add(`vol:${info.asset}`);
-          log(`volume reader error for ${info.asset}: ${(e as Error).message} — failing open`);
-        }
-        vol = null;
-      }
-      volumeCache.set(thisAsset, vol);
-    }
-
-    // Read the baseline BEFORE this cycle's reading goes into history, so
-    // the ratio is "this candle vs. everything strictly before it"
-    if (useMomentum) {
-      volumeConfirmed = true; // fail OPEN if reader unavailable/warming up
-      if (vol !== null) {
-        const baseline = volHistory.baseline(info.asset);
-        if (baseline !== null) {
-          volumeRatio = vol.volume / baseline;
-          volumeConfirmed = volumeRatio >= VOLUME_RATIO_MIN;
-        }
-      }
-    }
-
-    if (vol !== null) {
       warned.delete(`vol:${info.asset}`);
-      // Only feed the baseline when BOTH venues answered — a Binance or
-      // Coinbase outage produces a genuinely smaller number, and mixing
-      // that into the ring quietly drags the baseline down for as long as
-      // the outage lasts, then produces a false spike in the ratio the
-      // moment the venue recovers.
-      if (vol.sources.length === 2) {
-        // candleTime dedupes inside record() — repeated polls against the
-        // same still-current candle no longer add duplicate samples.
-        volHistory.record(info.asset, vol.volume, now, vol.candleTime);
+      if (reading.state === "too_early") {
+        // Baseline exists but too little of this window has traded to judge.
+        // Not confirmed — set to true instead to fail open here too.
+        volumeConfirmed = false;
+        paceEarly = true;
+      } else if (reading.state === "ok" && reading.ratio !== null) {
+        volumeRatio = reading.ratio;
+        volumeConfirmed = volumeRatio >= VOLUME_RATIO_MIN;
       }
-    } else if (!warned.has(`vol:${info.asset}`)) {
-      warned.add(`vol:${info.asset}`);
-      log(`volume reader has no data for ${info.asset} — volume confirmation failing open`);
+      // state === "warming": stays true (fail open)
     }
   }
   // Not a fresh boolean gate on top of useMomentum — this is what "useMomentum"
@@ -835,7 +806,9 @@ async function takeOne(
   if (REQUIRE_MOMENTUM && !useMomentumConfirmed) {
     note(
       cycle,
-      volumeConfirmed === false
+      paceEarly
+        ? "volume pace: too early in window"
+        : volumeConfirmed === false
         ? "momentum unconfirmed by volume (OF_REQUIRE_VOLUME_CONFIRM)"
         : "no momentum contribution (OF_REQUIRE_MOMENTUM)"
     );
@@ -1338,6 +1311,34 @@ async function takeOne(
   await fire();
 }
 
+// One pace read per asset per cycle, shared by every market's gate AND written
+// to the dashboard snapshot. Runs regardless of REQUIRE_VOLUME_CONFIRM so the
+// MARKET PULSE card keeps tracking even with the gate off.
+async function refreshPace(): Promise<Map<Asset, PaceReading | null>> {
+  const out = new Map<Asset, PaceReading | null>();
+  const now = Date.now();
+  await Promise.all(
+    (["BTC", "ETH"] as Asset[]).map(async (a) => {
+      try {
+        out.set(a, await withTimeout(pace.getPace(a, now), 12_000, `pace(${a})`));
+        warned.delete(`pace:${a}`);
+      } catch (e) {
+        out.set(a, null);
+        if (!warned.has(`pace:${a}`)) {
+          warned.add(`pace:${a}`);
+          log(`volume pace read failed for ${a}: ${(e as Error).message} — gate failing open`);
+        }
+      }
+    })
+  );
+  writePulse(PULSE_PATH, out, {
+    gateEnabled: REQUIRE_VOLUME_CONFIRM,
+    ratioMin: VOLUME_RATIO_MIN,
+    bucketMin: VOLUME_CANDLE_MS / 60_000,
+  });
+  return out;
+}
+
 async function main() {
   // A signer is only needed to send orders. In DRY_RUN you can watch the bot
   // reason about live books and a live feed with no key at all.
@@ -1388,11 +1389,9 @@ async function main() {
       } ` +
       `volumeConfirm=${
         REQUIRE_VOLUME_CONFIRM
-          ? `on (binance+coinbase, candle=${(
+          ? `on (binance+coinbase 1m pace, bucket=${(
               VOLUME_CANDLE_MS / 60_000
-            ).toFixed(0)}min, baseline=${(
-              VOLUME_BASELINE_RETENTION_MS / 60_000
-            ).toFixed(0)}min, ratioMin=${VOLUME_RATIO_MIN})`
+            ).toFixed(0)}min, baseline=${PACE_BASELINE_BUCKETS} buckets, minElapsed=${PACE_MIN_ELAPSED_MIN}min, ratioMin=${VOLUME_RATIO_MIN})`
           : "off"
       } ` +
       `tradingHours=${
@@ -1445,6 +1444,10 @@ async function main() {
       // stop. Skipping activeMarkets() entirely (rather than fetching and
       // then discarding every market below) also means a paused bot makes
       // zero RPC/indexer calls for the scan itself, not just zero trades.
+      // Before the trading-window check on purpose: the volume map keeps
+      // tracking while the bot is paused.
+      const paceCache = await refreshPace();
+
       if (!withinTradingWindow(new Date())) {
         note(cycle, "outside trading window (OF_TRADING_HOURS_ENABLED)");
       } else {
@@ -1453,7 +1456,7 @@ async function main() {
           20_000,
           "activeMarkets"
         );
-        const volumeCache = new Map<Asset, VolumeReading | null>();
+ 
         for (const m of markets) {
           if (stop) break;
           try {
@@ -1462,7 +1465,7 @@ async function main() {
             // the rest of this cycle (or, since the loop is sequential, forever
             // — see timeout.ts for why this can't be fixed inside the SDK itself).
             await withTimeout(
-              takeOne(ctx, spot, refs, m, cycle, volumeCache),
+              takeOne(ctx, spot, refs, m, cycle, paceCache),
               20_000,
               `takeOne(${m.symbol})`
             );

@@ -2,6 +2,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 .cache/
+volume-pulse.json*
 
 # secrets & local state — never commit these
 .env

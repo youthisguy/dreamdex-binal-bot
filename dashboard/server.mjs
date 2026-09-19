@@ -19,6 +19,9 @@ const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 const JOURNAL_PATH = join(REPO_ROOT, "strategies/ec-oracle-follow/logs/decisions.jsonl");
+// Bot writes this next to its own cwd (the ec-oracle-follow workspace). Leave the
+// PULSE_PATH env var UNSET so the bot and this server agree on the location.
+const PULSE_PATH = join(REPO_ROOT, "strategies/ec-oracle-follow/volume-pulse.json");
 const DASHBOARD_DIR = __dirname;
 const PORT = Number(process.env.DASHBOARD_PORT ?? 8787);
 
@@ -69,6 +72,22 @@ const server = createServer(async (req, res) => {
         res.writeHead(500);
         res.end(`journal read error: ${e.message}`);
       }
+    }
+    return;
+  }
+
+  // Live volume-pace snapshot written by the bot every cycle (volume-pace.ts).
+  // It lives in the bot's workspace dir, NOT in dashboard/, so it needs its own
+  // route like decisions.jsonl. 404 = bot hasn't written one yet -> the
+  // dashboard's MARKET PULSE card shows OFFLINE instead of stale data.
+  if (req.url === "/volume-pulse.json") {
+    try {
+      const data = await readFile(PULSE_PATH, "utf8");
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(data);
+    } catch (e) {
+      res.writeHead(e.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end(e.code === "ENOENT" ? "no pulse snapshot yet" : `pulse read error: ${e.message}`);
     }
     return;
   }
