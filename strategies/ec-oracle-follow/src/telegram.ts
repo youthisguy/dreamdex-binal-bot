@@ -25,7 +25,7 @@ const dashboardUrl = () =>
   process.env.DASHBOARD_URL ?? "https://dreamdex-binal-bot-5by9.onrender.com";
 const copyBinalUrl = () =>
   process.env.COPY_BINAL_URL ??
-  "https://dreamdex-binal-bot-5by9.onrender.comcopy-trade.html";
+  "https://dreamdex-binal-bot-5by9.onrender.com/copy-trade.html";
 const dreamdexMarketBase = () =>
   process.env.DREAMDEX_MARKET_URL ?? "https://app.dreamdex.io/event-contracts";
 const apiBase = () => {

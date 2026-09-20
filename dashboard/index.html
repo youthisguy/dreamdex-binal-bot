@@ -1041,7 +1041,7 @@
           Math.round((Date.now() - new Date(pulse.updated_at).getTime()) / 1000)
         );
         const stale = ageS > 30;
-        meta.textContent = (stale ? "STALE " : "LIVE ") + ageS + "s";
+        meta.textContent = stale ? `STALE ${ageS}s` : "";
         meta.className = "pulse-meta" + (stale ? " neg" : "");
 
         const names = ["BTC", "ETH"].filter((a) => pulse.assets && pulse.assets[a]);
