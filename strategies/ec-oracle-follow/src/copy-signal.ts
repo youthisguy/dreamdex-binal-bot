@@ -75,6 +75,7 @@ export interface CopySignal {
   outcomeToken: string;  
   yesId: string;          
   noId: string;
+  venueSymbol: string;
 }
 
 export function notifyCopyService(signal: CopySignal): void {

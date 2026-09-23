@@ -73,6 +73,7 @@ import {
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
 import { notifyCopyService } from "./copy-signal.js";
+import { recordOrderBook, writeOrderBookSnapshot } from "./orderbook-cache.js";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -322,6 +323,14 @@ const PACE_SETTLE_MS = envNum("OF_PACE_SETTLE_MS", 2_000);
 // Snapshot the dashboard polls. Relative to cwd (next to index.html), and
 // deliberately NOT under logs/, which checkpoint.sh commits to GitHub.
 const PULSE_PATH = process.env.PULSE_PATH ?? "volume-pulse.json";
+// Same pattern, for the copy service's book-depth polling — see
+// orderbook-cache.ts. Also relative to cwd, also outside logs/.
+const ORDERBOOK_SNAPSHOT_PATH =
+  process.env.ORDERBOOK_SNAPSHOT_PATH ?? "orderbook-snapshot.json";
+// How many book levels to keep in that snapshot. The bot's own trading only
+// ever looks at asks[0] — this is free depth for copiers walking the book,
+// not something any trading gate depends on.
+const BOOK_DEPTH = envNum("OF_BOOK_DEPTH", 15);
 
 const nearExpiryStopMs = (intervalSec: number | null): number =>
   NEAR_EXPIRY_STOP_OVERRIDE_MS ??
@@ -726,7 +735,8 @@ async function takeOne(
   // sanity check the absolute one is measured against. The YES mid is P(up) in
   // market terms.
   const { yes, no } = outcomeSymbols(market);
-  const yesBook = await ctx.exchange.fetchOrderBook(yes, 3);
+  const yesBook = await ctx.exchange.fetchOrderBook(yes, BOOK_DEPTH);
+  recordOrderBook(yes, yesBook);
   let anchorUp = marketImpliedUp(yesBook);
 
   if (anchorUp === null) {
@@ -877,7 +887,8 @@ async function takeOne(
   // 10) A view is not a trade: only cross when the ask is below fair by EDGE.
   // Crossing costs about half the spread, so on a 2-cent book a 2-cent tilt
   // cannot pay for itself — this is the gate that says so.
-  const favBook = bullish ? yesBook : await ctx.exchange.fetchOrderBook(fav, 3);
+  const favBook = bullish ? yesBook : await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
+  if (!bullish) recordOrderBook(fav, favBook); // bullish case: fav===yes, already recorded above
   const top = favBook.asks[0];
   if (!top) {
     note(cycle, "empty ask side");
@@ -1028,7 +1039,8 @@ async function takeOne(
     let filledAskPx = 0;
 
     if (ctx.config.dryRun) {
-      const book = await ctx.exchange.fetchOrderBook(fav, 3);
+      const book = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
+      recordOrderBook(fav, book);
       const top = book.asks[0];
       if (!top) {
         log(`${market.symbol}: dry-run skipped — ${fav} book empty`);
@@ -1047,7 +1059,8 @@ async function takeOne(
       );
     } else {
       while (true) {
-        const book = await ctx.exchange.fetchOrderBook(fav, 3);
+        const book = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
+        recordOrderBook(fav, book);  
         const top = book.asks[0];
         if (!top) {
           log(`${market.symbol}: retry stopped — ${fav} book now empty`);
@@ -1236,6 +1249,7 @@ async function takeOne(
         outcomeToken: OUTCOME_TOKEN,
         yesId,
         noId,
+        venueSymbol: fav, 
       });
     }
 
@@ -1415,8 +1429,6 @@ async function refreshPace(): Promise<Map<Asset, PaceReading | null>> {
 }
 
 async function main() {
-  // A signer is only needed to send orders. In DRY_RUN you can watch the bot
-  // reason about live books and a live feed with no key at all.
   const ctx = createExchange({ withSigner: !loadConfig().dryRun });
 
   if (SPOT_SOURCE === "binance" || process.env.NETWORK === "mainnet") {
@@ -1550,6 +1562,9 @@ async function main() {
           }
         }
       }
+      // After the scan, so this cycle's freshly-fetched books are what the
+      // copy service polls next, not last cycle's.
+      writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH);
     } catch (e) {
       log(`cycle error: ${(e as Error).message}`);
     }

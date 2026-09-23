@@ -22,6 +22,7 @@ const JOURNAL_PATH = join(REPO_ROOT, "strategies/ec-oracle-follow/logs/decisions
 // Bot writes this next to its own cwd (the ec-oracle-follow workspace). Leave the
 // PULSE_PATH env var UNSET so the bot and this server agree on the location.
 const PULSE_PATH = join(REPO_ROOT, "strategies/ec-oracle-follow/volume-pulse.json");
+const ORDERBOOK_PATH = join(REPO_ROOT, "strategies/ec-oracle-follow/orderbook-snapshot.json");
 const DASHBOARD_DIR = __dirname;
 const PORT = Number(process.env.DASHBOARD_PORT ?? 8787);
 
@@ -88,6 +89,22 @@ const server = createServer(async (req, res) => {
     } catch (e) {
       res.writeHead(e.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
       res.end(e.code === "ENOENT" ? "no pulse snapshot yet" : `pulse read error: ${e.message}`);
+    }
+    return;
+  }
+
+  // Live order-book snapshot written by the bot every cycle (orderbook-cache.ts).
+  // Polled by the (fully independent) copy-trade service — local-server.mjs's
+  // fetchAskDepth() — to size fills against real depth instead of guessing.
+  // Same shape/reasoning as the volume-pulse route above.
+  if (req.url === "/orderbook-snapshot.json") {
+    try {
+      const data = await readFile(ORDERBOOK_PATH, "utf8");
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(data);
+    } catch (e) {
+      res.writeHead(e.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end(e.code === "ENOENT" ? "no orderbook snapshot yet" : `orderbook read error: ${e.message}`);
     }
     return;
   }
