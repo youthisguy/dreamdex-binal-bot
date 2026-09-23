@@ -169,6 +169,9 @@ interface PendingConfirmation {
 }
 
 const pendingConfirmation = new Map<Asset, PendingConfirmation>();
+// Most recent pace read, so a held (cross-asset) trade can re-check delta at
+// execution time instead of trusting the reading from when it first qualified.
+let latestPace: Map<Asset, PaceReading | null> = new Map();
 
 // Which window lengths this bot is allowed to trade, in minutes. Comma-
 // separated, e.g. "15,60". Defaults to 15-minute ONLY, because that's the
@@ -649,6 +652,10 @@ async function takeOne(
   let paceEarly = false;
   let deltaRatioOut: number | null = null;
   let deltaBlocked = false;
+  // Raw delta, read regardless of whether momentum/volume gates ran, so the
+  // direction check below can always compare it to the actual trade side.
+  const deltaRatioRaw: number | null =
+    paceCache.get(thisAsset)?.deltaRatio ?? null;
   if (REQUIRE_VOLUME_CONFIRM && useMomentum) {
     const reading = paceCache.get(thisAsset) ?? null;
     volumeConfirmed = true; // fail OPEN if no reading / baseline still warming
@@ -757,6 +764,26 @@ async function takeOne(
     return;
   }
   const bullish = tilt > 0;
+
+  // Direction agreement: the leg we're about to buy must match the momentum
+  // sign AND the order-flow delta sign. The gates above validate momentum in
+  // isolation; this validates the actual TRADE (tilt is driven mostly by
+  // moneyness vs the reference, which can point the other way).
+  const tradeSign = bullish ? 1 : -1;
+  if (REQUIRE_MOMENTUM && Math.sign(mom.r) !== tradeSign) {
+    note(cycle, "momentum opposes trade direction");
+    return;
+  }
+  if (REQUIRE_DELTA_CONFIRM && deltaRatioRaw !== null) {
+    const deltaAgrees = bullish
+      ? deltaRatioRaw >= DELTA_RATIO_MIN
+      : deltaRatioRaw <= -DELTA_RATIO_MIN;
+    if (!deltaAgrees) {
+      note(cycle, "order-flow delta doesn't confirm trade direction");
+      return;
+    }
+  }
+
   if (!bullish && DISABLE_DOWN) {
     note(cycle, "DOWN trades disabled (OF_DISABLE_DOWN)");
     return;
@@ -949,6 +976,19 @@ async function takeOne(
     // trusting a stale ask. Cheap to run unconditionally: on the immediate
     // (non-held) path no time has passed, so this almost always just confirms
     // what we already had.
+    // Re-check delta at execution time: this closure may have been held for
+    // minutes waiting on the cross-asset partner.
+    if (REQUIRE_DELTA_CONFIRM) {
+      const d = latestPace.get(thisAsset)?.deltaRatio ?? null;
+      if (d !== null && (bullish ? d < DELTA_RATIO_MIN : d > -DELTA_RATIO_MIN)) {
+        log(
+          `${market.symbol}: held trade dropped — delta no longer confirms ` +
+            `${bullish ? "UP" : "DOWN"} (${d.toFixed(2)}x)`
+        );
+        return;
+      }
+    }
+
     const side = bullish ? "BUY_YES" : "BUY_NO";
     const whyPrefix =
       `${
@@ -967,7 +1007,7 @@ async function takeOne(
           ? "n/a"
           : `${volumeConfirmed}${
               volumeRatio !== null ? ` (${volumeRatio.toFixed(2)}x)` : ""
-            }${deltaRatioOut !== null ? `, delta ${deltaRatioOut.toFixed(2)}x` : ""}`
+            }${deltaRatioRaw !== null ? `, delta ${deltaRatioRaw.toFixed(2)}x` : ""}`
       }, ` +
       `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
         3
@@ -1134,7 +1174,7 @@ async function takeOne(
       momentum_used: useMomentum,
       volume_confirmed: volumeConfirmed,
       volume_ratio: volumeRatio,
-      delta_ratio: deltaRatioOut,
+      delta_ratio: deltaRatioRaw,
       reason: why,
       expiry_ms: info.expiryMs,
       ref_price: ref?.price ?? null,
@@ -1248,6 +1288,7 @@ async function takeOne(
         momentum_used: useMomentum,
         volume_confirmed: volumeConfirmed,
         volume_ratio: volumeRatio,
+        delta_ratio: deltaRatioRaw,
         reason: why,
         expiry_ms: info.expiryMs,
         ref_price: ref?.price ?? null,
@@ -1481,6 +1522,7 @@ async function main() {
       // Before the trading-window check on purpose: the volume map keeps
       // tracking while the bot is paused.
       const paceCache = await refreshPace();
+      latestPace = paceCache;
 
       if (!withinTradingWindow(new Date())) {
         note(cycle, "outside trading window (OF_TRADING_HOURS_ENABLED)");
