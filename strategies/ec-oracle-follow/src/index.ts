@@ -1233,6 +1233,7 @@ async function takeOne(
         `${market.symbol}: skip copy notify — missing yesTokenId/noTokenId on market.info`
       );
     } else {
+      writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH);
       notifyCopyService({
         id: `sig_${marketId}_${Date.now()}`,
         marketId: marketId,
