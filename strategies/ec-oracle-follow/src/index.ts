@@ -325,6 +325,14 @@ const REVERSAL_RECENT_MIN = envNum("OF_REVERSAL_RECENT_MIN", 2);
 // magnitude to flag — filters ordinary minute-to-minute noise from a real
 // unwind.
 const REVERSAL_RATIO_MIN = Number(process.env.OF_REVERSAL_RATIO_MIN ?? 0.35);
+// When REQUIRE_REVERSAL_CHECK is on, additionally require a DEFINED
+// reversal reading before letting a trade through, instead of failing open
+// on "not enough data yet" (Binance down, or too few closed minutes). Off
+// by default — every other confirm gate here fails open on missing data by
+// design; this turns reversal into a hard precondition instead of a
+// veto-only-when-detected check, and should be opted into deliberately.
+const REVERSAL_REQUIRE_READING =
+  (process.env.OF_REVERSAL_REQUIRE_READING ?? "false") === "true";
 // Bucket size for the volume pace curve. 900_000 = 15 min matches DreamDEX's
 // own :00/:15/:30/:45 market grid exactly. Must be a whole number of minutes.
 const VOLUME_CANDLE_MS = envNum("OF_VOLUME_CANDLE_MS", 900_000);
@@ -824,9 +832,15 @@ async function takeOne(
   // history to split into halves, never blocks by itself.
   const reversalReading = paceCache.get(thisAsset)?.reversal ?? null;
   const reversalFlagged = reversalReading?.flagged ?? false;
-  if (REQUIRE_REVERSAL_CHECK && reversalFlagged) {
-    note(cycle, "order flow reversing against entry in the last minute(s)");
-    return;
+  if (REQUIRE_REVERSAL_CHECK) {
+    if (reversalFlagged) {
+      note(cycle, "order flow reversing against entry in the last minute(s)");
+      return;
+    }
+    if (REVERSAL_REQUIRE_READING && reversalReading === null) {
+      note(cycle, "reversal check has no reading yet (OF_REVERSAL_REQUIRE_READING)");
+      return;
+    }
   }
 
   if (!bullish && DISABLE_DOWN) {

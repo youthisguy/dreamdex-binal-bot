@@ -143,13 +143,16 @@ function computeFlowReversal(
   ratioMin: number
 ): ReversalReading | null {
   const k = formingDelta.length;
-  // Fixed-size comparison: last `recentMin` minutes vs the `recentMin`
-  // minutes immediately before them — not "everything before," which would
-  // make the check less sensitive the later in the window it runs. Needs
-  // two full recentMin-sized chunks before it can judge anything.
-  if (recentMin <= 0 || k < recentMin * 2) return null;
-  const recent = formingDelta.slice(k - recentMin);
-  const earlier = formingDelta.slice(k - recentMin * 2, k - recentMin);
+  // Fixed-size, ADJACENT comparison: last N minutes vs the N minutes
+  // immediately before them. This lets this start judging
+  // a balanced 1-vs-1 split as soon as k=2 (matching the earliest a trade
+  // can fire once OF_PACE_MIN_ELAPSED_MIN's default of 2 is cleared) instead
+  // of sitting at "n/a" until a full recentMin*2 minutes have closed, and it
+  // grows toward the configured recentMin as more minutes close.
+  const N = Math.min(recentMin, Math.floor(k / 2));
+  if (N < 1) return null; // fewer than 2 closed minutes — can't split yet
+  const recent = formingDelta.slice(k - N);
+  const earlier = formingDelta.slice(k - N * 2, k - N);
   const recentDelta = sum(recent);
   const earlierDelta = sum(earlier);
   if (earlierDelta === 0) return null; // nothing to reverse against
@@ -162,7 +165,7 @@ function computeFlowReversal(
     ratio,
     recentDelta,
     earlierDelta,
-    recentMin,
+    recentMin: N,
   };
 }
 
