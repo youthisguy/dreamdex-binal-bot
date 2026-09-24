@@ -67,6 +67,11 @@ export interface DecisionRecord {
   // "momentum confirmed" 
   volume_confirmed: boolean | null;
   volume_ratio: number | null;
+  // Live flow-reversal reading at decision time (see volume-pace.ts
+  // computeFlowReversal). null when there wasn't enough closed-minute
+  // history to judge; reversal_flagged is only meaningful when non-null.
+  reversal_flagged: boolean | null;
+  reversal_ratio: number | null;
   reason: string;
   expiry_ms: number | null;
   ref_price: number | null; // the strike, or the window's own opening price

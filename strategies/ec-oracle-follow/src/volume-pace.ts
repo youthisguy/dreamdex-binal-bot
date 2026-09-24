@@ -48,6 +48,12 @@ export interface PaceConfig {
   /** A minute only counts as closed this long after it ends, so the venues'
    *  last bar has time to finalize. */
   settleMs: number;
+  /** How many of the most recent closed minutes count as "recent" vs "earlier"
+   *  when checking for a flow reversal. */
+  reversalRecentMin: number;
+  /** Recent countermove must be at least this fraction of the earlier push's
+   *  magnitude to flag as a reversal. */
+  reversalRatioMin: number;
 }
 
 /**
@@ -101,6 +107,21 @@ export interface PaceReading {
   deltaRatio: number | null;
   /** Per-minute signed delta of the forming bucket's k closed minutes. */
   formingDelta: number[];
+  /** Is the push behind cumDelta already being unwound in the most recent
+   *  closed minute(s)? null when deltaAvailable is false or there aren't
+   *  enough closed minutes yet to split into "earlier" vs "recent" halves —
+   *  treat null as "warming up," same fail-open posture as the other gates. */
+  reversal: ReversalReading | null;
+}
+
+export interface ReversalReading {
+  /** True when the recent minutes oppose the earlier push AND clear reversalRatioMin. */
+  flagged: boolean;
+  /** |recentDelta| / |earlierDelta|. */
+  ratio: number;
+  recentDelta: number;
+  earlierDelta: number;
+  recentMin: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,6 +135,35 @@ function median(a: number[]): number {
   const s = [...a].sort((x, y) => x - y);
   const m = Math.floor(s.length / 2);
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
+function computeFlowReversal(
+  formingDelta: number[],
+  recentMin: number,
+  ratioMin: number
+): ReversalReading | null {
+  const k = formingDelta.length;
+  // Fixed-size comparison: last `recentMin` minutes vs the `recentMin`
+  // minutes immediately before them — not "everything before," which would
+  // make the check less sensitive the later in the window it runs. Needs
+  // two full recentMin-sized chunks before it can judge anything.
+  if (recentMin <= 0 || k < recentMin * 2) return null;
+  const recent = formingDelta.slice(k - recentMin);
+  const earlier = formingDelta.slice(k - recentMin * 2, k - recentMin);
+  const recentDelta = sum(recent);
+  const earlierDelta = sum(earlier);
+  if (earlierDelta === 0) return null; // nothing to reverse against
+  const opposite =
+    Math.sign(recentDelta) !== 0 &&
+    Math.sign(recentDelta) !== Math.sign(earlierDelta);
+  const ratio = Math.abs(recentDelta) / Math.abs(earlierDelta);
+  return {
+    flagged: opposite && ratio >= ratioMin,
+    ratio,
+    recentDelta,
+    earlierDelta,
+    recentMin,
+  };
 }
 
 export function computePace(
@@ -189,6 +239,9 @@ export function computePace(
     ? Array.from({ length: k }, (_, i) => bDeltaAt(bucketStart, i))
     : [];
   const cumDelta = sum(formingDelta);
+  const reversal = deltaAvailable
+    ? computeFlowReversal(formingDelta, cfg.reversalRecentMin, cfg.reversalRatioMin)
+    : null;
 
   const rows: PaceReading["rows"] = [];
   for (let j = cfg.baselineBuckets; j >= 1; j--) {
@@ -265,6 +318,7 @@ export function computePace(
     deltaBaselineAbs,
     deltaRatio,
     formingDelta,
+    reversal,
   };
 }
 
@@ -427,6 +481,15 @@ export function writePulse(
         delta_baseline_abs: r.deltaBaselineAbs === null ? null : r3(r.deltaBaselineAbs),
         delta_ratio: r.deltaRatio === null ? null : r3(r.deltaRatio),
         forming_delta: r.formingDelta.map(r3),
+        reversal: r.reversal
+          ? {
+              flagged: r.reversal.flagged,
+              ratio: r3(r.reversal.ratio),
+              recent_delta: r3(r.reversal.recentDelta),
+              earlier_delta: r3(r.reversal.earlierDelta),
+              recent_min: r.reversal.recentMin,
+            }
+          : null,
       };
     }
     const payload = {

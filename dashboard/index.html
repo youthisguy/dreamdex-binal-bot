@@ -504,6 +504,8 @@
       .rv-gate { background: var(--accent); }
       .rv-status { min-width: 74px; text-align: right; color: var(--text-bright); font-weight: 600; }
       .pulse-note { font-size: 9px; color: var(--text-muted); text-transform: uppercase; line-height: 1.5; }
+      .rv-status.warn { color: var(--neg); }
+      .rv.reversal-flagged { background: var(--neg-bg); outline: 1px solid var(--neg); outline-offset: -2px; padding: 2px 4px; }
     </style>
   </head>
   <body>
@@ -1134,7 +1136,8 @@
              </div>
              <span class="rv-status ${hit ? "pos" : ""}">${status}</span></div>` +
           `<div class="pulse-note" title="Rows = prior windows. Brighter = more volume than typical for that minute. Cyan tick = gate. Baseline = median of ${d.rows.length} windows (${d.sources.join(" + ")}).">${fmtVol(d.cum)} vs ${fmtVol(d.baseline_cum)} typical @ ${k}m · gate ≥${gate.toFixed(2)}x${d.sources.length < 2 ? ` · <span class="neg">${d.sources.join("+")} only</span>` : ""}</div>` +
-          renderDeltaRow(d);
+          renderDeltaRow(d) +
+          renderReversalRow(d);
       }
 
       // Order-flow delta readout: net taker buy-sell vs its own noisy
@@ -1157,6 +1160,31 @@
                <div class="rv-fill${cls ? " hit" : ""}" style="width:${Math.min(mag / 3, 1) * 100}%"></div>
              </div>
              <span class="rv-status ${cls}">${dir} ${mag.toFixed(2)}x</span></div>`;
+      }
+
+      // Flow-reversal readout: is the most recent closed minute(s) already
+      // unwinding the push behind FLOW/cumDelta above? FLOW is cumulative
+      // over the whole forming window, so an early push that's already
+      // reversing can still read positive there — this looks at just the
+      // tail end. Only meaningful once both an "earlier" and "recent" half
+      // of the window exist (rev != null); before that it's still warming.
+      function renderReversalRow(d) {
+        if (!d.delta_available) return "";
+        const rev = d.reversal;
+        if (!rev) {
+          return `<div class="pulse-note">REVERSAL: warming up</div>`;
+        }
+        const earlierDir = rev.earlier_delta >= 0 ? "BUY" : "SELL";
+        const recentDir = rev.recent_delta >= 0 ? "BUY" : "SELL";
+        const label = rev.flagged
+          ? `${recentDir} UNWINDING ${earlierDir} (${rev.ratio.toFixed(2)}x)`
+          : `STEADY (${rev.ratio.toFixed(2)}x)`;
+        return `<div class="rv${rev.flagged ? " reversal-flagged" : ""}" title="Last ${rev.recent_min}m delta ${fmtVol(rev.recent_delta)} vs earlier ${fmtVol(rev.earlier_delta)}">
+             <span>REVERSAL</span>
+             <div class="rv-bar">
+               <div class="rv-fill${rev.flagged ? " hit" : ""}" style="width:${Math.min(rev.ratio / 2, 1) * 100}%"></div>
+             </div>
+             <span class="rv-status ${rev.flagged ? "warn" : ""}">${label}</span></div>`;
       }
 
       async function fetchPulse() {

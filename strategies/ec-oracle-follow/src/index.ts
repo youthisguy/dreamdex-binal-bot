@@ -308,6 +308,23 @@ const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);
 const REQUIRE_DELTA_CONFIRM =
   (process.env.OF_REQUIRE_DELTA_CONFIRM ?? "false") === "true";
 const DELTA_RATIO_MIN = Number(process.env.OF_DELTA_RATIO_MIN ?? 1.3);
+// Flow-reversal early warning (see volume-pace.ts computeFlowReversal): is
+// the push that would justify this entry already being unwound in the most
+// recent closed minute(s)? cumDelta/deltaRatio judge the window CUMULATIVELY,
+// so an early push that's already reversing can still pass them — this
+// targets exactly that gap. Pre-entry veto only: this bot has no exit path,
+// so it can only refuse a NEW entry, never act on a reversal in a position
+// already taken. Independent of REQUIRE_DELTA_CONFIRM — it targets timing
+// within the window, not direction, so it can run even when delta
+// confirmation itself is off. Default OFF, same as the other confirm gates.
+const REQUIRE_REVERSAL_CHECK =
+  (process.env.OF_REQUIRE_REVERSAL_CHECK ?? "false") === "true";
+// How many of the most recent closed minutes count as "recent" vs "earlier".
+const REVERSAL_RECENT_MIN = envNum("OF_REVERSAL_RECENT_MIN", 2);
+// Recent countermove must be at least this fraction of the earlier push's
+// magnitude to flag — filters ordinary minute-to-minute noise from a real
+// unwind.
+const REVERSAL_RATIO_MIN = Number(process.env.OF_REVERSAL_RATIO_MIN ?? 0.35);
 // Bucket size for the volume pace curve. 900_000 = 15 min matches DreamDEX's
 // own :00/:15/:30/:45 market grid exactly. Must be a whole number of minutes.
 const VOLUME_CANDLE_MS = envNum("OF_VOLUME_CANDLE_MS", 900_000);
@@ -397,6 +414,8 @@ const pace = paceReader({
   minBaselineBuckets: PACE_MIN_BASELINE_BUCKETS,
   minElapsedMin: PACE_MIN_ELAPSED_MIN,
   settleMs: PACE_SETTLE_MS,
+  reversalRecentMin: REVERSAL_RECENT_MIN,
+  reversalRatioMin: REVERSAL_RATIO_MIN,
 });
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
@@ -794,6 +813,22 @@ async function takeOne(
     }
   }
 
+  // Flow-reversal veto: cumDelta/deltaRatio can still pass while the most
+  // recent closed minute(s) are already unwinding the push that dominates
+  // the window's cumulative sum — this is the "strong buy, we enter, then it
+  // immediately corrects" pattern. `flagged` only fires when the recent
+  // countermove opposes the earlier push AND is big enough to matter, so it
+  // won't trip on ordinary noise. Checked unconditionally against the trade
+  // direction being taken, not just the reading's own sign, on the same
+  // fail-open posture as the other confirm gates: no reading, or too little
+  // history to split into halves, never blocks by itself.
+  const reversalReading = paceCache.get(thisAsset)?.reversal ?? null;
+  const reversalFlagged = reversalReading?.flagged ?? false;
+  if (REQUIRE_REVERSAL_CHECK && reversalFlagged) {
+    note(cycle, "order flow reversing against entry in the last minute(s)");
+    return;
+  }
+
   if (!bullish && DISABLE_DOWN) {
     note(cycle, "DOWN trades disabled (OF_DISABLE_DOWN)");
     return;
@@ -999,6 +1034,21 @@ async function takeOne(
         return;
       }
     }
+    // Same idea, re-checked at fire time: a hold for cross-asset confirm can
+    // be long enough for a reversal to appear that wasn't there when this
+    // signal first qualified.
+    if (REQUIRE_REVERSAL_CHECK) {
+      const rev = latestPace.get(thisAsset)?.reversal ?? null;
+      if (rev?.flagged) {
+        log(
+          `${market.symbol}: held trade dropped — order flow reversing ` +
+            `against ${bullish ? "UP" : "DOWN"} (recent ${rev.recentDelta.toFixed(
+              1
+            )} vs earlier ${rev.earlierDelta.toFixed(1)})`
+        );
+        return;
+      }
+    }
 
     const side = bullish ? "BUY_YES" : "BUY_NO";
     const whyPrefix =
@@ -1019,6 +1069,17 @@ async function takeOne(
           : `${volumeConfirmed}${
               volumeRatio !== null ? ` (${volumeRatio.toFixed(2)}x)` : ""
             }${deltaRatioRaw !== null ? `, delta ${deltaRatioRaw.toFixed(2)}x` : ""}`
+      }, ` +
+      `reversal ${
+        reversalReading === null
+          ? "n/a"
+          : `${reversalReading.flagged}${
+              reversalReading.flagged
+                ? ` (recent ${reversalReading.recentDelta.toFixed(
+                    1
+                  )} vs earlier ${reversalReading.earlierDelta.toFixed(1)})`
+                : ""
+            }`
       }, ` +
       `tilt ${tilt >= 0 ? "+" : ""}${tilt.toFixed(
         3
@@ -1188,6 +1249,8 @@ async function takeOne(
       volume_confirmed: volumeConfirmed,
       volume_ratio: volumeRatio,
       delta_ratio: deltaRatioRaw,
+      reversal_flagged: reversalReading?.flagged ?? null,
+      reversal_ratio: reversalReading?.ratio ?? null,
       reason: why,
       expiry_ms: info.expiryMs,
       ref_price: ref?.price ?? null,
@@ -1304,6 +1367,8 @@ async function takeOne(
         volume_confirmed: volumeConfirmed,
         volume_ratio: volumeRatio,
         delta_ratio: deltaRatioRaw,
+        reversal_flagged: reversalReading?.flagged ?? null,
+        reversal_ratio: reversalReading?.ratio ?? null,
         reason: why,
         expiry_ms: info.expiryMs,
         ref_price: ref?.price ?? null,
