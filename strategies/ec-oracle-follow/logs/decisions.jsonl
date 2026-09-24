@@ -19416,3 +19416,57 @@
 {"timestamp":"2026-09-24T07:45:01.119Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"no view and no reference price":2}}
 {"timestamp":"2026-09-24T07:45:38.348Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":2}}
 {"timestamp":"2026-09-24T07:45:39.130Z","type":"settlement","market_id":"0x0000000000000000000000000000000000000000000000000000000000006b55","outcome":"WIN","pnl":3.66,"settled_at":"2026-09-24T07:45:39.130Z"}
+{"timestamp":"2026-09-24T07:46:08.678Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":1,"momentum opposes trade direction":1}}
+{"timestamp":"2026-09-24T07:46:44.992Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T07:47:17.632Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:47:47.666Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"momentum opposes trade direction":2,"window not in OF_ALLOWED_WINDOWS_MIN":4}}
+{"timestamp":"2026-09-24T07:48:18.385Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T07:48:58.371Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:49:28.846Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T07:50:08.843Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T07:50:46.913Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T07:51:25.658Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:51:56.918Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:52:38.618Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:53:17.606Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:53:47.751Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:54:25.871Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T07:55:04.619Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:55:36.230Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:56:13.405Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:56:49.177Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:57:25.455Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:57:56.089Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:58:38.770Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:59:08.804Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T07:59:47.674Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:00:24.492Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":2}}
+{"timestamp":"2026-09-24T08:00:55.868Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":1,"momentum opposes trade direction":1}}
+{"timestamp":"2026-09-24T08:01:33.564Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T08:02:13.209Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:02:48.898Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":1,"order-flow delta doesn't confirm trade direction":1}}
+{"timestamp":"2026-09-24T08:03:25.873Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":1,"order-flow delta doesn't confirm trade direction":1}}
+{"timestamp":"2026-09-24T08:03:57.440Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":1,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1}}
+{"timestamp":"2026-09-24T08:04:33.492Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T08:05:12.931Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:05:51.169Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":1,"momentum opposes trade direction":1}}
+{"timestamp":"2026-09-24T08:06:27.955Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:07:06.101Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:07:37.761Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T08:08:17.402Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:08:56.089Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":1,"order-flow delta doesn't confirm trade direction":1}}
+{"timestamp":"2026-09-24T08:09:26.338Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T08:10:08.325Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:10:47.242Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:11:25.880Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:12:01.648Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:12:38.618Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:13:16.647Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:13:47.091Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:14:17.305Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:14:55.556Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-09-24T08:15:25.938Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:16:03.704Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:16:40.266Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"order-flow delta doesn't confirm trade direction":2}}
+{"timestamp":"2026-09-24T08:17:16.992Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum opposes trade direction":2}}
+{"timestamp":"2026-09-24T08:17:47.241Z","type":"decision","action":"TRADE_UP","outcome":"PENDING","market_id":"0x0000000000000000000000000000000000000000000000000000000000006b6f","symbol":"BTC-0-24SEP26-0830/USDso","asset":"BTC","window":"15m","side":"BUY_YES","size":15,"price":0.748,"dry_run":false,"signal":"UP","fair_prob":0.7908085433244901,"market_mid":0.729,"edge":0.044808543324490135,"disagreement":0.06180854332449015,"momentum_r":0.00033540281130120433,"momentum_used":true,"volume_confirmed":true,"volume_ratio":1.881693591282235,"delta_ratio":3.323318146989216,"reason":"opening 84390.97 vs spot 84448.93, vol 0.064% measured, r +0.0003, volConfirm true (1.88x), delta 3.32x, tilt +0.062 off market 0.729, pUp 0.791, fair 0.791, ask 0.746","expiry_ms":1790238600000,"ref_price":84390.97,"ref_kind":"opening","explorer_url":"https://prd.smk.somnia.host/markets/0xCBcF2E54D95635F2bD60aEA0Dcb778fc2fcf7a8a"}
