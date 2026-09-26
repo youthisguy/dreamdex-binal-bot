@@ -76,6 +76,7 @@ export interface CopySignal {
   yesId: string;          
   noId: string;
   venueSymbol: string;
+  remainingAsks?: [number, number][];
 }
 
 export function notifyCopyService(signal: CopySignal): void {

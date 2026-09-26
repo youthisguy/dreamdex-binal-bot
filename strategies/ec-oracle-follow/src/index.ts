@@ -1311,6 +1311,23 @@ async function takeOne(
       );
     } else {
       writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH);
+
+      // Residual liquidity on the leg we just bought, measured AFTER our
+      // own fill — this is what a copier's IOC will actually see a moment
+      // later, not the pre-fill depth "ask ${filledAskPx}" reflects.
+      let remainingAsks: [number, number][] | undefined;
+      try {
+        const postFillBook = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
+        recordOrderBook(fav, postFillBook);
+        remainingAsks = postFillBook.asks
+          .filter(([px]: [number, number]) => px <= copierLimitPrice)
+          .map(([px, amt]: [number, number]) => [px, amt] as [number, number]);
+      } catch (e) {
+        log(
+          `${market.symbol}: post-fill residual re-fetch failed — copy will poll snapshot instead (${(e as Error).message})`
+        );
+      }
+
       notifyCopyService({
         id: `sig_${marketId}_${Date.now()}`,
         marketId: marketId,
@@ -1327,7 +1344,8 @@ async function takeOne(
         outcomeToken: OUTCOME_TOKEN,
         yesId,
         noId,
-        venueSymbol: fav, 
+        venueSymbol: fav,
+        remainingAsks,
       });
     }
 
