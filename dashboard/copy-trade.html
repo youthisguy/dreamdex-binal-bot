@@ -795,7 +795,6 @@
     </div>
 
     <script>
-      // ── Config — fill in for your deployment ─────────────────────────
       const COPY_SERVICE_URL = "https://binal-copy-serve.onrender.com";
       const VAULT_ADDRESS = "0x921772bf13175E5E39672154bDe3C521d859eFCA";
       const USDSO_TOKEN_ADDRESS = "0x00000022dA000002656c64D9eA6011ea952D008A";
@@ -889,7 +888,7 @@
         return a.slice(0, 6) + "…" + a.slice(-4);
       }
 
-      // ── Network handling (silent — no UI badge, just switches/adds chain) ──
+      // ── Network handling  ──
       async function ensureNetwork() {
         const chainId = await window.ethereum.request({
           method: "eth_chainId",
@@ -986,7 +985,6 @@
             .forEach((btn) => (btn.disabled = false));
 
           // Let the backend know this wallet exists — read-only registration,
-          // never signs or submits anything on the user's behalf.
           fetch(`${COPY_SERVICE_URL}/api/copy/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

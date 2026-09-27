@@ -22,6 +22,7 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Asset } from "./signal.js";
+import { binanceDispatcher } from "./binance-proxy.js";
 
 const MINUTE_MS = 60_000;
 
@@ -330,11 +331,19 @@ export function computePace(
 // ---------------------------------------------------------------------------
 
 // Node's fetch has no default timeout — see timeout.ts. These carry their own.
-async function fetchJson(url: string, timeoutMs = 8_000): Promise<unknown> {
+// Optional `dispatcher` routes this one call through the Binance proxy
+async function fetchJson(
+  url: string,
+  timeoutMs = 8_000,
+  dispatcher?: import("undici").Dispatcher
+): Promise<unknown> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await fetch(url, {
+      signal: controller.signal,
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
@@ -346,7 +355,9 @@ async function binanceBars(asset: Asset, limit: number): Promise<Bar[]> {
   const symbol = asset === "BTC" ? "BTCUSDT" : "ETHUSDT";
   // Rows: [openTime, open, high, low, close, volume, closeTime, ...], oldest first.
   const rows = (await fetchJson(
-    `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=${limit}`
+    `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=${limit}`,
+    8_000,
+    binanceDispatcher()
   )) as unknown[][];
   // Row layout: [openTime, open, high, low, close, volume, closeTime,
   // quoteVolume, trades, takerBuyBaseVolume, takerBuyQuoteVolume, ignore].

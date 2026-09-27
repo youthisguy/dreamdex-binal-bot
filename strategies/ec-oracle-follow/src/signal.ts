@@ -16,6 +16,7 @@
 // the price feed knows the first one.
 
 import type { EcContext } from "@dreamdex-bot-kit/ec-core";
+import { binanceDispatcher } from "./binance-proxy.js";
 
 export type Asset = "BTC" | "ETH";
 
@@ -473,8 +474,10 @@ export function binanceVolumeReader(): VolumeReader {
     async getVolume(asset, windowMs) {
       const symbol = asset === "BTC" ? "BTCUSDT" : "ETHUSDT";
       const interval = binanceIntervalFor(windowMs);
+      const dispatcher = binanceDispatcher();
       const res = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=2`
+        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=2`,
+        dispatcher ? ({ dispatcher } as unknown as RequestInit) : undefined
       );
       if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
       // Rows are [openTime, open, high, low, close, volume, closeTime, ...],
