@@ -475,10 +475,20 @@ export function binanceVolumeReader(): VolumeReader {
       const symbol = asset === "BTC" ? "BTCUSDT" : "ETHUSDT";
       const interval = binanceIntervalFor(windowMs);
       const dispatcher = binanceDispatcher();
-      const res = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=2`,
-        dispatcher ? ({ dispatcher } as unknown as RequestInit) : undefined
-      );
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8_000);
+      let res: Response;
+      try {
+        res = await fetch(
+          `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=2`,
+          {
+            signal: controller.signal,
+            ...(dispatcher ? { dispatcher } : {}),
+          } as RequestInit
+        );
+      } finally {
+        clearTimeout(timer);
+      }
       if (!res.ok) throw new Error(`volume ${asset} HTTP ${res.status}`);
       // Rows are [openTime, open, high, low, close, volume, closeTime, ...],
       // oldest first. With limit=2, rows[1] is still forming and rows[0] is

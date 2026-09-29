@@ -114,17 +114,42 @@ const server = createServer(async (req, res) => {
   // fetchAskDepth() — to size fills against real depth  
   if (req.url === "/orderbook-snapshot.json") {
     try {
-      const data = await readFile(ORDERBOOK_PATH, "utf8");
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-      res.end(data);
-    } catch (e) {
-      res.writeHead(e.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end(e.code === "ENOENT" ? "no orderbook snapshot yet" : `orderbook read error: ${e.message}`);
-    }
+    const data = await readFile(ORDERBOOK_PATH, "utf8");
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(data);
+        } catch (e) {
+    res.writeHead(e.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(e.code === "ENOENT" ? "no orderbook snapshot yet" : `orderbook read error: ${e.message}`);
+        }
     return;
-  }
-
-  const path = req.url === "/" ? "/index.html" : req.url;
+      }
+    
+      // Live book: bot child owns exchange client on 127.0.0.1:LIVE_BOOK_PORT
+      if (req.url?.startsWith("/api/live-book")) {
+        const LIVE_BOOK_PORT = Number(process.env.LIVE_BOOK_PORT ?? 8791);
+        try {
+          const upstream = await fetch(
+            `http://127.0.0.1:${LIVE_BOOK_PORT}${req.url}`,
+            { signal: AbortSignal.timeout(5_000) }
+          );
+          const body = await upstream.text();
+          res.writeHead(upstream.status, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+          });
+          res.end(body);
+        } catch (e) {
+          res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(
+            JSON.stringify({
+              error: `live-book upstream unavailable: ${e.message}`,
+            })
+          );
+        }
+        return;
+      }
+    
+    const path = req.url === "/" ? "/index.html" : req.url;
   try {
     const filePath = join(DASHBOARD_DIR, path);
     if (!filePath.startsWith(DASHBOARD_DIR)) throw new Error("path escape blocked");

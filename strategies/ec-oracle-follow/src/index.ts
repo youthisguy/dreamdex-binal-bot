@@ -74,6 +74,7 @@ import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
 import { notifyCopyService } from "./copy-signal.js";
 import { recordOrderBook, writeOrderBookSnapshot } from "./orderbook-cache.js";
+import { startLiveBookServer } from "./live-book-server.js";
 
 const INTERVAL_MS = envNum("OF_INTERVAL_MS", 8_000);
 const WINDOW_MS = envNum("OF_MOMENTUM_WINDOW_MS", 60_000);
@@ -1528,6 +1529,9 @@ async function refreshPace(): Promise<Map<Asset, PaceReading | null>> {
 
 async function main() {
   const ctx = createExchange({ withSigner: !loadConfig().dryRun });
+
+  // Copy service polls live books through prod-server → this internal port.
+  startLiveBookServer(ctx);
 
   if (SPOT_SOURCE === "binance" || process.env.NETWORK === "mainnet") {
     spot = coinbaseSpotReader();

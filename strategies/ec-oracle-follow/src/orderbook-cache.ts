@@ -62,3 +62,4 @@ export function writeOrderBookSnapshot(path: string, maxAgeMs = 120_000): void {
     console.error(`orderbook snapshot write failed: ${(e as Error).message}`);
   }
 }
+
