@@ -803,24 +803,6 @@ async function takeOne(
   }
   const bullish = tilt > 0;
 
-  // Direction agreement: the leg we're about to buy must match the momentum
-  // sign AND the order-flow delta sign. The gates above validate momentum in
-  // isolation; this validates the actual TRADE (tilt is driven mostly by
-  // moneyness vs the reference, which can point the other way).
-  const tradeSign = bullish ? 1 : -1;
-  if (REQUIRE_MOMENTUM && Math.sign(mom.r) !== tradeSign) {
-    note(cycle, "momentum opposes trade direction");
-    return;
-  }
-  if (REQUIRE_DELTA_CONFIRM && deltaRatioRaw !== null) {
-    const deltaAgrees = bullish
-      ? deltaRatioRaw >= DELTA_RATIO_MIN
-      : deltaRatioRaw <= -DELTA_RATIO_MIN;
-    if (!deltaAgrees) {
-      note(cycle, "order-flow delta doesn't confirm trade direction");
-      return;
-    }
-  }
 
   // Flow-reversal veto: cumDelta/deltaRatio can still pass while the most
   // recent closed minute(s) are already unwinding the push that dominates
@@ -1315,7 +1297,7 @@ async function takeOne(
 
       // Residual liquidity on the leg we just bought, measured AFTER our
       // own fill — this is what a copier's IOC will actually see a moment
-      // later, not the pre-fill depth "ask ${filledAskPx}" reflects.
+      // later 
       let remainingAsks: [number, number][] | undefined;
       try {
         const postFillBook = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
@@ -1328,6 +1310,16 @@ async function takeOne(
           `${market.symbol}: post-fill residual re-fetch failed — copy will poll snapshot instead (${(e as Error).message})`
         );
       }
+
+      console.log(
+        "copy residual",
+        fav,
+        JSON.stringify(remainingAsks),
+        "notional",
+        (remainingAsks ?? [])
+          .filter((l) => l[0] <= copierLimitPrice)
+          .reduce((s, l) => s + l[0] * l[1], 0),
+      );
 
       notifyCopyService({
         id: `sig_${marketId}_${Date.now()}`,
