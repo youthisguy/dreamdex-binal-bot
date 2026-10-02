@@ -118,8 +118,17 @@ async function checkAndRedeemMarket(
       `holding YES=${held.yes} NO=${held.no}`
   );
 
+  // TEMP: force known holdings when the balance read returns 0
   if (held.yes === 0n && held.no === 0n) {
-    return { symbol, redeemed: false, note: "no balance held — nothing to redeem (already claimed, or never filled here)" };
+    if (process.env.FORCE_NO) {
+      held.no = BigInt(process.env.FORCE_NO) * 10n ** BigInt(ctx.config.decimals);
+      log(`${symbol}: balance read returned 0, FORCING NO=${held.no}`);
+    } else if (process.env.FORCE_YES) {
+      held.yes = BigInt(process.env.FORCE_YES) * 10n ** BigInt(ctx.config.decimals);
+      log(`${symbol}: balance read returned 0, FORCING YES=${held.yes}`);
+    } else {
+      return { symbol, redeemed: false, note: "no balance held — nothing to redeem (already claimed, or never filled here)" };
+    }
   }
 
   // Build the minimal UnifiedMarket shape redeemHoldings/settlementFeeBps need.

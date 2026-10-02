@@ -33,16 +33,16 @@
 //   npm start -w ec-oracle-follow
 
 import {
-  placeLimit,
+ 
   createExchange,
   envNum,
-  maybeClaim,
+ 
   loadConfig,
   shutdown,
   activeMarkets,
   marketOnchain,
   isTradable,
-  ensureCollateralAllowance,
+ 
   outcomeSymbols,
   quantize,
   assertProbability,
@@ -72,7 +72,7 @@ import {
 } from "./journal.js";
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
-import { notifyCopyService } from "./copy-signal.js";
+import { executeCopySignal } from "./copy-signal.js";
 import { recordOrderBook, writeOrderBookSnapshot } from "./orderbook-cache.js";
 import { startLiveBookServer } from "./live-book-server.js";
 
@@ -607,13 +607,7 @@ async function takeOne(
   // price-sensitive send path in fire(). Idempotent/cached per pool. the point is to absorb the
   // block-confirmation delay several cycles before a signal ever fires,
   // instead of it landing between reading the ask and crossing it.
-  ensureCollateralAllowance(
-    ctx,
-    onchain,
-    10n ** BigInt(ctx.config.decimals)
-  ).catch((e: Error) =>
-    log(`${market.symbol}: allowance warmup failed: ${(e as Error).message}`)
-  );
+
   if (!isAsset(info.asset)) {
     if (!warned.has(info.asset)) {
       warned.add(info.asset);
@@ -1116,71 +1110,86 @@ async function takeOne(
         )} (${whyPrefix}, ask ${filledAskPx.toFixed(3)})`
       );
     } else {
-      while (true) {
-        const book = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
-        recordOrderBook(fav, book);  
-        const top = book.asks[0];
-        if (!top) {
-          log(`${market.symbol}: retry stopped — ${fav} book now empty`);
-          break;
-        }
-        const [askPx] = top;
-
-        if (!opts.skipEdgeCheck && askPx > fairFav - EDGE) {
-          log(
-            `${market.symbol}: retry stopped — edge gone (ask ${askPx.toFixed(
-              3
-            )}, ` +
-              `fair ${fairFav.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(
-                3
-              )})`
-          );
-          break;
-        }
-
-        const attemptPrice = clampProbability(
-          ctx.exchange.priceToPrecision(fav, askPx + 0.002)
-        );
-        assertProbability(attemptPrice);
-
-        try {
-          const order = await placeLimit(ctx, {
-            market,
-            onchain,
-            outcome: bullish ? "YES" : "NO",
-            side: "buy",
-            price: attemptPrice,
-            size,
-            type: "ioc",
-          });
-          taken = order.filled;
-          log(
-            `${side} ${taken}/${size} ${fav} @ ~${attemptPrice.toFixed(
-              3
-            )} (${whyPrefix}, ask ${askPx.toFixed(3)})`
-          );
-          if (taken > 0) {
-            price = attemptPrice;
-            filledAskPx = askPx;
-            break;
-          }
-        } catch (e) {
-          if (!isNoFillError(e as Error)) throw e;
-          log(
-            `${market.symbol}: no fill (${
-              (e as Error).message
-            }), retrying in ${FILL_RETRY_INTERVAL_MS}ms...`
-          );
-        }
-
-        if (Date.now() + FILL_RETRY_INTERVAL_MS >= retryDeadline) {
-          log(`${market.symbol}: retry window exhausted with no fill`);
-          break;
-        }
-        await new Promise((r) => setTimeout(r, FILL_RETRY_INTERVAL_MS));
+      // One fresh look: edge gate + the book the server will size against.
+      const book = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
+      recordOrderBook(fav, book);
+      const top = book.asks[0];
+      if (!top) {
+        log(`${market.symbol}: ${fav} book empty — skipping`);
+        return;
+      }
+      const [askPx] = top;
+      if (!opts.skipEdgeCheck && askPx > fairFav - EDGE) {
+        log(`${market.symbol}: edge gone (ask ${askPx.toFixed(3)}, needed ≤ ${(fairFav - EDGE).toFixed(3)})`);
+        return;
       }
 
-      if (taken <= 0) return;
+      // Hard ceiling the server may not exceed (it adds its own tick buffer below this).
+      const ceiling = Math.min(
+        MAX_ENTRY_PRICE,
+        opts.skipEdgeCheck ? askPx + 0.02 : fairFav - EDGE
+      );
+      if (ceiling < askPx) {
+        log(`${market.symbol}: ceiling ${ceiling.toFixed(3)} below ask ${askPx.toFixed(3)} — skipping`);
+        return;
+      }
+
+      const binaryInfo =
+        market.info.marketType === "BINARY"
+          ? (market.info as { yesTokenId?: string; noTokenId?: string })
+          : null;
+      const yesId = binaryInfo?.yesTokenId != null ? String(binaryInfo.yesTokenId) : "";
+      const noId = binaryInfo?.noTokenId != null ? String(binaryInfo.noTokenId) : "";
+      if (!yesId || !noId) {
+        log(`${market.symbol}: missing yesTokenId/noTokenId — skipping`);
+        return;
+      }
+
+      // Sized in COLLATERAL, not shares: size × expected price. Shares come back ≈ size
+      // (slightly under, because the server buffers the limit price). Fine for MAX_SHARES.
+      const houseCollateralRaw = BigInt(
+        Math.floor(size * askPx * 10 ** ctx.config.decimals)
+      ).toString();
+
+      writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH); // BEFORE the call, not after
+
+      const OUTCOME_TOKEN = "0xB52c5934113Af5c0Bb20eb3C72290C8215f755b9";
+      const res = await executeCopySignal({
+        signalId: `sig_${info.marketId ?? onchain.pool}_${Date.now()}`,
+        marketId: info.marketId ?? onchain.pool,
+        symbol: market.symbol,
+        asset: info.asset,
+        window: windowLabel(info.intervalSec),
+        side,
+        price: askPx,
+        limitPrice: ceiling,
+        pool: onchain.pool,
+        expiryMs: info.expiryMs,
+        dryRun: false,
+        timestamp: Date.now(),
+        outcomeToken: OUTCOME_TOKEN,
+        yesId,
+        noId,
+        venueSymbol: fav,
+        houseCollateralRaw,
+      }).catch((e) => {
+        enteredMarkets.add(market.symbol); 
+        log(`${market.symbol}: copy execute failed: ${(e as Error).message} — check server logs / on-chain`);
+        return null;
+      });
+      if (!res) return;
+
+      if (!res.filled || res.houseSharesReceived <= 0) {
+        log(`${market.symbol}: batch did not fill the house leg (copiers: ${res.copierCount})`);
+        return;
+      }
+      taken = res.totalSharesReceived;
+      price = res.totalCollateralUsed / taken; // real average entry, not a limit price
+      filledAskPx = askPx;
+      log(
+        `${side} ${taken}/${size} ${fav} @ ${price.toFixed(3)} via vault batch ` +
+          `(+${res.copierCount} copier(s); ${whyPrefix}, ask ${askPx.toFixed(3)})`
+      );
     }
 
     const why = `${whyPrefix}, ask ${filledAskPx.toFixed(3)}`;
@@ -1255,93 +1264,7 @@ async function takeOne(
       explorer_url: explorerUrl,
     });
 
-    // Calculate a price ceiling that sweeps deeper order book levels for copiers
-    const COPY_SLIPPAGE_BUFFER = Number(
-      process.env.OF_COPY_SLIPPAGE_BUFFER ?? 0.15
-    );
-    const MAX_COPY_PRICE = Number(process.env.OF_COPY_MAX_PRICE ?? 0.99);
-
-    const copierLimitPrice = Math.min(
-      MAX_COPY_PRICE,
-      Number((filledAskPx * (1 + COPY_SLIPPAGE_BUFFER)).toFixed(4))
-    );
-
-    const marketId = info.marketId ?? onchain.pool;
-
-    // Notify the copy-trade service right after the journal write
-    const OUTCOME_TOKEN = "0xB52c5934113Af5c0Bb20eb3C72290C8215f755b9";
-
-    const binaryInfo =
-      market.info.marketType === "BINARY"
-        ? (market.info as { yesTokenId?: string; noTokenId?: string })
-        : null;
-
-    const yesId =
-      binaryInfo?.yesTokenId != null ? String(binaryInfo.yesTokenId) : "";
-    const noId =
-      binaryInfo?.noTokenId != null ? String(binaryInfo.noTokenId) : "";
-
-    // Dry-run never fires the copy service: there's no real fill behind it,
-    // so copiers must not be signaled to trade off a paper position. This is
-    // a hard skip (the call isn't made at all), not just a dryRun:true flag
-    // in the payload — the copy service should never even see a dry-run
-    // signal.
-    if (ctx.config.dryRun) {
-      log(`${market.symbol}: skip copy notify — dry run`);
-    } else if (!yesId || !noId) {
-      log(
-        `${market.symbol}: skip copy notify — missing yesTokenId/noTokenId on market.info`
-      );
-    } else {
-      writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH);
-
-      // Residual liquidity on the leg we just bought, measured AFTER our
-      // own fill — this is what a copier's IOC will actually see a moment
-      // later 
-      let remainingAsks: [number, number][] | undefined;
-      try {
-        const postFillBook = await ctx.exchange.fetchOrderBook(fav, BOOK_DEPTH);
-        recordOrderBook(fav, postFillBook);
-        remainingAsks = postFillBook.asks
-          .filter(([px]: [number, number]) => px <= copierLimitPrice)
-          .map(([px, amt]: [number, number]) => [px, amt] as [number, number]);
-      } catch (e) {
-        log(
-          `${market.symbol}: post-fill residual re-fetch failed — copy will poll snapshot instead (${(e as Error).message})`
-        );
-      }
-
-      console.log(
-        "copy residual",
-        fav,
-        JSON.stringify(remainingAsks),
-        "notional",
-        (remainingAsks ?? [])
-          .filter((l) => l[0] <= copierLimitPrice)
-          .reduce((s, l) => s + l[0] * l[1], 0),
-      );
-
-      notifyCopyService({
-        id: `sig_${marketId}_${Date.now()}`,
-        marketId: marketId,
-        symbol: market.symbol,
-        asset: info.asset,
-        window: windowLabel(info.intervalSec),
-        side: bullish ? "BUY_YES" : "BUY_NO",
-        price: filledAskPx,
-        limitPrice: copierLimitPrice,
-        pool: onchain.pool,
-        expiryMs: info.expiryMs,
-        dryRun: ctx.config.dryRun,
-        timestamp: Date.now(),
-        outcomeToken: OUTCOME_TOKEN,
-        yesId,
-        noId,
-        venueSymbol: fav,
-        remainingAsks,
-      });
-    }
-
+   
     // Post to Telegram AFTER the journal write so a signal always shows up in
     // the dashboard even if the Telegram call fails or isn't configured — then
     // log a second decision record with the message_id attached, so the last-
@@ -1605,9 +1528,6 @@ async function main() {
   while (!stop) {
     const cycle = newCycle();
     try {
-      // Collect anything that settled since the last pass. Self-throttled
-      // (AUTO_CLAIM_INTERVAL_MS) and a no-op under AUTO_CLAIM=false.
-      await withTimeout(maybeClaim(ctx), 20_000, "maybeClaim");
       // Independent of whatever activeMarkets() returns this cycle — see the
       // comment on positionExpiry above for why this can't just rely on
       // isTradable() being seen again for a symbol that already settled.
@@ -1648,7 +1568,7 @@ async function main() {
             // — see timeout.ts for why this can't be fixed inside the SDK itself).
             await withTimeout(
               takeOne(ctx, spot, refs, m, cycle, paceCache),
-              20_000,
+              60_000,
               `takeOne(${m.symbol})`
             );
           } catch (e) {

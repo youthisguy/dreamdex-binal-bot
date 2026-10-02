@@ -79,7 +79,7 @@ Full trade-by-trade history (every signal and settlement, testnet and mainnet) i
  
 | Network | CopyVault address |
 |---|---|
-| **Mainnet** | `0x921772bf13175E5E39672154bDe3C521d859eFCA` |
+| **Mainnet** | `0xDa734c4691D61D290E8A40c23870a3E613828eA7` |
 | **Testnet** (Somnia Shannon) | `0xBE24664ebC322aBA45bbA28d05b11B0f9D3E5Ed0` |
  
 ---

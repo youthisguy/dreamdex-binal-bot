@@ -4,6 +4,8 @@
 const copyServiceUrl = () => process.env.COPY_SERVICE_URL;
 
 const CALL_TIMEOUT_MS = 8_000;
+const EXECUTE_TIMEOUT_MS = Number(process.env.COPY_EXECUTE_TIMEOUT_MS ?? 45_000);
+
 const SETTLE_IMMEDIATE_RETRIES = 3;
 const SETTLE_RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
 /** Extra re-posts after first success/attempt (covers copy-service / RPC outages). */
@@ -60,23 +62,34 @@ function post(path: string, body: unknown): void {
 }
 
 export interface CopySignal {
-  id: string;
+  signalId: string;        
   marketId: string;
   symbol: string;
   asset: string;
   window: string;
   side: "BUY_YES" | "BUY_NO";
-  price: number;
-  limitPrice: number;
+  price: number;           
+  limitPrice: number;       
   pool: string;
   expiryMs: number | null;
   dryRun: boolean;
   timestamp: number;
-  outcomeToken: string;  
-  yesId: string;          
+  outcomeToken: string;
+  yesId: string;
   noId: string;
   venueSymbol: string;
-  remainingAsks?: [number, number][];
+  houseCollateralRaw: string; 
+}
+
+export interface CopyExecuteResult {
+  filled: boolean;
+  houseCollateralUsed: number;
+  houseSharesReceived: number;
+  copierCount: number;
+  copierCollateralUsed: number;
+  copierSharesReceived: number;
+  totalCollateralUsed: number;
+  totalSharesReceived: number;
 }
 
 export function notifyCopyService(signal: CopySignal): void {
@@ -89,6 +102,27 @@ export interface CopySettlement {
   payoutPerShare: number;
   dryRun: boolean;
   winningSide?: "BUY_YES" | "BUY_NO";
+}
+
+export async function executeCopySignal(signal: CopySignal): Promise<CopyExecuteResult> {
+  const url = copyServiceUrl();
+  const secret = process.env.COPY_WEBHOOK_SECRET;
+  if (!url || !secret) throw new Error("COPY_SERVICE_URL / COPY_WEBHOOK_SECRET not set");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXECUTE_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${url}/api/signal/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-webhook-secret": secret },
+      body: JSON.stringify(signal),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`copy-service /api/signal/execute: HTTP ${res.status}`);
+    return (await res.json()) as CopyExecuteResult;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
