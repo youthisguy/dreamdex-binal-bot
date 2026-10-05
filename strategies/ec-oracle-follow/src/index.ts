@@ -1151,7 +1151,7 @@ async function takeOne(
         Math.floor(size * askPx * 10 ** ctx.config.decimals)
       ).toString();
 
-      writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH); // BEFORE the call, not after
+      writeOrderBookSnapshot(ORDERBOOK_SNAPSHOT_PATH);  
 
       const OUTCOME_TOKEN = "0xB52c5934113Af5c0Bb20eb3C72290C8215f755b9";
       const res = await executeCopySignal({
