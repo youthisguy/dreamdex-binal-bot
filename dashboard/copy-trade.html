@@ -1049,7 +1049,7 @@
         }
       }
 
-      // Fetch the connected wallet's own USDso balance (not the vault's idle balance)
+      // Fetch the connected wallet's own USDso balance  
       async function refreshWalletBalance() {
         if (!walletToken || !address) return;
         try {
@@ -1275,7 +1275,7 @@
         window.ethereum.on?.("chainChanged", () => location.reload());
       }
 
-      // ── Poll leaderboard (public) regardless of connection state ────
+      // ── Poll leaderboard ────
       refreshLeaderboard();
       setInterval(() => {
         refreshLeaderboard();

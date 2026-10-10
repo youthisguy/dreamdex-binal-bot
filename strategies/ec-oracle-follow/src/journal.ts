@@ -72,6 +72,18 @@ export interface DecisionRecord {
   // history to judge; reversal_flagged is only meaningful when non-null.
   reversal_flagged: boolean | null;
   reversal_ratio: number | null;
+  // Forced-flow context (flow-risk.ts, Binance). Always logged so settled
+  // outcomes can be checked against it; only acts as a veto if
+  // OF_REQUIRE_TRAP_CHECK is on.
+  // liq_aligned_*: USD force-liquidated in the recent window on the side that
+  // pushes price in this trade's direction (longs for DOWN, shorts for UP).
+  // oi_change_pct: % change in open interest over the lookback; negative while
+  // price runs our way = positions closing/liquidating (flush-like).
+  // All null when the feed was down or still warming up.
+  liq_aligned_usd?: number | null;
+  liq_against_usd?: number | null;
+  liq_aligned_ratio?: number | null;
+  oi_change_pct?: number | null;
   reason: string;
   expiry_ms: number | null;
   ref_price: number | null; // the strike, or the window's own opening price
@@ -88,6 +100,34 @@ export function logDecision(rec: DecisionRecord): void {
     ...rec,
   });
   scheduleCheckpoint(`decision:${rec.market_id}`);
+}
+
+/**
+ * A momentum entry that the forced-flow trap check REFUSED. Written so the
+ * veto can be scored afterwards (did the trade it blocked actually lose?) —
+ * without this a vetoed trade leaves no trace and the gate can't be measured.
+ * Not a "decision": computeStats/pendingMarketIds ignore it, so it never
+ * touches the track record or settlement backfill.
+ */
+export interface VetoRecord {
+  market_id: string;
+  symbol: string;
+  asset: string;
+  window: string;
+  signal: "UP" | "DOWN";
+  dry_run: boolean;
+  expiry_ms: number | null;
+  ref_price: number | null;
+  ref_kind: "strike" | "opening" | null;
+  liq_aligned_usd: number | null;
+  liq_aligned_ratio: number | null;
+  oi_change_pct: number | null;
+  reason: string;
+}
+
+export function logVeto(rec: VetoRecord): void {
+  appendRecord({ type: "veto", action: "TRAP_VETO", ...rec });
+  scheduleCheckpoint(`veto:${rec.market_id}`);
 }
 
 export interface CycleSummary {

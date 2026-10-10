@@ -63,12 +63,14 @@ import {
   type SpotReader,
 } from "./signal.js";
 import { paceReader, writePulse, type PaceReading } from "./volume-pace.js";
+import { createFlowRisk } from "./flow-risk.js";
 import { Positions } from "./position.js";
 import {
   logDecision,
   logCycleSummary,
   backfillSettlements,
   computeStats,
+  logVeto,
 } from "./journal.js";
 import { postSignal } from "./telegram.js";
 import { withTimeout } from "./timeout.js";
@@ -96,6 +98,12 @@ const EDGE = Number(process.env.OF_EDGE ?? 0.03);
 // likely explanation is that the model is wrong and the market knows something
 // it doesn't. Set to 0 or less to disable.
 const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
+// The disagreement cap is currently held OFF. That used to be a hardcoded
+// `false &&` inside the check (dead code, which TypeScript flags as
+// unreachable); this is the same behaviour as a real switch, default OFF.
+// Set OF_DISAGREEMENT_GATE=true to re-enable the OF_MAX_DISAGREEMENT cap.
+const DISAGREEMENT_GATE_ENABLED =
+  (process.env.OF_DISAGREEMENT_GATE ?? "false") === "true";
 const MIN_MARKET_PRICE = Number(process.env.OF_MIN_MARKET_PRICE ?? 0.35);
 const MAX_SHARES = envNum("OF_MAX_SHARES", 777);
 const MAX_EXPOSURE = envNum("OF_MAX_EXPOSURE", 7770);
@@ -334,6 +342,15 @@ const REVERSAL_RATIO_MIN = Number(process.env.OF_REVERSAL_RATIO_MIN ?? 0.35);
 // veto-only-when-detected check, and should be opted into deliberately.
 const REVERSAL_REQUIRE_READING =
   (process.env.OF_REVERSAL_REQUIRE_READING ?? "false") === "true";
+// Forced-flow trap veto (see flow-risk.ts evaluateTrap). Volume/delta confirm a
+// move is real; a liquidation cascade is real too, and reverses once the forced
+// flow is spent. Refuses a NEW momentum entry only when ALL of: liquidations on
+// our side are far above baseline, large in dollars, AND Binance open interest
+// is falling. Missing/warming data never blocks. Thresholds: OF_TRAP_LIQ_RATIO_MIN,
+// OF_TRAP_LIQ_USD_MIN, OF_TRAP_OI_DROP_PCT. Default OFF until validated against
+// the logged liq_*/oi_* fields.
+const REQUIRE_TRAP_CHECK =
+  (process.env.OF_REQUIRE_TRAP_CHECK ?? "false") === "true";
 // Bucket size for the volume pace curve. 900_000 = 15 min matches DreamDEX's
 // own :00/:15/:30/:45 market grid exactly. Must be a whole number of minutes.
 const VOLUME_CANDLE_MS = envNum("OF_VOLUME_CANDLE_MS", 900_000);
@@ -426,6 +443,10 @@ const pace = paceReader({
   reversalRecentMin: REVERSAL_RECENT_MIN,
   reversalRatioMin: REVERSAL_RATIO_MIN,
 });
+// Forced-flow context from Binance (liquidations + open interest). Always
+// logged into the decision journal; only vetoes a trade if OF_REQUIRE_TRAP_CHECK
+// is on. Never delays a trade either way.
+const flowRisk = createFlowRisk();
 // Per-market state keyed by SYMBOL — never by pool address, which v2 recycles
 // across successive markets.
 const position = new Positions();
@@ -590,6 +611,7 @@ async function takeOne(
     lastTake.delete(market.symbol);
     enteredMarkets.delete(market.symbol);
     warned.delete(`opp:${market.symbol}`);
+    warned.delete(`trap:${market.symbol}`);
     clearUnpairedLeg(market.symbol);
     note(cycle, "not trading");
     return;
@@ -820,6 +842,40 @@ async function takeOne(
     }
   }
 
+  // Forced-flow trap veto. Only for momentum-driven entries (that's the flow we
+  // would be following). Constant note text: skip reasons are map keys, so
+  // numbers go to the log, once per market, not into the key.
+  if (REQUIRE_TRAP_CHECK && useMomentum) {
+    const trap = flowRisk.checkTrap(thisAsset, bullish ? "UP" : "DOWN", Date.now());
+    if (trap.blocked) {
+      if (!warned.has(`trap:${market.symbol}`)) {
+        warned.add(`trap:${market.symbol}`);
+        log(`${market.symbol}: forced-flow trap veto ${bullish ? "UP" : "DOWN"} — ${trap.reason}`);
+        // One record per market (the warned guard), so the veto can be scored
+        // against what the trade would have done (scripts/flow-report.mjs).
+        if (info.marketId) {
+          logVeto({
+            market_id: info.marketId,
+            symbol: market.symbol,
+            asset: info.asset,
+            window: windowLabel(info.intervalSec),
+            signal: bullish ? "UP" : "DOWN",
+            dry_run: ctx.config.dryRun,
+            expiry_ms: info.expiryMs,
+            ref_price: ref?.price ?? null,
+            ref_kind: ref?.kind ?? null,
+            liq_aligned_usd: trap.reading.liqAlignedUsd,
+            liq_aligned_ratio: trap.reading.liqAlignedRatio,
+            oi_change_pct: trap.reading.oiChangePct,
+            reason: trap.reason,
+          });
+        }
+      }
+      note(cycle, "forced-flow trap (OF_REQUIRE_TRAP_CHECK)");
+      return;
+    }
+  }
+
   if (!bullish && DISABLE_DOWN) {
     note(cycle, "DOWN trades disabled (OF_DISABLE_DOWN)");
     return;
@@ -883,7 +939,7 @@ async function takeOne(
   // it's cheaper by a lot. For the momentum model the gap is the tilt; for the
   // strike model it is |fair − market|.
   const disagreement = Math.abs(fairFav - marketFair);
-  if (MAX_DISAGREEMENT > 0 && disagreement > MAX_DISAGREEMENT) {
+  if (DISAGREEMENT_GATE_ENABLED && MAX_DISAGREEMENT > 0 && disagreement > MAX_DISAGREEMENT) {
     if (!cycle.widest || disagreement > cycle.widest.by) {
       cycle.widest = {
         symbol: fav,
@@ -1036,6 +1092,19 @@ async function takeOne(
             `against ${bullish ? "UP" : "DOWN"} (recent ${rev.recentDelta.toFixed(
               1
             )} vs earlier ${rev.earlierDelta.toFixed(1)})`
+        );
+        return;
+      }
+    }
+
+    // Re-checked at fire time like the reversal check above: a cross-asset hold
+    // can outlast the point where a cascade starts.
+    if (REQUIRE_TRAP_CHECK && useMomentum) {
+      const trap = flowRisk.checkTrap(thisAsset, bullish ? "UP" : "DOWN", Date.now());
+      if (trap.blocked) {
+        log(
+          `${market.symbol}: held trade dropped — forced-flow trap against ` +
+            `${bullish ? "UP" : "DOWN"} (${trap.reason})`
         );
         return;
       }
@@ -1236,6 +1305,14 @@ async function takeOne(
     if (info.expiryMs !== null)
       positionExpiry.set(market.symbol, info.expiryMs);
 
+    // Read at fire time, not at qualification time: fire() can be held for the
+    // cross-asset partner, and forced flow can change a lot in that gap.
+    const flowReading = flowRisk.read(
+      thisAsset,
+      bullish ? "UP" : "DOWN",
+      Date.now()
+    );
+
     logDecision({
       market_id: info.marketId!, // guaranteed by this point: a tradable BINARY market that passed marketInfo() and isTradable() above
       symbol: market.symbol,
@@ -1257,6 +1334,10 @@ async function takeOne(
       delta_ratio: deltaRatioRaw,
       reversal_flagged: reversalReading?.flagged ?? null,
       reversal_ratio: reversalReading?.ratio ?? null,
+      liq_aligned_usd: flowReading.liqAlignedUsd,
+      liq_against_usd: flowReading.liqAgainstUsd,
+      liq_aligned_ratio: flowReading.liqAlignedRatio,
+      oi_change_pct: flowReading.oiChangePct,
       reason: why,
       expiry_ms: info.expiryMs,
       ref_price: ref?.price ?? null,
@@ -1317,6 +1398,10 @@ async function takeOne(
         delta_ratio: deltaRatioRaw,
         reversal_flagged: reversalReading?.flagged ?? null,
         reversal_ratio: reversalReading?.ratio ?? null,
+        liq_aligned_usd: flowReading.liqAlignedUsd,
+        liq_against_usd: flowReading.liqAgainstUsd,
+        liq_aligned_ratio: flowReading.liqAlignedRatio,
+        oi_change_pct: flowReading.oiChangePct,
         reason: why,
         expiry_ms: info.expiryMs,
         ref_price: ref?.price ?? null,
@@ -1422,6 +1507,7 @@ async function refreshPace(): Promise<Map<Asset, PaceReading | null>> {
   const now = Date.now();
   await Promise.all(
     (["BTC", "ETH"] as Asset[]).map(async (a) => {
+      flowRisk.sampleOi(a, now); // fire-and-forget, self-throttled, never throws
       try {
         out.set(a, await withTimeout(pace.getPace(a, now), 12_000, `pace(${a})`));
         warned.delete(`pace:${a}`);
@@ -1448,6 +1534,13 @@ async function main() {
   // Copy service polls live books through prod-server → this internal port.
   startLiveBookServer(ctx);
 
+  // Liquidation websocket (shadow-log only). Non-blocking; a dead feed just
+  // yields null readings.
+  flowRisk.start();
+  log(
+    `flow-risk context: ${flowRisk.describe()} · trapVeto=${REQUIRE_TRAP_CHECK ? "ON" : "off (log only)"}`
+  );
+
   if (SPOT_SOURCE === "binance" || process.env.NETWORK === "mainnet") {
     spot = coinbaseSpotReader();
     log(`using Coinbase REST spot reader (mainnet)`);
@@ -1473,7 +1566,7 @@ async function main() {
       ctx.exchange.walletAddress ?? "(no key, dry run)"
     } · dryRun=${ctx.config.dryRun} · ` +
       `model=${MODEL} interval=${INTERVAL_MS}ms window=${WINDOW_MS}ms edge=${EDGE} ` +
-      `maxDisagreement=${MAX_DISAGREEMENT > 0 ? MAX_DISAGREEMENT : "off"} ` +
+      `maxDisagreement=${DISAGREEMENT_GATE_ENABLED && MAX_DISAGREEMENT > 0 ? MAX_DISAGREEMENT : "off"} ` +
       `maxHorizons=${
         MAX_HORIZONS > 0
           ? `${MAX_HORIZONS} (${((MAX_HORIZONS * WINDOW_MS) / 60_000).toFixed(
