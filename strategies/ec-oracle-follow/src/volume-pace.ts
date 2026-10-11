@@ -465,7 +465,13 @@ const r3 = (n: number): number => Number(n.toFixed(3));
 export function writePulse(
   path: string,
   readings: Map<Asset, PaceReading | null>,
-  meta: { gateEnabled: boolean; ratioMin: number; bucketMin: number }
+  meta: {
+    gateEnabled: boolean;
+    ratioMin: number;
+    bucketMin: number;
+    /** Forced-flow snapshot (flow-risk.ts) for the dashboard's FLOW RISK row. */
+    flowRisk?: unknown;
+  }
 ): void {
   try {
     const assets: Record<string, unknown> = {};
@@ -511,6 +517,7 @@ export function writePulse(
       gate_enabled: meta.gateEnabled,
       ratio_min: meta.ratioMin,
       bucket_min: meta.bucketMin,
+      flow_risk: meta.flowRisk ?? null,
       assets,
     };
     mkdirSync(dirname(path), { recursive: true });

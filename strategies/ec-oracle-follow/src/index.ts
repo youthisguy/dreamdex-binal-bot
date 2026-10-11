@@ -1524,6 +1524,14 @@ async function refreshPace(): Promise<Map<Asset, PaceReading | null>> {
     gateEnabled: REQUIRE_VOLUME_CONFIRM,
     ratioMin: VOLUME_RATIO_MIN,
     bucketMin: VOLUME_CANDLE_MS / 60_000,
+    flowRisk: {
+      veto_on: REQUIRE_TRAP_CHECK,
+      config: flowRisk.config(),
+      assets: {
+        BTC: flowRisk.snapshot("BTC", now),
+        ETH: flowRisk.snapshot("ETH", now),
+      },
+    },
   });
   return out;
 }

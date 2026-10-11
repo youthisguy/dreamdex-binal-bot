@@ -505,7 +505,21 @@
       .rv-status { min-width: 74px; text-align: right; color: var(--text-bright); font-weight: 600; }
       .pulse-note { font-size: 9px; color: var(--text-muted); text-transform: uppercase; line-height: 1.5; }
       .rv-status.warn { color: var(--neg); }
-      .rv.reversal-flagged { background: var(--neg-bg); outline: 1px solid var(--neg); outline-offset: -2px; padding: 2px 4px; }
+      /* ---- Flow risk (Binance liquidations + OI) ---- */
+      .rv .rv-lab { min-width: 62px; }
+      .rv-fill.risk { background: var(--neg); }
+      .rv-status.wide { min-width: 92px; }
+      .flow-box { display: flex; flex-direction: column; gap: 6px; padding: 2px 4px; }
+      .flow-box.hot { background: var(--neg-bg); outline: 1px solid var(--neg); outline-offset: -2px; }
+      .flow-head { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+      .flow-chip { font-weight: 600; color: var(--text-bright); padding: 1px 6px; border: 1px solid var(--border-bright); }
+      .flow-chip.pos { color: var(--pos); border-color: var(--pos); }
+      .flow-chip.warn { color: var(--neg); border-color: var(--neg); background: var(--neg-bg); }
+      /* ---- Left column sizing: only MARKET PULSE flexes ---- */
+      .layout-column { overflow-y: auto; }
+      .layout-column > .card:not(.pulse-card) { flex-shrink: 0; }
+      .pulse-card { min-height: 240px; }
+      .pnl-card .card-body { flex: 0 0 auto; height: 176px; }
     </style>
   </head>
   <body>
@@ -557,7 +571,7 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card pnl-card">
             <div class="card-header">
               <h2>CUMULATIVE PNL (STL)</h2>
               <!-- <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">[PINCH/SCROLL: ZOOM | DRAG: PAN]</span> -->
@@ -567,14 +581,6 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-header"><h2>EXECUTION SKIPS (LOG)</h2></div>
-            <div class="card-body">
-              <div class="sitout-list" id="sitoutList">
-                <div class="empty-state">AWAITING DATA...</div>
-              </div>
-            </div>
-          </div>
 
           <div class="card pulse-card">
             <div class="card-header">
@@ -825,25 +831,6 @@
           rows ||
           '<tr><td colspan="7" class="empty-state">NO MATCHING DATA</td></tr>';
 
-        const sortedSkips = Object.entries(cycleSkips)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 8);
-        const maxSkip = sortedSkips.length ? sortedSkips[0][1] : 1;
-        document.getElementById("sitoutList").innerHTML = sortedSkips.length
-          ? sortedSkips
-              .map(
-                ([reason, n]) => `
-        <div class="sitout-row">
-          <span class="reason" title="${reason}">${reason}</span>
-          <span class="sitout-bar-bg"><span class="sitout-bar-fill" style="width:${(
-            (n / maxSkip) *
-            100
-          ).toFixed(0)}%"></span></span>
-          <span class="count">${n}</span>
-        </div>`
-              )
-              .join("")
-          : '<div class="empty-state">NO SKIPS LOGGED</div>';
 
         const chronoSettled = [...settled].sort(
           (a, b) => new Date(a.settled_at) - new Date(b.settled_at)
@@ -1137,7 +1124,7 @@
              <span class="rv-status ${hit ? "pos" : ""}">${status}</span></div>` +
           `<div class="pulse-note" title="Rows = prior windows. Brighter = more volume than typical for that minute. Cyan tick = gate. Baseline = median of ${d.rows.length} windows (${d.sources.join(" + ")}).">${fmtVol(d.cum)} vs ${fmtVol(d.baseline_cum)} typical @ ${k}m · gate ≥${gate.toFixed(2)}x${d.sources.length < 2 ? ` · <span class="neg">${d.sources.join("+")} only</span>` : ""}</div>` +
           renderDeltaRow(d) +
-          renderReversalRow(d);
+          renderFlowRiskRow(pulseAsset);
       }
 
       // Order-flow delta readout: net taker buy-sell vs its own noisy
@@ -1162,29 +1149,69 @@
              <span class="rv-status ${cls}">${dir} ${mag.toFixed(2)}x</span></div>`;
       }
 
-      // Flow-reversal readout: is the most recent closed minute(s) already
-      // unwinding the push behind FLOW/cumDelta above? FLOW is cumulative
-      // over the whole forming window, so an early push that's already
-      // reversing can still read positive there — this looks at just the
-      // tail end. Only meaningful once both an "earlier" and "recent" half
-      // of the window exist (rev != null); before that it's still warming.
-      function renderReversalRow(d) {
-        if (!d.delta_available) return "";
-        const rev = d.reversal;
-        if (!rev) {
-          return `<div class="pulse-note">REVERSAL: warming up</div>`;
-        }
-        const earlierDir = rev.earlier_delta >= 0 ? "BUY" : "SELL";
-        const recentDir = rev.recent_delta >= 0 ? "BUY" : "SELL";
-        const label = rev.flagged
-          ? `${recentDir} UNWINDING ${earlierDir} (${rev.ratio.toFixed(2)}x)`
-          : `STEADY (${rev.ratio.toFixed(2)}x)`;
-        return `<div class="rv${rev.flagged ? " reversal-flagged" : ""}" title="Last ${rev.recent_min}m delta ${fmtVol(rev.recent_delta)} vs earlier ${fmtVol(rev.earlier_delta)}">
-             <span>REVERSAL</span>
-             <div class="rv-bar">
-               <div class="rv-fill${rev.flagged ? " hit" : ""}" style="width:${Math.min(rev.ratio / 2, 1) * 100}%"></div>
-             </div>
-             <span class="rv-status ${rev.flagged ? "warn" : ""}">${label}</span></div>`;
+      // FLOW RISK: the forced-flow trap check the bot actually uses (flow-risk.ts).
+      // Volume and delta confirm a move is real; a liquidation cascade is real too,
+      // and tends to reverse once the forced flow is spent. Two things separate
+      // them: how much of the move is LIQUIDATIONS (vs their own 1h norm), and
+      // whether OPEN INTEREST is draining (positions closing, not new ones opening).
+      // A DOWN entry follows forced LONG liquidations; an UP entry follows forced
+      // SHORT liquidations — so each side's bar guards the opposite-named entry.
+      function fmtUsd(v) {
+        if (v == null) return "–";
+        if (v >= 1e6) return "$" + (v / 1e6).toFixed(1) + "M";
+        if (v >= 1e3) return "$" + Math.round(v / 1e3) + "k";
+        return "$" + Math.round(v);
+      }
+
+      function renderFlowRiskRow(asset) {
+        const fr = pulse && pulse.flow_risk;
+        const f = fr && fr.assets && fr.assets[asset];
+        const c = fr && fr.config;
+        if (!fr || !f || !c) return '<div class="pulse-note">FLOW RISK: awaiting bot data</div>';
+        if (c.enabled === false) return '<div class="pulse-note">FLOW RISK: off (OF_FLOW_RISK_LOG=false)</div>';
+
+        const usdMin = (c.usd_min && c.usd_min[asset]) || 0;
+        const vetoOn = !!fr.veto_on;
+        const liqScale = c.ratio_min * 1.6; // gate tick sits at 62.5% of the bar
+        const oiScale = c.oi_drop_pct * 3; // gate tick sits at 33% of the bar
+
+        const liqRow = (label, usd, ratio, tip) => {
+          const hot = ratio != null && ratio >= c.ratio_min && usd >= usdMin;
+          const fill = ratio == null ? 0 : Math.min(ratio / liqScale, 1) * 100;
+          const txt = ratio == null ? (f.connected ? "WARMING" : "–") : ratio.toFixed(1) + "x " + fmtUsd(usd);
+          return '<div class="rv" title="' + tip + '"><span class="rv-lab">' + label + '</span>' +
+            '<div class="rv-bar"><div class="rv-fill' + (hot ? " risk" : "") + '" style="width:' + fill.toFixed(1) + '%"></div>' +
+            '<span class="rv-gate" style="left:' + ((c.ratio_min / liqScale) * 100).toFixed(1) + '%"></span></div>' +
+            '<span class="rv-status wide ' + (hot ? "warn" : "") + '">' + txt + '</span></div>';
+        };
+
+        const oi = f.oiChangePct;
+        const oiHot = oi != null && oi <= -c.oi_drop_pct;
+        const oiFill = oi == null ? 0 : Math.min(Math.max(-oi, 0) / oiScale, 1) * 100;
+        const oiTxt = oi == null ? (f.connected ? "WARMING" : "–") : (oi >= 0 ? "+" : "") + oi.toFixed(2) + "%";
+        const oiCls = oiHot ? "warn" : oi != null && oi > 0 ? "pos" : "";
+        const oiRow =
+          '<div class="rv" title="Binance open interest change over ' + c.oi_lookback_min + 'm. Falling while price runs one way = positions closing or being liquidated."><span class="rv-lab">OI ' + c.oi_lookback_min + 'M</span>' +
+          '<div class="rv-bar"><div class="rv-fill' + (oiHot ? " risk" : "") + '" style="width:' + oiFill.toFixed(1) + '%"></div>' +
+          '<span class="rv-gate" style="left:' + ((c.oi_drop_pct / oiScale) * 100).toFixed(1) + '%"></span></div>' +
+          '<span class="rv-status wide ' + oiCls + '">' + oiTxt + '</span></div>';
+
+        const blocked = [];
+        if (f.upBlocked) blocked.push("UP");
+        if (f.downBlocked) blocked.push("DOWN");
+        let chip, chipCls;
+        if (!f.connected) { chip = "FEED OFFLINE"; chipCls = "warn"; }
+        else if (blocked.length) { chip = (vetoOn ? "BLOCKING " : "WOULD BLOCK ") + blocked.join("+"); chipCls = "warn"; }
+        else if (f.longRatio == null || f.shortRatio == null || f.oiChangePct == null) { chip = "WARMING"; chipCls = ""; }
+        else { chip = "CLEAR"; chipCls = "pos"; }
+
+        return '<div class="flow-box' + (blocked.length ? " hot" : "") + '">' +
+          '<div class="flow-head"><span>FLOW RISK</span><span class="flow-chip ' + chipCls + '">' + chip + '</span></div>' +
+          liqRow("LIQ LONGS", f.longUsd, f.longRatio, "Longs liquidated in the last " + c.recent_min + "m vs their " + c.baseline_min + "m norm. Forced selling: guards DOWN entries.") +
+          liqRow("LIQ SHORTS", f.shortUsd, f.shortRatio, "Shorts liquidated in the last " + c.recent_min + "m vs their " + c.baseline_min + "m norm. Forced buying: guards UP entries.") +
+          oiRow +
+          '<div class="pulse-note">block = LIQ ≥' + c.ratio_min + 'x &amp; ≥' + fmtUsd(usdMin) + ' AND OI ≤ -' + c.oi_drop_pct + '% · ' + c.recent_min + 'm liq vs ' + c.baseline_min + 'm norm · BINANCE ONLY' + (vetoOn ? "" : ' · <span class="neg">VETO OFF (LOG ONLY)</span>') + '</div>' +
+          '</div>';
       }
 
       async function fetchPulse() {

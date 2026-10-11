@@ -143,6 +143,11 @@ export class LiquidationFeed {
     }
   }
 
+  /** True while the websocket is up (readings are null otherwise). */
+  isConnected(): boolean {
+    return this.connectedSince !== null;
+  }
+
   /** Public so tests (and a future replay tool) can feed events directly. */
   record(ev: LiqEvent): void {
     const minute = Math.floor(ev.at / MINUTE_MS) * MINUTE_MS;
@@ -426,6 +431,42 @@ export function evaluateTrap(r: FlowRiskReading, cfg: TrapConfig, asset: Asset):
 // Facade used by index.ts
 // ---------------------------------------------------------------------------
 
+/** Both liquidation sides + OI for one asset, for the dashboard. */
+export interface FlowSnapshot {
+  connected: boolean;
+  /** USD of LONGS liquidated in the recent window (forced selling; the side a DOWN entry follows). */
+  longUsd: number | null;
+  /** USD of SHORTS liquidated in the recent window (forced buying; the side an UP entry follows). */
+  shortUsd: number | null;
+  longRatio: number | null;
+  shortRatio: number | null;
+  oiChangePct: number | null;
+  /** Would the trap check refuse an UP / DOWN entry right now (ignoring whether the veto is switched on). */
+  upBlocked: boolean;
+  downBlocked: boolean;
+}
+
+export interface FlowConfigView {
+  enabled: boolean;
+  ratio_min: number;
+  usd_min: Record<Asset, number>;
+  oi_drop_pct: number;
+  recent_min: number;
+  baseline_min: number;
+  oi_lookback_min: number;
+}
+
+const EMPTY_SNAPSHOT: FlowSnapshot = {
+  connected: false,
+  longUsd: null,
+  shortUsd: null,
+  longRatio: null,
+  shortRatio: null,
+  oiChangePct: null,
+  upBlocked: false,
+  downBlocked: false,
+};
+
 const EMPTY: FlowRiskReading = {
   liqAlignedUsd: null,
   liqAgainstUsd: null,
@@ -444,6 +485,10 @@ export interface FlowRisk {
   read(asset: Asset, dir: TradeDir, now: number): FlowRiskReading;
   /** Reading + verdict against the OF_TRAP_* thresholds. Only acted on when OF_REQUIRE_TRAP_CHECK is on. */
   checkTrap(asset: Asset, dir: TradeDir, now: number): TrapVerdict & { reading: FlowRiskReading };
+  /** Dashboard view: both liquidation sides + OI + whether each direction would be refused. */
+  snapshot(asset: Asset, now: number): FlowSnapshot;
+  /** Thresholds the dashboard draws its gate marks from. */
+  config(): FlowConfigView;
 }
 
 export function createFlowRisk(): FlowRisk {
@@ -456,6 +501,16 @@ export function createFlowRisk(): FlowRisk {
       sampleOi() {},
       read: () => EMPTY,
       checkTrap: () => ({ blocked: false, reason: "flow-risk off", reading: EMPTY }),
+      snapshot: () => EMPTY_SNAPSHOT,
+      config: () => ({
+        enabled: false,
+        ratio_min: 0,
+        usd_min: { BTC: 0, ETH: 0 },
+        oi_drop_pct: 0,
+        recent_min: 0,
+        baseline_min: 0,
+        oi_lookback_min: 0,
+      }),
     };
   }
 
@@ -467,10 +522,11 @@ export function createFlowRisk(): FlowRisk {
     "wss://fstream.binance.com/market/stream?streams=!forceOrder@arr/btcusdt@markPrice@1s";
 
   const recentMin = envNum("OF_LIQ_RECENT_MIN", 3);
+  const baselineMin = envNum("OF_LIQ_BASELINE_MIN", 60);
   const feed = new LiquidationFeed({
     url,
     recentMin,
-    baselineMin: envNum("OF_LIQ_BASELINE_MIN", 60),
+    baselineMin,
     warmupMin: envNum("OF_LIQ_WARMUP_MIN", 15),
     floorUsd: envNum("OF_LIQ_FLOOR_USD", 50_000),
     staleMs: envNum("OF_LIQ_STALE_MS", 30_000),
@@ -513,5 +569,29 @@ export function createFlowRisk(): FlowRisk {
       const reading = read(asset, dir, now);
       return { ...evaluateTrap(reading, trapCfg, asset), reading };
     },
+    snapshot(asset, now) {
+      // For an UP entry the pushing side is SHORT liquidations; for DOWN it is LONG.
+      const up = read(asset, "UP", now);
+      const down = read(asset, "DOWN", now);
+      return {
+        connected: feed.isConnected(),
+        shortUsd: up.liqAlignedUsd,
+        shortRatio: up.liqAlignedRatio,
+        longUsd: down.liqAlignedUsd,
+        longRatio: down.liqAlignedRatio,
+        oiChangePct: up.oiChangePct,
+        upBlocked: evaluateTrap(up, trapCfg, asset).blocked,
+        downBlocked: evaluateTrap(down, trapCfg, asset).blocked,
+      };
+    },
+    config: () => ({
+      enabled: true,
+      ratio_min: trapCfg.liqRatioMin,
+      usd_min: trapCfg.liqUsdMin,
+      oi_drop_pct: trapCfg.oiDropPct,
+      recent_min: recentMin,
+      baseline_min: baselineMin,
+      oi_lookback_min: lookbackMin,
+    }),
   };
 }
