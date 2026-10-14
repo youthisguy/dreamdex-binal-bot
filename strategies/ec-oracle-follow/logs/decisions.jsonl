@@ -34229,3 +34229,17 @@
 {"timestamp":"2026-10-14T12:51:56.250Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum unconfirmed by order-flow delta (OF_REQUIRE_DELTA_CONFIRM)":1,"already entered this market":1}}
 {"timestamp":"2026-10-14T12:52:28.285Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum unconfirmed by order-flow delta (OF_REQUIRE_DELTA_CONFIRM)":1,"already entered this market":1}}
 {"timestamp":"2026-10-14T12:52:49.892Z","type":"veto","action":"TRAP_VETO","market_id":"0x000000000000000000000000000000000000000000000000000000000000ab93","symbol":"BTC-8277586-14OCT26-1300/USDso","asset":"BTC","window":"15m","signal":"UP","dry_run":false,"expiry_ms":1791982800000,"ref_price":82775.86,"ref_kind":"strike","liq_aligned_usd":320162,"liq_aligned_ratio":6.4,"oi_change_pct":-0.318,"reason":"liq 6.4x ($320k) oi -0.32%"}
+{"timestamp":"2026-10-14T12:52:59.623Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1,"already entered this market":1}}
+{"timestamp":"2026-10-14T12:53:46.038Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum unconfirmed by order-flow delta (OF_REQUIRE_DELTA_CONFIRM)":1,"holding the opposing leg":1}}
+{"timestamp":"2026-10-14T12:54:26.232Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"momentum unconfirmed by order-flow delta (OF_REQUIRE_DELTA_CONFIRM)":1,"holding the opposing leg":1}}
+{"timestamp":"2026-10-14T12:55:04.755Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:55:35.450Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:56:12.885Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:56:44.839Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:57:15.984Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:57:54.431Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:58:33.421Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:59:04.389Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T12:59:47.575Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
+{"timestamp":"2026-10-14T13:00:26.676Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":2}}
+{"timestamp":"2026-10-14T13:00:27.780Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000000ab93","outcome":"LOSS","pnl":-22.71108,"settled_at":"2026-10-14T13:00:27.780Z"}
