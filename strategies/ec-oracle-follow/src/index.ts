@@ -317,6 +317,10 @@ const VOLUME_RATIO_MIN = Number(process.env.OF_VOLUME_RATIO_MIN ?? 1.3);
 const REQUIRE_DELTA_CONFIRM =
   (process.env.OF_REQUIRE_DELTA_CONFIRM ?? "false") === "true";
 const DELTA_RATIO_MIN = Number(process.env.OF_DELTA_RATIO_MIN ?? 1.3);
+// Cap on |deltaRatio|. Extremely high readings (liquidation cascades,
+// one-sided forced flow) reverse quickly; refuse them even when they
+// clear the minimum. Set ≤ 0 to disable the cap.
+const DELTA_RATIO_MAX = Number(process.env.OF_DELTA_RATIO_MAX ?? 10);
 // Flow-reversal early warning (see volume-pace.ts computeFlowReversal): is
 // the push that would justify this entry already being unwound in the most
 // recent closed minute(s)? cumDelta/deltaRatio judge the window CUMULATIVELY,
@@ -743,7 +747,11 @@ async function takeOne(
               ? reading.deltaRatio > 0
               : reading.deltaRatio < 0;
             deltaRatioOut = reading.deltaRatio;
-            volumeConfirmed = deltaAgrees && Math.abs(reading.deltaRatio) >= DELTA_RATIO_MIN;
+            const absDelta = Math.abs(reading.deltaRatio);
+            const withinBand =
+              absDelta >= DELTA_RATIO_MIN &&
+              (DELTA_RATIO_MAX <= 0 || absDelta <= DELTA_RATIO_MAX);
+            volumeConfirmed = deltaAgrees && withinBand;
             deltaBlocked = !volumeConfirmed;
           }
         }
@@ -1073,12 +1081,19 @@ async function takeOne(
     // minutes waiting on the cross-asset partner.
     if (REQUIRE_DELTA_CONFIRM) {
       const d = latestPace.get(thisAsset)?.deltaRatio ?? null;
-      if (d !== null && (bullish ? d < DELTA_RATIO_MIN : d > -DELTA_RATIO_MIN)) {
-        log(
-          `${market.symbol}: held trade dropped — delta no longer confirms ` +
-            `${bullish ? "UP" : "DOWN"} (${d.toFixed(2)}x)`
-        );
-        return;
+      if (d !== null) {
+        const absD = Math.abs(d);
+        const directionOk = bullish ? d >= DELTA_RATIO_MIN : d <= -DELTA_RATIO_MIN;
+        const magnitudeOk = DELTA_RATIO_MAX <= 0 || absD <= DELTA_RATIO_MAX;
+        if (!directionOk || !magnitudeOk) {
+          log(
+            `${market.symbol}: held trade dropped — delta no longer confirms ` +
+              `${bullish ? "UP" : "DOWN"} (${d.toFixed(2)}x` +
+              (magnitudeOk ? "" : `, exceeds OF_DELTA_RATIO_MAX=${DELTA_RATIO_MAX}`) +
+              `)`
+          );
+          return;
+        }
       }
     }
     // Same idea, re-checked at fire time: a hold for cross-asset confirm can
