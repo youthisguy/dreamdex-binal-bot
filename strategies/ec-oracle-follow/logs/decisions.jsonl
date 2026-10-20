@@ -40652,3 +40652,6 @@
 {"timestamp":"2026-10-20T13:59:47.695Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"near expiry":2}}
 {"timestamp":"2026-10-20T14:00:25.785Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":2}}
 {"timestamp":"2026-10-20T14:00:27.005Z","type":"settlement","market_id":"0x000000000000000000000000000000000000000000000000000000000000bed8","outcome":"WIN","pnl":6.794519999999999,"settled_at":"2026-10-20T14:00:27.004Z"}
+{"timestamp":"2026-10-20T14:01:03.753Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":2}}
+{"timestamp":"2026-10-20T14:01:40.078Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":6,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":4,"market price below floor":2}}
+{"timestamp":"2026-10-20T14:02:17.840Z","type":"veto","action":"TRAP_VETO","market_id":"0x000000000000000000000000000000000000000000000000000000000000bedd","symbol":"ETH-240859-20OCT26-1415/USDso","asset":"ETH","window":"15m","signal":"UP","dry_run":false,"expiry_ms":1792505700000,"ref_price":2408.59,"ref_kind":"strike","liq_aligned_usd":1520317,"liq_aligned_ratio":30.41,"oi_change_pct":-0.458,"reason":"liq 30.4x ($1520k) oi -0.46%"}
