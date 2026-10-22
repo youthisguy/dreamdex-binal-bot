@@ -888,6 +888,27 @@ async function takeOne(
     note(cycle, "DOWN trades disabled (OF_DISABLE_DOWN)");
     return;
   }
+  // Hard delta gate: fail CLOSED. No entry unless the pace reading is fully
+  // "ok" (past the min-elapsed minutes, baseline ready), delta is defined,
+  // points the same way as the trade, and sits inside the min/max band.
+  if (REQUIRE_DELTA_CONFIRM) {
+    const dr = paceCache.get(thisAsset) ?? null;
+    const d =
+      dr && dr.state === "ok" && dr.deltaAvailable ? dr.deltaRatio : null;
+    if (d === null) {
+      note(cycle, "delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)");
+      return;
+    }
+    const absD = Math.abs(d);
+    const dirOk = bullish ? d > 0 : d < 0;
+    const inBand =
+      absD >= DELTA_RATIO_MIN &&
+      (DELTA_RATIO_MAX <= 0 || absD <= DELTA_RATIO_MAX);
+    if (!dirOk || !inBand) {
+      note(cycle, "delta outside limits or against trade direction");
+      return;
+    }
+  }
   const fav = bullish ? yes : no;
 
   // Never buy the leg opposite one we already hold. That doesn't reverse the
@@ -1081,7 +1102,11 @@ async function takeOne(
     // minutes waiting on the cross-asset partner.
     if (REQUIRE_DELTA_CONFIRM) {
       const d = latestPace.get(thisAsset)?.deltaRatio ?? null;
-      if (d !== null) {
+      if (d === null) {
+        log(`${market.symbol}: trade dropped — no delta reading at execution`);
+        return;
+      }
+      {
         const absD = Math.abs(d);
         const directionOk = bullish ? d >= DELTA_RATIO_MIN : d <= -DELTA_RATIO_MIN;
         const magnitudeOk = DELTA_RATIO_MAX <= 0 || absD <= DELTA_RATIO_MAX;
