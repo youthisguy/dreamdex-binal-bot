@@ -52808,3 +52808,594 @@
 {"timestamp":"2026-10-28T12:14:09.946Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
 {"timestamp":"2026-10-28T12:14:49.133Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
 {"timestamp":"2026-10-28T12:15:20.387Z","type":"veto","action":"TRAP_VETO","market_id":"0x000000000000000000000000000000000000000000000000000000000000d824","symbol":"ETH-234388-28OCT26-1230/USDso","asset":"ETH","window":"15m","signal":"DOWN","dry_run":false,"expiry_ms":1793190600000,"ref_price":2343.88,"ref_kind":"strike","liq_aligned_usd":464452,"liq_aligned_ratio":9.1,"oi_change_pct":-0.36,"reason":"liq 9.1x ($464k) oi -0.36%"}
+{"timestamp":"2026-10-28T12:15:21.186Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"forced-flow trap (OF_REQUIRE_TRAP_CHECK)":1}}
+{"timestamp":"2026-10-28T12:15:58.827Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"forced-flow trap (OF_REQUIRE_TRAP_CHECK)":1}}
+{"timestamp":"2026-10-28T12:16:29.229Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"forced-flow trap (OF_REQUIRE_TRAP_CHECK)":1}}
+{"timestamp":"2026-10-28T12:17:07.505Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T12:17:38.702Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T12:18:17.270Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:18:54.854Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:19:24.897Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:19:54.987Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:20:32.643Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:21:09.202Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:21:48.402Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:22:21.688Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:22:59.273Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:23:36.066Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:24:08.470Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:24:51.088Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:25:30.626Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:26:00.873Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:26:38.837Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:27:09.099Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:27:51.013Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:28:29.196Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:28:59.916Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:29:38.339Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:30:17.050Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:30:49.034Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:31:19.172Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:31:51.741Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:32:29.345Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:33:02.108Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:33:38.962Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:34:20.971Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:34:51.237Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:35:27.904Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:36:04.996Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:36:38.016Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:37:09.447Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:37:39.672Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:38:20.372Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:39:01.795Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:39:38.356Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:40:14.939Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:40:52.918Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:41:29.688Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:41:59.983Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:42:38.462Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:43:09.432Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:43:39.505Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:44:10.660Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:44:51.301Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:45:30.602Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:46:08.770Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:46:40.727Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T12:47:21.038Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:47:59.732Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:48:38.328Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:49:08.436Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:49:40.227Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:50:21.124Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:50:59.139Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:51:29.624Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:51:59.884Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:52:36.863Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:53:09.687Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:53:40.566Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T12:54:19.579Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:54:57.899Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T12:55:31.574Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:56:08.729Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:56:50.744Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:57:20.794Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:57:52.025Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:58:29.754Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:59:08.106Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T12:59:40.375Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:00:18.685Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:00:56.435Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:01:35.327Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:02:08.127Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:02:39.521Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:03:17.324Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:03:55.823Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:04:32.730Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1}}
+{"timestamp":"2026-10-28T13:05:10.419Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:05:48.195Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:06:21.468Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:06:59.155Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:07:29.755Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:08:07.810Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T13:08:38.363Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T13:09:09.442Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1}}
+{"timestamp":"2026-10-28T13:09:51.129Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T13:10:30.794Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:11:09.034Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:11:50.703Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:12:23.856Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:12:57.137Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:13:29.907Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:14:00.854Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:14:31.905Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:15:04.003Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"empty book":1}}
+{"timestamp":"2026-10-28T13:15:37.114Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:16:09.255Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:16:39.496Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T13:17:21.357Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:18:00.051Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:18:38.152Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:19:11.142Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:19:50.821Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:20:21.771Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:20:59.421Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:21:31.761Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:22:01.858Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:22:39.415Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:23:10.356Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:23:51.244Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:24:30.831Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:25:08.838Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:25:38.857Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:26:15.658Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:26:48.088Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:27:19.508Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:27:51.710Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:28:28.917Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:28:59.835Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:29:31.864Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:30:08.421Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:30:40.226Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:31:20.100Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:31:51.340Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:32:31.224Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T13:33:09.535Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:33:47.746Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:34:24.723Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:35:01.622Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":2,"skips":{"delta outside limits or against trade direction":1,"window not in OF_ALLOWED_WINDOWS_MIN":1}}
+{"timestamp":"2026-10-28T13:35:39.706Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:36:21.766Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:36:52.966Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:37:30.581Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:38:08.513Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:38:39.958Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:39:20.392Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:39:51.329Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:40:27.895Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:41:05.161Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:41:38.591Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:42:17.535Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:42:49.056Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:43:20.685Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:43:51.127Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:44:30.565Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:45:00.570Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":1,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":1}}
+{"timestamp":"2026-10-28T13:45:31.216Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:46:09.372Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:46:51.683Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T13:47:28.953Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:48:06.508Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:48:39.097Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:49:09.221Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:49:42.535Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:50:21.124Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:51:00.350Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:51:33.842Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:52:06.718Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:52:43.765Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:53:23.838Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:54:01.642Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:54:39.024Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T13:55:21.171Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:55:57.431Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:56:30.750Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:57:00.908Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:57:38.606Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:58:10.298Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:58:47.589Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:59:22.243Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T13:59:59.452Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:00:31.095Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:01:01.132Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:01:39.688Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:02:11.264Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:02:51.789Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:03:22.328Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:03:59.887Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:04:37.123Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:05:14.184Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:05:46.185Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:06:23.894Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:07:00.678Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:07:31.863Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:08:09.621Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:08:47.108Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:09:17.474Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:09:51.069Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:10:28.976Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:11:01.276Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:11:31.900Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:12:02.139Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:12:38.195Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:13:09.538Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:13:40.673Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:14:20.854Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:14:50.866Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:15:21.351Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:15:51.442Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:16:21.525Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:17:00.193Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:17:38.159Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:18:10.570Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:18:51.675Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:19:29.468Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:20:01.968Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:20:40.178Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:21:18.468Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:21:48.955Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:22:19.717Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:23:02.009Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:23:39.447Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:24:20.971Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:24:57.707Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:25:28.512Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:26:05.631Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:26:38.166Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:27:08.469Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:27:40.309Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:28:18.290Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:28:51.197Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:29:29.287Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:30:07.235Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"empty book":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:30:40.384Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:31:20.471Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:31:59.440Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:32:29.651Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta outside limits or against trade direction":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:33:08.052Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:33:38.478Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"order flow reversing against entry in the last minute(s)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:34:08.822Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta outside limits or against trade direction":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:34:49.756Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta outside limits or against trade direction":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T14:35:20.544Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:35:58.382Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:36:30.423Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:37:08.589Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:37:51.894Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:38:30.401Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:39:07.237Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:39:38.138Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:40:08.955Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:40:48.110Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:41:25.632Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:42:02.630Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:42:40.031Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:43:20.848Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:44:00.171Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:44:37.410Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:45:08.510Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"empty book":1}}
+{"timestamp":"2026-10-28T14:45:39.442Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:46:09.488Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:46:39.565Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T14:47:16.519Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:47:49.419Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:48:20.217Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:48:52.752Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:49:30.864Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:50:08.334Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:50:38.802Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:51:12.971Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:51:50.329Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:52:27.028Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:52:59.671Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:53:38.138Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T14:54:16.989Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:54:55.291Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T14:55:26.524Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:56:04.115Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:56:42.616Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:57:13.160Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:57:50.560Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:58:30.100Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:59:07.476Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T14:59:44.177Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:00:15.587Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:00:48.460Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:01:26.627Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:02:04.198Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:02:41.591Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:03:19.618Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:03:49.745Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:04:21.151Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:04:59.848Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:05:30.477Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:06:00.591Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:06:38.266Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:07:08.886Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:07:46.584Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:08:17.714Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:08:50.606Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:09:20.691Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:10:00.376Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:10:30.405Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:11:08.390Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:11:38.992Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:12:09.578Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:12:48.771Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:13:19.788Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:13:59.408Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:14:38.068Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:15:17.060Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:15:51.565Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:16:29.415Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:16:59.996Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:17:30.454Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:18:08.139Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:18:39.500Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:19:21.027Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:19:58.885Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:20:37.492Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:21:08.226Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:21:49.763Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:22:26.800Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:23:00.341Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:23:39.027Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:24:19.412Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:24:57.262Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:25:29.723Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:26:00.684Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:26:38.227Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:27:14.900Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:27:51.359Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:28:29.205Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:29:07.305Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:29:50.273Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:30:22.317Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:30:59.908Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:31:38.829Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:32:20.240Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:32:50.638Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:33:29.047Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:33:59.146Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:34:37.648Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:35:08.973Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:35:39.187Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:36:10.331Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:36:50.584Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:37:30.944Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:38:08.315Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:38:47.694Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:39:17.704Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:39:49.871Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:40:29.096Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:41:01.835Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:41:38.612Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:42:16.858Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:42:54.105Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:43:32.254Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:44:09.752Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:44:47.985Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:45:20.176Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:46:00.415Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:46:37.888Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T15:47:09.424Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:47:47.236Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:48:30.367Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:49:08.135Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:49:45.758Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:50:17.540Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:50:50.416Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:51:28.306Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:52:00.419Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:52:39.094Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:53:17.325Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:53:55.979Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T15:54:34.329Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T15:55:12.483Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:55:44.798Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:56:21.595Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:56:59.676Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:57:29.905Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:58:08.359Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:58:46.344Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:59:21.058Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T15:59:59.505Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:00:30.720Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:01:09.208Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:01:39.221Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:02:09.881Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:02:48.273Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:03:25.962Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:04:02.593Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:04:41.115Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:05:18.539Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:05:48.707Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:06:30.476Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:07:00.911Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:07:39.291Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:08:09.398Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:08:47.883Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:09:25.763Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:09:56.295Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:10:33.190Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:11:09.972Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:11:46.971Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:12:17.053Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:12:47.345Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:13:23.520Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:13:54.442Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:14:24.606Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:15:01.589Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":1,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":1}}
+{"timestamp":"2026-10-28T16:15:39.703Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:16:18.520Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:16:56.684Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:17:28.267Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:17:59.902Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:18:37.984Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:19:09.375Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:19:47.332Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:20:18.327Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:20:56.745Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:21:27.370Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:22:05.980Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:22:43.775Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:23:14.155Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:23:51.548Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:24:30.470Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:25:08.207Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:25:45.191Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:26:21.726Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:26:59.363Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:27:37.854Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:28:14.413Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:28:54.472Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:29:32.710Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:30:03.988Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"empty book":1}}
+{"timestamp":"2026-10-28T16:30:41.079Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:31:18.507Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:31:56.423Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:32:28.053Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:33:01.066Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:33:39.240Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:34:17.474Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:34:50.625Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:35:28.271Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:35:59.186Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:36:30.681Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:37:07.140Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:37:39.401Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:38:15.509Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:38:51.754Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:39:29.943Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:40:00.134Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:40:36.432Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:41:13.030Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:41:49.605Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:42:26.418Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:43:04.004Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:43:41.518Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:44:19.090Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:44:55.832Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:45:32.899Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:46:10.421Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:46:42.290Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T16:47:20.684Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:47:53.029Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:48:30.432Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:49:02.848Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:49:35.341Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"entry too rich (ask 0.82 > OF_MAX_ENTRY_PRICE 0.82)":1}}
+{"timestamp":"2026-10-28T16:50:14.007Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:50:51.280Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:51:29.595Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1}}
+{"timestamp":"2026-10-28T16:52:00.693Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1}}
+{"timestamp":"2026-10-28T16:52:30.693Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T16:53:09.033Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:53:47.838Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T16:54:18.167Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T16:54:48.495Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"market price below floor":1}}
+{"timestamp":"2026-10-28T16:55:26.944Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:55:59.628Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:56:36.091Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:57:08.719Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:57:50.521Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:58:21.375Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:59:00.012Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T16:59:31.350Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:00:08.944Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:00:46.284Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:01:24.654Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:02:03.225Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:02:40.815Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:03:19.058Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:03:49.273Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:04:19.408Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:04:49.601Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:05:26.897Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:05:57.589Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:06:35.873Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:07:08.638Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:07:39.287Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:08:17.031Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:08:56.156Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:09:30.698Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:10:07.244Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:10:39.127Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:11:19.519Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:11:51.453Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:12:29.727Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:13:05.860Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:13:37.554Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:14:07.938Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:14:38.260Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:15:08.579Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"empty book":1}}
+{"timestamp":"2026-10-28T17:15:50.829Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:16:29.736Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:17:00.972Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:17:39.528Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:18:18.321Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:18:55.443Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:19:33.110Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:20:05.520Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:20:43.432Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:21:21.326Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:21:52.009Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:22:24.555Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:23:02.690Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:23:40.461Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:24:18.053Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:24:58.527Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:25:30.673Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:26:01.469Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:26:37.628Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:27:07.754Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:27:37.844Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:28:08.723Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:28:40.296Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:29:20.920Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:29:59.001Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:30:31.557Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:31:10.109Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:31:48.381Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:32:26.766Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:33:01.521Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:33:39.369Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:34:16.949Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:34:50.351Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:35:27.594Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:35:58.667Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:36:28.819Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:36:59.160Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:37:30.353Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"no momentum contribution (OF_REQUIRE_MOMENTUM)":1}}
+{"timestamp":"2026-10-28T17:38:08.458Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:38:39.214Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:39:13.328Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:39:50.568Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:40:21.396Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:40:58.780Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:41:29.697Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:42:05.992Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:42:44.265Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:43:21.548Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:43:59.346Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:44:35.654Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:45:13.392Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T17:45:43.710Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T17:46:20.770Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T17:46:58.760Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T17:47:30.562Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"order flow reversing against entry in the last minute(s)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T17:48:07.314Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:48:44.781Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"delta outside limits or against trade direction":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T17:49:24.908Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"order flow reversing against entry in the last minute(s)":1,"window not in OF_ALLOWED_WINDOWS_MIN":2}}
+{"timestamp":"2026-10-28T17:50:03.531Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:50:41.170Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:51:19.796Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:51:50.242Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:52:31.176Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:53:01.966Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:53:39.851Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T17:54:18.597Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:54:51.197Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"order flow reversing against entry in the last minute(s)":1}}
+{"timestamp":"2026-10-28T17:55:27.751Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:56:04.497Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:56:41.290Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:57:19.068Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:57:49.643Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:58:19.885Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:58:57.151Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T17:59:33.141Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"near expiry":1}}
+{"timestamp":"2026-10-28T18:00:03.682Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":1,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":1}}
+{"timestamp":"2026-10-28T18:00:40.510Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T18:01:18.474Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T18:01:51.404Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta not defined yet (OF_REQUIRE_DELTA_CONFIRM)":1}}
+{"timestamp":"2026-10-28T18:02:29.814Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T18:03:00.389Z","type":"cycle","action":"SIT_OUT_SUMMARY","scanned":3,"skips":{"window not in OF_ALLOWED_WINDOWS_MIN":2,"delta outside limits or against trade direction":1}}
+{"timestamp":"2026-10-28T18:03:29.804Z","type":"veto","action":"TRAP_VETO","market_id":"0x000000000000000000000000000000000000000000000000000000000000d8e7","symbol":"ETH-234299-28OCT26-1815/USDso","asset":"ETH","window":"15m","signal":"UP","dry_run":false,"expiry_ms":1793211300000,"ref_price":2342.99,"ref_kind":"strike","liq_aligned_usd":346990,"liq_aligned_ratio":6.94,"oi_change_pct":-0.303,"reason":"liq 6.9x ($347k) oi -0.30%"}
